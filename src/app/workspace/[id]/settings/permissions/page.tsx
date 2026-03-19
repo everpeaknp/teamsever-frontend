@@ -26,6 +26,7 @@ interface Plan {
 interface Workspace {
   name: string;
   owner: string;
+  logo?: string;
   subscription?: {
     plan: Plan;
   };

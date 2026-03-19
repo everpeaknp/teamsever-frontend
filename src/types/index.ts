@@ -16,6 +16,7 @@ export interface Workspace {
     user: string | User;
     role: 'owner' | 'admin' | 'member';
   }>;
+  logo?: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -9,6 +9,7 @@ export interface Workspace {
     userId: string;
     role: string;
   }>;
+  logo?: string;
   createdAt: string;
   updatedAt: string;
 }

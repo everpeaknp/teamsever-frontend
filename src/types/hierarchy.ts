@@ -38,5 +38,5 @@ export type HierarchyItem = HierarchySpace | HierarchyFolder | HierarchyList;
 export interface WorkspaceHierarchy {
   workspaceId: string;
   workspaceName: string;
-  spaces: HierarchySpace[];
+  logo?: string;
 }
