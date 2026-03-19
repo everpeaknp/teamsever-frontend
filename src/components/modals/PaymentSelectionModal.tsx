@@ -15,21 +15,14 @@ import { CurrencyDisplay } from '@/components/currency/CurrencyDisplay';
 import { api } from '@/lib/axios';
 import { toast } from 'sonner';
 import { submitEsewaPayment } from '@/lib/esewa';
+import { Plan } from '@/types';
 
 interface PaymentSelectionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  plan: {
-    _id: string;
-    name: string;
-    basePrice: number;
-    pricePerMemberMonthly: number;
-    pricePerMemberAnnual: number;
-    baseCurrency: 'USD' | 'NPR';
-    description: string;
-  };
-  memberCount: number;
-  billingCycle: 'monthly' | 'annual';
+  plan: Plan;
+  memberCount?: number;
+  billingCycle?: 'monthly' | 'annual';
   whatsappNumber: string;
 }
 
@@ -37,8 +30,8 @@ export function PaymentSelectionModal({
   isOpen,
   onClose,
   plan,
-  memberCount,
-  billingCycle,
+  memberCount = 1,
+  billingCycle = 'annual',
   whatsappNumber
 }: PaymentSelectionModalProps) {
   const [processingEsewa, setProcessingEsewa] = useState(false);

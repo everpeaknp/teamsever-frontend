@@ -11,28 +11,8 @@ import { api } from '@/lib/axios';
 import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
 import { submitEsewaPayment } from '@/lib/esewa';
+import { Plan } from '@/types';
 
-interface Plan {
-  _id: string;
-  name: string;
-  price: number;
-  description: string;
-  features: {
-    maxWorkspaces: number;
-    maxMembers: number;
-    maxAdmins: number;
-    maxSpaces: number;
-    maxLists: number;
-    maxFolders: number;
-    maxTasks: number;
-    hasAccessControl: boolean;
-    hasGroupChat: boolean;
-    messageLimit: number;
-    announcementCooldown: number;
-    accessControlTier: string;
-  };
-  isActive: boolean;
-}
 
 interface PricingModalProps {
   isOpen: boolean;

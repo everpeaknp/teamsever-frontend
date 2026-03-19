@@ -10,6 +10,7 @@ import {
   Calendar,
   Briefcase,
 } from "lucide-react";
+import { Plan } from "@/types";
 
 interface AdminUser {
   _id: string;
@@ -28,11 +29,6 @@ interface AdminUser {
   createdAt: string;
 }
 
-interface Plan {
-  _id: string;
-  name: string;
-  price: number;
-}
 
 export default function UserManagement() {
   const [users, setUsers] = useState<AdminUser[]>([]);

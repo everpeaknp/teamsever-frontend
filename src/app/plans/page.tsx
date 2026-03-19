@@ -12,33 +12,10 @@ import { toast } from 'sonner';
 import { CurrencyDisplay } from '@/components/currency/CurrencyDisplay';
 import { PaymentSelectionModal } from '@/components/modals/PaymentSelectionModal';
 import { useSubscription } from '@/hooks/useSubscription';
+import { Plan } from '@/types';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-interface Plan {
-  _id: string;
-  name: string;
-  price: number;
-  basePrice: number;
-  baseCurrency: 'USD' | 'NPR';
-  pricePerMemberMonthly: number;
-  pricePerMemberAnnual: number;
-  description: string;
-  features: {
-    maxWorkspaces: number;
-    maxAdmins: number;
-    maxSpaces: number;
-    maxLists: number;
-    maxFolders: number;
-    maxTasks: number;
-    hasAccessControl: boolean;
-    hasGroupChat: boolean;
-    messageLimit: number;
-    announcementCooldown: number;
-    accessControlTier: string;
-  };
-  isActive: boolean;
-}
 
 // Plans Page Loading Skeleton
 function PlansSkeleton() {

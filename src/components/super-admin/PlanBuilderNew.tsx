@@ -10,40 +10,8 @@ import { CurrencyDisplay } from "@/components/currency/CurrencyDisplay";
 import { toast } from "sonner";
 import { PlusIcon, Pencil1Icon, TrashIcon, ArchiveIcon, IdCardIcon, ComponentInstanceIcon, ListBulletIcon, FileIcon, CheckboxIcon, LockClosedIcon, PersonIcon, TableIcon, ChatBubbleIcon, EnvelopeClosedIcon, FileTextIcon, BellIcon } from "@radix-ui/react-icons";
 import { Loader2 } from "lucide-react";
+import { Plan } from "@/types";
 
-interface Plan {
-  _id: string;
-  name: string;
-  price: number;
-  basePrice?: number;
-  pricePerMemberMonthly?: number;
-  pricePerMemberAnnual?: number;
-  baseCurrency?: 'USD' | 'NPR';
-  description: string;
-  features: {
-    maxWorkspaces: number;
-    maxAdmins: number;
-    maxSpaces: number;
-    maxLists: number;
-    maxFolders: number;
-    maxTasks: number;
-    hasAccessControl: boolean;
-    hasGroupChat: boolean;
-    messageLimit: number;
-    announcementCooldown: number;
-    accessControlTier: string;
-    canUseCustomRoles?: boolean;
-    maxCustomRoles?: number;
-    canCreateTables?: boolean;
-    maxTablesCount?: number;
-    maxRowsLimit?: number;
-    maxColumnsLimit?: number;
-    maxFiles?: number;
-    maxDocuments?: number;
-    maxDirectMessagesPerUser?: number;
-  };
-  isActive: boolean;
-}
 
 export default function PlanBuilderNew() {
   const router = useRouter();

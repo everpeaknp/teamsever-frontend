@@ -12,35 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { ArchiveIcon, IdCardIcon, CubeIcon, ListBulletIcon, FileIcon, CheckboxIcon, BellIcon, ChatBubbleIcon, LockClosedIcon, PersonIcon, CounterClockwiseClockIcon, TableIcon, FileTextIcon } from "@radix-ui/react-icons";
 import { Shield, ArrowLeft, Loader2 } from "lucide-react";
+import { Plan } from "@/types";
 
-interface Plan {
-  _id: string;
-  name: string;
-  price: number;
-  description: string;
-  features: {
-    maxWorkspaces: number;
-    maxAdmins: number;
-    maxSpaces: number;
-    maxLists: number;
-    maxFolders: number;
-    maxTasks: number;
-    hasAccessControl: boolean;
-    hasGroupChat: boolean;
-    messageLimit: number;
-    announcementCooldown: number;
-    accessControlTier: 'basic' | 'pro' | 'advanced';
-    canUseCustomRoles: boolean;
-    maxCustomRoles: number;
-    canCreateTables: boolean;
-    maxTablesCount: number;
-    maxRowsLimit: number;
-    maxColumnsLimit: number;
-    maxFiles: number;
-    maxDocuments: number;
-    maxDirectMessagesPerUser: number;
-  };
-}
 
 export default function EditPlanPage() {
   const router = useRouter();

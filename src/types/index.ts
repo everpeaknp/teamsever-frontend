@@ -93,6 +93,46 @@ export interface GroupedTasks {
   [status: string]: Task[];
 }
 
+// Subscription Plan Types
+export interface Plan {
+  _id: string;
+  name: string;
+  price: number;
+  basePrice: number;
+  baseCurrency: 'USD' | 'NPR';
+  pricePerMemberMonthly?: number;
+  pricePerMemberAnnual?: number;
+  description: string;
+  features: {
+    maxWorkspaces: number;
+    maxMembers: number;
+    maxAdmins: number;
+    maxSpaces: number;
+    maxLists: number;
+    maxFolders: number;
+    maxTasks: number;
+    hasAccessControl: boolean;
+    hasGroupChat: boolean;
+    messageLimit: number;
+    announcementCooldown: number;
+    accessControlTier: string;
+    // Advanced Features
+    canUseCustomRoles?: boolean;
+    maxCustomRoles?: number;
+    canCreateTables?: boolean;
+    maxTablesCount?: number;
+    maxRowsLimit?: number;
+    maxColumnsLimit?: number;
+    maxFiles?: number;
+    maxDocuments?: number;
+    maxDirectMessagesPerUser?: number;
+    [key: string]: any; // Allow for extra features
+  };
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Status Configuration
 export interface StatusConfig {
   label: string;

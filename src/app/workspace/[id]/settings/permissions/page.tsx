@@ -15,13 +15,8 @@ import {
   Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Plan } from '@/types';
 
-interface Plan {
-  features: {
-    accessControlTier: 'basic' | 'pro' | 'advanced';
-    maxAdmins: number;
-  };
-}
 
 interface Workspace {
   name: string;

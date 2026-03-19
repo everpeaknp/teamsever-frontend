@@ -16,30 +16,8 @@ import { submitEsewaPayment } from '@/lib/esewa';
 import { CurrencyDisplay } from '@/components/currency/CurrencyDisplay';
 import { CurrencySwitcherCompact } from '@/components/currency/CurrencySwitcher';
 import { PaymentSelectionModal } from '@/components/modals/PaymentSelectionModal';
+import { Plan } from '@/types';
 
-interface Plan {
-  _id: string;
-  name: string;
-  price: number;
-  basePrice: number;
-  baseCurrency: 'USD' | 'NPR';
-  description: string;
-  features: {
-    maxWorkspaces: number;
-    maxMembers: number;
-    maxAdmins: number;
-    maxSpaces: number;
-    maxLists: number;
-    maxFolders: number;
-    maxTasks: number;
-    hasAccessControl: boolean;
-    hasGroupChat: boolean;
-    messageLimit: number;
-    announcementCooldown: number;
-    accessControlTier: string;
-  };
-  isActive: boolean;
-}
 
 export default function PricingPage() {
   const router = useRouter();

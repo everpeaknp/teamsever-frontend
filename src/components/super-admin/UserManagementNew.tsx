@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { CurrencyDisplay } from "@/components/currency/CurrencyDisplay";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Plan } from "@/types";
 
 interface AdminUser {
   _id: string;
@@ -29,13 +30,6 @@ interface AdminUser {
   createdAt: string;
 }
 
-interface Plan {
-  _id: string;
-  name: string;
-  price: number;
-  basePrice?: number;
-  baseCurrency?: 'USD' | 'NPR';
-}
 
 export default function UserManagementNew() {
   const [users, setUsers] = useState<AdminUser[]>([]);
