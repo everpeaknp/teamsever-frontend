@@ -51,7 +51,7 @@ export function CustomizeModal({ open, onOpenChange }: CustomizeModalProps) {
             <div>
               <DialogTitle className="text-xl font-semibold dark:text-white">Customize</DialogTitle>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Personalize and organize your ClickUp interface
+                Personalize and organize your Workspace interface
               </p>
             </div>
             <Button
@@ -140,10 +140,10 @@ export function CustomizeModal({ open, onOpenChange }: CustomizeModalProps) {
                 </div>
               </div>
 
-              {/* ClickUp Theme */}
+              {/* Workspace Theme */}
               <div>
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">
-                  ClickUp theme
+                  Workspace theme
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
                   {colorOptions.map((option) => (

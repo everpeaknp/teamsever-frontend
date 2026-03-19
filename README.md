@@ -1,4 +1,4 @@
-# ClickUp Clone - Frontend
+# Workspace - Frontend
 
 A modern, production-ready task management application built with Next.js 14, featuring subscription management, custom tables, document collaboration, and real-time features.
 

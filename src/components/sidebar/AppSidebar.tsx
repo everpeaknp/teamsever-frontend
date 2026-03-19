@@ -48,7 +48,7 @@ import UpgradeButton from '@/components/subscription/UpgradeButton';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 
-export function ClickUpSidebar() {
+export function AppSidebar() {
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
@@ -170,7 +170,7 @@ export function ClickUpSidebar() {
         const newSpaceIds = spaceIds.filter(id => !expandedIds.includes(id));
         if (newSpaceIds.length > 0) {
           useUIStore.getState().expandAll(newSpaceIds);
-          console.log('[ClickUpSidebar] Auto-expanded spaces:', newSpaceIds);
+          console.log('[AppSidebar] Auto-expanded spaces:', newSpaceIds);
         }
       }
     } catch (err: any) {

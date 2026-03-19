@@ -8,7 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { ClickUpSidebar } from './ClickUpSidebar';
+import { AppSidebar } from './AppSidebar';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { useState } from 'react';
 
@@ -31,7 +31,7 @@ export function MobileSidebar() {
         <VisuallyHidden>
           <SheetTitle>Navigation Menu</SheetTitle>
         </VisuallyHidden>
-        <ClickUpSidebar />
+        <AppSidebar />
       </SheetContent>
     </Sheet>
   );

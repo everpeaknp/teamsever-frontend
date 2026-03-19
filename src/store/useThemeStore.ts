@@ -11,7 +11,7 @@ interface ThemeStore {
   setAccentColor: (color: AccentColor) => void;
 }
 
-// ClickUp color palette
+// Workspace color palette
 export const accentColors: Record<AccentColor, string> = {
   white: '#f8fafc',     // Light gray/white
   mint: '#10b981',      // Emerald/Mint
@@ -46,7 +46,7 @@ export const useThemeStore = create<ThemeStore>()(
       setAccentColor: (color: AccentColor) => set({ accentColor: color }),
     }),
     {
-      name: 'clickup-theme-storage',
+      name: 'workspace-theme-storage',
     }
   )
 );

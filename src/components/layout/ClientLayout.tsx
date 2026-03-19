@@ -7,8 +7,8 @@ import { SearchProvider } from '@/components/search/SearchProvider';
 import { NavigationLoader } from '@/components/layout/NavigationLoader';
 
 // Dynamic imports so these heavy components are excluded from pages that don't need them
-const ClickUpSidebar = dynamic(
-  () => import('@/components/sidebar/ClickUpSidebar').then(mod => mod.ClickUpSidebar),
+const AppSidebar = dynamic(
+  () => import('@/components/sidebar/AppSidebar').then(mod => mod.AppSidebar),
   {
     ssr: false,
     loading: () => <div className="w-[300px] h-screen bg-background border-r border-border animate-pulse flex-shrink-0" />,
@@ -51,7 +51,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       {showShell ? (
         <div className="flex h-screen overflow-hidden bg-background">
           <div className="hidden lg:flex">
-            <ClickUpSidebar />
+            <AppSidebar />
           </div>
           <div className="flex-1 flex flex-col overflow-hidden">
             <Header />
