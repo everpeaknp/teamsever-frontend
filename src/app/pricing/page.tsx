@@ -21,7 +21,7 @@ import { Plan } from '@/types';
 
 export default function PricingPage() {
   const router = useRouter();
-  const { whatsappNumber } = useSystemSettings();
+  const { whatsappNumber, systemName } = useSystemSettings();
   const { subscription } = useSubscription();
   const { themeMode, setThemeMode } = useThemeStore();
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -379,6 +379,7 @@ export default function PricingPage() {
                 }}
                 plan={selectedPlan}
                 whatsappNumber={whatsappNumber}
+                systemName={systemName}
               />
             )}
 
