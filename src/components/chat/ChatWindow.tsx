@@ -8,6 +8,8 @@ import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { useAuthStore } from '@/store/useAuthStore';
 import { format, isToday, isYesterday } from 'date-fns';
 
 interface ChatWindowProps {
@@ -24,10 +26,11 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Get current user ID and name
-  const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
-  const currentUserName = typeof window !== 'undefined' ? localStorage.getItem('userName') : null;
-  const currentUserEmail = typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null;
+  // Get current user from store
+  const { user: currentUser } = useAuthStore();
+  const currentUserId = currentUser?._id || null;
+  const currentUserName = currentUser?.name || null;
+  const currentUserEmail = currentUser?.email || null;
 
   // Generate room ID
   const roomId = type === 'workspace' 
@@ -47,20 +50,27 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
     getDraft, 
     setDraft, 
     clearDraft,
-    clearUnread 
+    setActiveRoom
   } = useChatStore();
-
+  
   // Get or create room
   useEffect(() => {
+    if (userId && !currentUserId) return; // Wait for current userId
+
     if (roomId) {
       const room = getRoom(roomId);
       if (!room) {
         createRoom(roomId, type, workspaceId, userId ? [currentUserId!, userId] : undefined);
       }
-      // Clear unread when entering room
-      clearUnread(roomId);
+      // Set active room - this also clears unread count in useChatStore
+      setActiveRoom(roomId);
     }
-  }, [roomId, type, workspaceId, userId, currentUserId, getRoom, createRoom, clearUnread]);
+
+    // Cleanup: clear active room when leaving component
+    return () => {
+      setActiveRoom('');
+    };
+  }, [roomId, type, workspaceId, userId, currentUserId, getRoom, createRoom, setActiveRoom]);
 
   // Get draft from store
   const draft = getDraft(roomId);
@@ -170,6 +180,8 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
         _id: currentUserId,
         name: currentUserName,
         email: currentUserEmail || '',
+        profilePicture: currentUser?.profilePicture,
+        avatar: currentUser?.avatar
       },
       content: messageContent,
       createdAt: new Date().toISOString(),
@@ -449,14 +461,7 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
                   </div>
 
                   {showAvatar ? (
-                    <Avatar className="h-8 w-8 flex-shrink-0">
-                      {message.sender.avatar ? (
-                        <AvatarImage src={message.sender.avatar} alt={message.sender.name} />
-                      ) : null}
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                        {getInitials(message.sender.name)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar user={message.sender} className="h-8 w-8 flex-shrink-0" />
                   ) : (
                     <div className="w-8 flex-shrink-0" />
                   )}
@@ -474,14 +479,7 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
                 )}
               >
                 {showAvatar && (
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    {message.sender.avatar ? (
-                      <AvatarImage src={message.sender.avatar} alt={message.sender.name} />
-                    ) : null}
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                      {getInitials(message.sender.name)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar user={message.sender} className="h-8 w-8 flex-shrink-0" />
                 )}
 
                 <div className="flex-1 min-w-0">

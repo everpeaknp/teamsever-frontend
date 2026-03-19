@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { requestNotificationPermission, onMessageListener } from '@/lib/firebase';
 import { api } from '@/lib/axios';
+import { toast } from 'sonner';
 
 export interface Notification {
   _id: string;
@@ -63,9 +64,20 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     
     set({ notifications: newNotifications, unreadCount });
 
-    // Show browser notification if permission granted
+    // Show browser notification if:
+    // 1. Permission is granted
+    // 2. Notification is unread
+    // 3. Document is hidden OR user is not on the target page
     if (get().permission === 'granted' && !notification.read) {
-      get().showBrowserNotification(notification.title, notification.body, notification.data);
+      const isTabHidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      
+      const isTargetPage = (notification.data?.conversationId && currentPath.includes(notification.data.conversationId)) ||
+                          (notification.data?.taskId && currentPath.includes(notification.data.taskId));
+
+      if (isTabHidden || !isTargetPage) {
+        get().showBrowserNotification(notification.title, notification.body, notification.data);
+      }
     }
   },
 
@@ -142,36 +154,71 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     }
   },
 
-  showBrowserNotification: (title, body, data) => {
-    if (typeof window === 'undefined' || typeof Notification === 'undefined') {
+  showBrowserNotification: async (title, body, data) => {
+    if (typeof window === 'undefined') return;
+
+    // Check if browser supports notifications
+    if (!('Notification' in window)) {
+      console.warn('This browser does not support notifications');
+      toast.info(title, { description: body });
       return;
     }
 
-    if (Notification.permission === 'granted') {
-      try {
-        const notification = new Notification(title, {
-          body,
-          icon: '/logo.png',
-          badge: '/badge.png',
-          tag: data?.resourceId || 'default',
-          requireInteraction: false,
-          silent: false,
-        });
+    const { permission } = get();
 
+    if (permission === 'granted') {
+      try {
+        const options = {
+          body,
+          icon: '/teamsever_logo.png', // Corrected path to logo
+          badge: '/teamsever_logo.png',
+          tag: data?.resourceId || data?.conversationId || 'default',
+          renotify: true,
+          vibrate: [200, 100, 200],
+          data: data,
+          requireInteraction: true, // Keep it visible until user interacts
+        };
+
+        // Try using Service Worker registration first (more reliable)
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          if (registration) {
+            await registration.showNotification(title, options);
+            return;
+          }
+        }
+
+        // Fallback to standard Notification API
+        const notification = new Notification(title, options);
         notification.onclick = () => {
           window.focus();
           notification.close();
-          
-          // Navigate to relevant page if data provided
           if (data?.workspaceId) {
-            window.location.href = `/workspace/${data.workspaceId}`;
-          } else if (data?.inviteUrl) {
-            window.location.href = data.inviteUrl;
+            window.location.href = `/workspace/${data.workspaceId}/chat`;
+          } else if (data?.conversationId) {
+            window.location.href = `/workspace/${data.workspaceId || 'current'}/inbox?id=${data.conversationId}`;
           }
         };
       } catch (error) {
-        console.error('Failed to show browser notification:', error);
+        console.error('Failed to show native notification:', error);
+        toast.info(title, { description: body });
       }
+    } else {
+      // Fallback to toast if permission not granted
+      toast.info(title, {
+        description: body,
+        duration: 5000,
+        action: data?.workspaceId || data?.conversationId ? {
+          label: 'View',
+          onClick: () => {
+            if (data?.workspaceId) {
+              window.location.href = `/workspace/${data.workspaceId}/chat`;
+            } else if (data?.conversationId) {
+              window.location.href = `/workspace/${data.workspaceId || 'current'}/inbox?id=${data.conversationId}`;
+            }
+          }
+        } : undefined
+      });
     }
   },
 

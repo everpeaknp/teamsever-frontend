@@ -148,7 +148,7 @@ export function KanbanColumn({
 
   return (
     <div className="flex-1 min-w-0">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between px-1">
         <h3 className={`font-semibold text-sm ${headingColor}`}>{title}</h3>
         <span className="rounded text-sm text-muted-foreground">{filteredCards.length}</span>
       </div>
@@ -156,7 +156,7 @@ export function KanbanColumn({
         onDrop={handleDragEnd}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        className={`h-full w-full rounded-lg p-2 transition-colors overflow-y-auto ${
+        className={`h-full w-full rounded-lg p-1.5 transition-colors overflow-y-auto ${
           active ? 'bg-muted/50' : 'bg-muted/20'
         }`}
       >

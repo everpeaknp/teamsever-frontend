@@ -71,6 +71,9 @@ function storeAuthData(authData: AuthResponse): void {
   localStorage.setItem('userEmail', authData.user.email);
   localStorage.setItem('isSuperUser', String(authData.user.isSuperUser || false));
   
+  // Clean up legacy token keys
+  localStorage.removeItem('token');
+  
   // Dispatch custom event to notify socket context
   window.dispatchEvent(new CustomEvent('auth-token-updated', { 
     detail: { token: authData.token } 
@@ -88,6 +91,7 @@ export function clearAuthData(): void {
   localStorage.removeItem('userName');
   localStorage.removeItem('userEmail');
   localStorage.removeItem('isSuperUser');
+  localStorage.removeItem('token');
 }
 
 /**

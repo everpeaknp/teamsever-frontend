@@ -115,44 +115,6 @@ export default function AccountSettingsPage() {
       try {
         setIsLoading(true);
         
-        // Get from localStorage
-        const userId = localStorage.getItem('userId');
-        const userName = localStorage.getItem('userName');
-        const userEmail = localStorage.getItem('userEmail');
-        const userAvatar = localStorage.getItem('userAvatar');
-
-        // Use localStorage data
-        if (userId && userName && userEmail) {
-          const userData = {
-            _id: userId,
-            name: userName,
-            email: userEmail,
-            avatar: userAvatar || undefined,
-            jobTitle: '',
-            department: '',
-            bio: '',
-            language: 'en-US',
-            timezone: 'America/Los_Angeles',
-            twoFactorEnabled: false,
-          };
-          
-          setUser(userData);
-          
-          profileForm.reset({
-            name: userName,
-            email: userEmail,
-            jobTitle: '',
-            department: '',
-            bio: '',
-          });
-          
-          if (userAvatar) {
-            setAvatarPreview(userAvatar);
-          }
-        }
-
-        // TODO: Uncomment when backend endpoint is ready
-        /*
         // Fetch full user data from API
         const response = await api.get('/users/profile');
         const userData = response.data.data || response.data;
@@ -169,11 +131,10 @@ export default function AccountSettingsPage() {
           bio: userData.bio || '',
         });
         
-        setAvatarPreview(userData.avatar || null);
+        setAvatarPreview(userData.profilePicture || userData.avatar || null);
         setTwoFactorEnabled(userData.twoFactorEnabled || false);
         setLanguage(userData.language || 'en-US');
         setTimezone(userData.timezone || 'America/Los_Angeles');
-        */
         
       } catch (error) {
         console.error('Failed to fetch user data:', error);
@@ -225,36 +186,6 @@ export default function AccountSettingsPage() {
   const onSaveProfile = async (data: ProfileFormData) => {
     setIsSaving(true);
     try {
-      // For now, just update localStorage since backend endpoint doesn't exist
-      localStorage.setItem('userName', data.name);
-      
-      // Update Zustand store with current data
-      const updatedUser = {
-        _id: localStorage.getItem('userId') || '',
-        name: data.name,
-        email: data.email,
-        avatar: avatarPreview || undefined,
-        jobTitle: data.jobTitle,
-        department: data.department,
-        bio: data.bio,
-        language,
-        timezone,
-        twoFactorEnabled,
-      };
-      
-      setUser(updatedUser);
-      
-      // If avatar was changed, update localStorage
-      if (avatarPreview) {
-        localStorage.setItem('userAvatar', avatarPreview);
-      } else {
-        localStorage.removeItem('userAvatar');
-      }
-
-      toast.success('Profile updated successfully!');
-      
-      // TODO: Uncomment when backend endpoint is ready
-      /*
       const formData = new FormData();
       formData.append('name', data.name);
       formData.append('jobTitle', data.jobTitle || '');
@@ -265,7 +196,7 @@ export default function AccountSettingsPage() {
       formData.append('twoFactorEnabled', String(twoFactorEnabled));
 
       if (avatarFile) {
-        formData.append('avatar', avatarFile);
+        formData.append('file', avatarFile);
       } else if (!avatarPreview) {
         formData.append('removeAvatar', 'true');
       }
@@ -279,10 +210,11 @@ export default function AccountSettingsPage() {
       
       // Update localStorage
       localStorage.setItem('userName', updatedUser.name);
-      if (updatedUser.avatar) {
-        localStorage.setItem('userAvatar', updatedUser.avatar);
+      if (updatedUser.profilePicture || updatedUser.avatar) {
+        localStorage.setItem('userAvatar', updatedUser.profilePicture || updatedUser.avatar);
       }
-      */
+      
+      toast.success('Profile updated successfully!');
     } catch (error: any) {
       console.error('Failed to update profile:', error);
       toast.error(error.response?.data?.message || 'Failed to update profile');

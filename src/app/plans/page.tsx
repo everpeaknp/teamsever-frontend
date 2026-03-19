@@ -75,7 +75,7 @@ export default function PlansPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { subscription } = useSubscription();
-  const { whatsappNumber } = useSystemSettings();
+  const { whatsappNumber, systemName } = useSystemSettings();
   
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -292,13 +292,14 @@ export default function PlansPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((plan) => {
             const isCurrent = isCurrentPlan(plan.name);
-            const isFree = plan.price === 0;
             const features = getFeaturesList(plan);
 
             // Get active price based on billing cycle
             const activePrice = billingCycle === 'monthly' 
               ? (plan.pricePerMemberMonthly || plan.basePrice || plan.price)
               : (plan.pricePerMemberAnnual || plan.basePrice || plan.price);
+            
+            const isPlanFree = activePrice === 0;
 
             return (
               <div
@@ -317,7 +318,7 @@ export default function PlansPage() {
                 )}
 
                 {/* Popular Badge */}
-                {!isFree && plan.price < 100 && !isCurrent && (
+                {!isPlanFree && activePrice < 100 && !isCurrent && (
                   <Badge className="absolute -top-3 right-4 bg-gradient-to-r from-orange-500 to-pink-500">
                     Popular
                   </Badge>
@@ -338,7 +339,7 @@ export default function PlansPage() {
                     </div>
                     
                     {/* Total price */}
-                    {!isFree && (
+                    {(!isPlanFree || plan.name !== 'Free') && (
                       <div className="mt-2 pt-2 border-t border-border">
                         <div className="text-xs text-muted-foreground mb-1">Total for {memberCount} {memberCount === 1 ? 'member' : 'members'}</div>
                         <div className="flex items-baseline justify-center gap-1">
@@ -381,7 +382,7 @@ export default function PlansPage() {
                     <Button disabled className="w-full" variant="outline">
                       Current Plan
                     </Button>
-                  ) : isFree ? (
+                  ) : isPlanFree ? (
                     <Button disabled variant="outline" className="w-full">
                       Free Plan
                     </Button>
@@ -420,6 +421,7 @@ export default function PlansPage() {
           memberCount={memberCount}
           billingCycle={billingCycle}
           whatsappNumber={whatsappNumber}
+          systemName={systemName}
         />
       )}
     </div>

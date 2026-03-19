@@ -207,6 +207,11 @@ export default function DashboardPage() {
       router.push('/login');
       return;
     }
+
+    // Clean up legacy token to prevent session hijacking
+    if (localStorage.getItem('token')) {
+      localStorage.removeItem('token');
+    }
   }, [router]);
 
   const handleCreateWorkspace = (e: React.FormEvent) => {

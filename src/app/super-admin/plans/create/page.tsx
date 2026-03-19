@@ -246,9 +246,8 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
                     value={formData.maxWorkspaces}
-                    onChange={(e) => setFormData({ ...formData, maxWorkspaces: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, maxWorkspaces: parseInt(e.target.value) || 0 })}
                     required
                   />
                 </div>
@@ -259,9 +258,8 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
                     value={formData.maxAdmins}
-                    onChange={(e) => setFormData({ ...formData, maxAdmins: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, maxAdmins: parseInt(e.target.value) || 0 })}
                     required
                   />
                 </div>
@@ -272,9 +270,8 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
                     value={formData.maxSpaces}
-                    onChange={(e) => setFormData({ ...formData, maxSpaces: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, maxSpaces: parseInt(e.target.value) || 0 })}
                     required
                   />
                 </div>
@@ -285,9 +282,8 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
                     value={formData.maxLists}
-                    onChange={(e) => setFormData({ ...formData, maxLists: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, maxLists: parseInt(e.target.value) || 0 })}
                     required
                   />
                 </div>
@@ -298,9 +294,8 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
                     value={formData.maxFolders}
-                    onChange={(e) => setFormData({ ...formData, maxFolders: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, maxFolders: parseInt(e.target.value) || 0 })}
                     required
                   />
                 </div>
@@ -311,9 +306,8 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
                     value={formData.maxTasks}
-                    onChange={(e) => setFormData({ ...formData, maxTasks: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, maxTasks: parseInt(e.target.value) || 0 })}
                     required
                   />
                 </div>
@@ -324,9 +318,8 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="24"
                     value={formData.announcementCooldown}
-                    onChange={(e) => setFormData({ ...formData, announcementCooldown: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, announcementCooldown: parseInt(e.target.value) || 0 })}
                     required
                     min="0"
                   />
@@ -363,9 +356,8 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
                     value={formData.messageLimit}
-                    onChange={(e) => setFormData({ ...formData, messageLimit: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, messageLimit: parseInt(e.target.value) || 0 })}
                     required
                   />
                 </div>
@@ -408,7 +400,7 @@ export default function CreatePlanPage() {
           <Card>
             <CardHeader>
               <CardTitle>Custom Display Roles</CardTitle>
-              <CardDescription>Pro feature for custom member role titles</CardDescription>
+              <CardDescription>Pro feature for custom member role titles (-1 for unlimited)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -435,25 +427,11 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
                     value={formData.maxCustomRoles}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === '' || val === '-' || val === '-1') {
-                        setFormData({ ...formData, maxCustomRoles: val === '' ? -1 : parseInt(val) || -1 });
-                      } else {
-                        const num = parseInt(val);
-                        if (!isNaN(num)) {
-                          setFormData({ ...formData, maxCustomRoles: num });
-                        }
-                      }
-                    }}
+                    onChange={(e) => setFormData({ ...formData, maxCustomRoles: parseInt(e.target.value) || -1 })}
                     min="-1"
                     required
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Set to -1 for unlimited, or specify a maximum number
-                  </p>
                 </div>
               )}
             </CardContent>
@@ -463,7 +441,7 @@ export default function CreatePlanPage() {
           <Card>
             <CardHeader>
               <CardTitle>Customizable Tables</CardTitle>
-              <CardDescription>Pro feature for spreadsheet-like tables</CardDescription>
+              <CardDescription>Pro feature for spreadsheet-like tables (-1 for unlimited)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -489,11 +467,15 @@ export default function CreatePlanPage() {
                       <Label>Max Tables per Space</Label>
                       <Input
                         type="number"
-                        placeholder="-1 for unlimited"
-                        value={formData.maxTablesCount === -1 ? '' : formData.maxTablesCount}
+                        value={formData.maxTablesCount}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setFormData({ ...formData, maxTablesCount: val === '' ? -1 : parseInt(val) });
+                          if (val === '' || val === '-' || val === '-1') {
+                            setFormData({ ...formData, maxTablesCount: val === '' ? -1 : parseInt(val) || -1 });
+                          } else {
+                            const num = parseInt(val);
+                            if (!isNaN(num)) setFormData({ ...formData, maxTablesCount: num });
+                          }
                         }}
                         min="-1"
                       />
@@ -502,11 +484,15 @@ export default function CreatePlanPage() {
                       <Label>Max Rows per Table</Label>
                       <Input
                         type="number"
-                        placeholder="-1 for unlimited"
-                        value={formData.maxRowsLimit === -1 ? '' : formData.maxRowsLimit}
+                        value={formData.maxRowsLimit}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setFormData({ ...formData, maxRowsLimit: val === '' ? -1 : parseInt(val) });
+                          if (val === '' || val === '-' || val === '-1') {
+                            setFormData({ ...formData, maxRowsLimit: val === '' ? -1 : parseInt(val) || -1 });
+                          } else {
+                            const num = parseInt(val);
+                            if (!isNaN(num)) setFormData({ ...formData, maxRowsLimit: num });
+                          }
                         }}
                         min="-1"
                       />
@@ -515,11 +501,15 @@ export default function CreatePlanPage() {
                       <Label>Max Columns per Table</Label>
                       <Input
                         type="number"
-                        placeholder="-1 for unlimited"
-                        value={formData.maxColumnsLimit === -1 ? '' : formData.maxColumnsLimit}
+                        value={formData.maxColumnsLimit}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setFormData({ ...formData, maxColumnsLimit: val === '' ? -1 : parseInt(val) });
+                          if (val === '' || val === '-' || val === '-1') {
+                            setFormData({ ...formData, maxColumnsLimit: val === '' ? -1 : parseInt(val) || -1 });
+                          } else {
+                            const num = parseInt(val);
+                            if (!isNaN(num)) setFormData({ ...formData, maxColumnsLimit: num });
+                          }
                         }}
                         min="-1"
                       />
@@ -545,11 +535,15 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
-                    value={formData.maxFiles === -1 ? '' : formData.maxFiles}
+                    value={formData.maxFiles}
                     onChange={(e) => {
                       const val = e.target.value;
-                      setFormData({ ...formData, maxFiles: val === '' ? -1 : parseInt(val) });
+                      if (val === '' || val === '-' || val === '-1') {
+                        setFormData({ ...formData, maxFiles: val === '' ? -1 : parseInt(val) || -1 });
+                      } else {
+                        const num = parseInt(val);
+                        if (!isNaN(num)) setFormData({ ...formData, maxFiles: num });
+                      }
                     }}
                     min="-1"
                   />
@@ -561,11 +555,15 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
-                    value={formData.maxDocuments === -1 ? '' : formData.maxDocuments}
+                    value={formData.maxDocuments}
                     onChange={(e) => {
                       const val = e.target.value;
-                      setFormData({ ...formData, maxDocuments: val === '' ? -1 : parseInt(val) });
+                      if (val === '' || val === '-' || val === '-1') {
+                        setFormData({ ...formData, maxDocuments: val === '' ? -1 : parseInt(val) || -1 });
+                      } else {
+                        const num = parseInt(val);
+                        if (!isNaN(num)) setFormData({ ...formData, maxDocuments: num });
+                      }
                     }}
                     min="-1"
                   />
@@ -577,11 +575,15 @@ export default function CreatePlanPage() {
                   </Label>
                   <Input
                     type="number"
-                    placeholder="-1 for unlimited"
-                    value={formData.maxDirectMessagesPerUser === -1 ? '' : formData.maxDirectMessagesPerUser}
+                    value={formData.maxDirectMessagesPerUser}
                     onChange={(e) => {
                       const val = e.target.value;
-                      setFormData({ ...formData, maxDirectMessagesPerUser: val === '' ? -1 : parseInt(val) });
+                      if (val === '' || val === '-' || val === '-1') {
+                        setFormData({ ...formData, maxDirectMessagesPerUser: val === '' ? -1 : parseInt(val) || -1 });
+                      } else {
+                        const num = parseInt(val);
+                        if (!isNaN(num)) setFormData({ ...formData, maxDirectMessagesPerUser: num });
+                      }
                     }}
                     min="-1"
                   />

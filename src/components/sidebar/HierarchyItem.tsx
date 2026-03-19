@@ -36,11 +36,18 @@ const INDENT_SIZE = 22; // Increased for better tree visibility like in Lively
 // otherwise the dot/line visually collides with the expand arrow.
 const TREE_CONNECTOR_X_OFFSET = -10;
 
-export function HierarchyItemComponent({ item, level, workspaceId, parentSpaceId }: HierarchyItemProps) {
+export const HierarchyItemComponent = React.memo(function HierarchyItemComponent({ item, level, workspaceId, parentSpaceId }: HierarchyItemProps) {
   const pathname = usePathname();
-  const { expandedIds, toggleExpanded, favoriteIds, toggleFavorite } = useUIStore();
-  const { openModal } = useModalStore();
+  
+  // Optimized selectors
+  const expandedIds = useUIStore(state => state.expandedIds);
+  const toggleExpanded = useUIStore(state => state.toggleExpanded);
+  const favoriteIds = useUIStore(state => state.favoriteIds);
+  const toggleFavorite = useUIStore(state => state.toggleFavorite);
+  
+  const openModal = useModalStore(state => state.openModal);
   const { isAdmin, isOwner } = usePermissions();
+  
   const [isHovered, setIsHovered] = useState(false);
   const [canCreateContent, setCanCreateContent] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -410,4 +417,4 @@ const getRoute = () => {
 )}
     </div>
   );
-}
+});

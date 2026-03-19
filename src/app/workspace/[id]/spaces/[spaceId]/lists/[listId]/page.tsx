@@ -53,8 +53,9 @@ import { format } from 'date-fns';
 import { useTaskStore } from '@/store/useTaskStore';
 import { useHighlight } from '@/hooks/useHighlight';
 import { useActivityStore } from '@/store/useActivityStore';
-import { useAuthStore } from '@/store/useAuthStore';
 import { ListMemberManagement } from '@/components/ListMemberManagement';
+import { useTaskSidebarStore } from '@/store/useTaskSidebarStore';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { toast } from 'sonner';
 
@@ -567,12 +568,12 @@ export default function ListView() {
                   {listMembers.slice(0, 3).map((member: any, idx: number) => {
                     const user = typeof member.user === 'object' ? member.user : member;
                     return (
-                      <Avatar key={idx} className="w-7 h-7 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110" onClick={() => setShowListMemberManagement(true)}>
-                        <AvatarImage src={user?.avatar} />
-                        <AvatarFallback className="text-xs bg-blue-600 text-white">
-                          {user ? getInitials(user.name) : '?'}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar 
+                        key={idx} 
+                        user={user} 
+                        className="w-7 h-7 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110" 
+                        onClick={() => setShowListMemberManagement(true)} 
+                      />
                     );
                   })}
                   {listMembers.length > 3 && (
@@ -1023,10 +1024,13 @@ function TaskRow({
   const isDone = task.status === 'done';
   const assignee = typeof task.assignee === 'object' ? task.assignee : null;
 
+  const { openTask } = useTaskSidebarStore();
+  
   return (
     <div 
       id={task._id}
-      className={`flex items-center gap-4 p-4 hover:bg-accent/50 transition-colors ${isDone ? 'opacity-60' : ''} ${isHighlighted ? 'ring-2 ring-primary' : ''}`}
+      onClick={() => openTask(task._id)}
+      className={`flex items-center gap-4 p-4 hover:bg-accent/50 transition-colors cursor-pointer ${isDone ? 'opacity-60' : ''} ${isHighlighted ? 'ring-2 ring-primary' : ''}`}
     >
       {/* Checkbox */}
       {!isReadOnly && canEdit && (
@@ -1108,12 +1112,7 @@ function TaskRow({
         <DropdownMenuTrigger asChild disabled={!canEdit}>
           <button className="hover:opacity-80 transition-opacity">
             {assignee ? (
-              <Avatar className="w-8 h-8">
-                <AvatarImage src={assignee.avatar} />
-                <AvatarFallback className="text-xs bg-blue-600 text-white">
-                  {assignee.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar user={assignee as any} className="w-8 h-8" />
             ) : (
               <div className="w-8 h-8 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
                 <Plus className="w-4 h-4 text-muted-foreground" />
@@ -1131,12 +1130,7 @@ function TaskRow({
                 key={user._id}
                 onClick={() => onAssigneeChange(task._id, user._id)}
               >
-                <Avatar className="w-6 h-6 mr-2">
-                  <AvatarImage src={user.avatar} />
-                  <AvatarFallback className="text-xs">
-                    {user.name.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar user={user as any} className="w-6 h-6 mr-2" />
                 {user.name}
               </DropdownMenuItem>
             );

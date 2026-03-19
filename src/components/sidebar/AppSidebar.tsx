@@ -29,6 +29,9 @@ import { usePermissions, useWorkspaceContext } from '@/store/useAuthStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useThemeStore, accentColors, getGradientColor } from '@/store/useThemeStore';
 import { useWorkspaceStore } from '@/store/useWorkspaceStore';
+import { useChatStore } from '@/store/useChatStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { HierarchyItemComponent } from './HierarchyItem';
 import { CreateItemModal } from '@/components/modals/CreateItemModal';
 import { EditSpaceModal } from '@/components/modals/EditSpaceModal';
@@ -52,23 +55,22 @@ export function AppSidebar() {
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
-  const { favoriteIds, isSidebarOpen } = useUIStore();
+  const favoriteIds = useUIStore(state => state.favoriteIds);
+  const isSidebarOpen = useUIStore(state => state.isSidebarOpen);
   const { openModal, setOnSuccess } = useModalStore();
   const { can, isAdmin, isOwner } = usePermissions();
   const { setWorkspaceContext } = useWorkspaceContext();
-  const { unreadCount } = useNotificationStore();
-  const { accentColor } = useThemeStore();
+  const unreadCount = useNotificationStore(state => state.unreadCount);
+  const syncPermission = useNotificationStore(state => state.syncPermission);
+  const accentColor = useThemeStore(state => state.accentColor);
   const { resolvedTheme } = useTheme();
   const themeMode = resolvedTheme || 'light';
   const { subscription, nextPlan } = useSubscription();
-  const { whatsappNumber } = useSystemSettings();
+  const { whatsappNumber, systemName, accentColor: systemAccentColor, logoUrl } = useSystemSettings();
 
   // Use workspace store instead of local state
   const { hierarchy, loading, error, fetchHierarchy } = useWorkspaceStore();
-  const [userName, setUserName] = useState('User');
-  const [userEmail, setUserEmail] = useState('user@example.com');
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const { user } = useAuthStore();
   const [isClient, setIsClient] = useState(false);
   const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState(false);
   const [allWorkspaces, setAllWorkspaces] = useState<any[]>([]);
@@ -83,23 +85,27 @@ export function AppSidebar() {
     }
   }
 
-  const themeColor = accentColors[accentColor];
+  // Chat unread counts - Optimized selectors
+  const groupChatUnread = useChatStore(state => 
+    workspaceId ? (state.rooms[`workspace_${workspaceId}`]?.unreadCount || 0) : 0
+  );
+  
+  const inboxUnread = useChatStore(state => 
+    Object.values(state.rooms)
+      .filter(room => room.type === 'direct')
+      .reduce((total, room) => total + (room.unreadCount || 0), 0)
+  );
+
+  // Use system accent color if user hasn't set one or as base
+  const themeColor = accentColors[accentColor] || accentColors[systemAccentColor as AccentColor] || accentColors.mint;
   const gradientStyle = getGradientColor(themeColor);
 
   // Load user info from localStorage
   useEffect(() => {
     setIsClient(true);
-    if (typeof window !== 'undefined') {
-      const storedName = localStorage.getItem('userName');
-      const storedEmail = localStorage.getItem('userEmail');
-      const storedUserId = localStorage.getItem('userId');
-      const storedAvatar = localStorage.getItem('userAvatar');
-      if (storedName) setUserName(storedName);
-      if (storedEmail) setUserEmail(storedEmail);
-      if (storedUserId) setUserId(storedUserId);
-      if (storedAvatar) setUserAvatar(storedAvatar);
-    }
-  }, []);
+    // Sync notification permission
+    syncPermission();
+  }, [syncPermission]);
 
   // Listen for workspace updates to refresh logo/name
   useEffect(() => {
@@ -112,6 +118,44 @@ export function AppSidebar() {
     window.addEventListener('workspace-updated', handleWorkspaceUpdate);
     return () => window.removeEventListener('workspace-updated', handleWorkspaceUpdate);
   }, [workspaceId, fetchHierarchy]);
+
+  // Sync DMs unread counts on mount
+  useEffect(() => {
+    const syncInboxUnread = async () => {
+      try {
+        const response = await api.get('/dm/conversations');
+        const conversations = response.data.data || [];
+        
+        const { createRoom, incrementUnread } = useChatStore.getState();
+        
+        conversations.forEach((conv: any) => {
+          if (conv.unreadCount > 0) {
+            // Ensure room exists
+            createRoom(conv._id, 'direct', undefined, conv.participants.map((p: any) => p._id));
+            // Update unread count manually for existing rooms
+            const rooms = useChatStore.getState().rooms;
+            if (rooms[conv._id]) {
+              useChatStore.setState({
+                rooms: {
+                  ...rooms,
+                  [conv._id]: {
+                    ...rooms[conv._id],
+                    unreadCount: conv.unreadCount
+                  }
+                }
+              });
+            }
+          }
+        });
+      } catch (error) {
+        console.error('[AppSidebar] Failed to sync inbox unread:', error);
+      }
+    };
+
+    if (isClient && user?._id) {
+      syncInboxUnread();
+    }
+  }, [isClient, user?._id]);
 
   // Fetch all workspaces for switcher
   const fetchAllWorkspaces = async () => {
@@ -152,8 +196,8 @@ export function AppSidebar() {
       }
 
       // Set workspace context for permissions
-      if (userId) {
-        const userMember = workspace.members?.find((m: any) => m.user === userId || m.user._id === userId);
+      if (user?._id) {
+        const userMember = workspace.members?.find((m: any) => m.user === user._id || m.user._id === user._id);
         if (userMember) {
           setWorkspaceContext(workspace._id, userMember.role);
         }
@@ -182,7 +226,7 @@ export function AppSidebar() {
         }, 2000);
       }
     }
-  }, [workspaceId, userId, setWorkspaceContext, fetchHierarchy, router]);
+  }, [workspaceId, user?._id, setWorkspaceContext, fetchHierarchy, router]);
 
   useEffect(() => {
     if (workspaceId) {
@@ -251,7 +295,7 @@ export function AppSidebar() {
               }}
             >
               <img 
-                src="/teamsever_logo.png" 
+                src={logoUrl || "/teamsever_logo.png"} 
                 alt="System Logo" 
                 className="w-8 h-8 object-contain"
               />
@@ -490,7 +534,12 @@ export function AppSidebar() {
                       )}
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
-                      Group Chat
+                      <span>Group Chat</span>
+                      {groupChatUnread > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg transform scale-110">
+                          {groupChatUnread > 99 ? '99+' : groupChatUnread}
+                        </span>
+                      )}
                     </Link>
                     <Link
                       href={`/workspace/${workspaceId}/inbox`}
@@ -502,7 +551,12 @@ export function AppSidebar() {
                       )}
                     >
                       <Inbox className="w-3.5 h-3.5" />
-                      Inbox (DMs)
+                      <span>Inbox (DMs)</span>
+                      {inboxUnread > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg transform scale-110">
+                          {inboxUnread > 99 ? '99+' : inboxUnread}
+                        </span>
+                      )}
                     </Link>
                     <Link
                       href={`/workspace/${workspaceId}/docs`}
@@ -634,23 +688,18 @@ export function AppSidebar() {
             )
           )}
 
-          {/* User Profile */}
           <div className="p-2 border-t border-slate-200 dark:border-slate-800">
-            <button className="flex items-center gap-2 w-full px-2 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md transition-colors">
-              <Avatar className="h-7 w-7 flex-shrink-0">
-                {userAvatar ? (
-                  <AvatarImage src={userAvatar} alt={userName} />
-                ) : null}
-                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                  <User className="h-3.5 w-3.5" />
-                </AvatarFallback>
-              </Avatar>
+            <button 
+              onClick={() => router.push('/account')}
+              className="flex items-center gap-2 w-full px-2 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md transition-colors"
+            >
+              <UserAvatar user={user as any} className="h-7 w-7 flex-shrink-0" />
               <div className="flex-1 text-left min-w-0">
                 <div className="font-medium truncate text-slate-900 dark:text-white text-[11px]">
-                  {userName}
+                  {user?.name || 'User'}
                 </div>
                 <div className="text-[10px] truncate text-slate-500 dark:text-slate-400">
-                  {userEmail}
+                  {user?.email}
                 </div>
               </div>
             </button>

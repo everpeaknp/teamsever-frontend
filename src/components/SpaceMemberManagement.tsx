@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { X, Shield, Edit, MessageSquare, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -38,6 +38,7 @@ interface SpaceMember {
   name: string;
   email: string;
   avatar?: string;
+  profilePicture?: string;
   workspaceRole: string;
   spacePermissionLevel: SpacePermissionLevel | null;
   hasOverride: boolean;
@@ -195,17 +196,14 @@ export function SpaceMemberManagement({
                     <TableRow key={member._id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarImage src={member.avatar} />
-                            <AvatarFallback
-                              style={{
-                                backgroundColor: spaceColor,
-                                color: 'white',
-                              }}
-                            >
-                              {getInitials(member.name)}
-                            </AvatarFallback>
-                          </Avatar>
+                          <UserAvatar 
+                            user={member} 
+                            className="h-9 w-9" 
+                            style={{
+                              backgroundColor: spaceColor,
+                              color: 'white',
+                            }}
+                          />
                           <div>
                             <p className="font-medium text-sm">{member.name}</p>
                             <p className="text-xs text-muted-foreground">

@@ -6,6 +6,7 @@ export interface User {
   name: string;
   email: string;
   avatar?: string;
+  profilePicture?: string;
 }
 
 export interface Workspace {
@@ -71,6 +72,7 @@ export interface Task {
   tags?: string[];
   order: number;
   isDeleted: boolean;
+  createdBy: User;
   createdAt: string;
   updatedAt: string;
 }

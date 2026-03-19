@@ -50,21 +50,20 @@ export const initializeSocket = (token: string): Socket => {
   });
 
   socket.on('disconnect', (reason) => {
-    // Only handle auth-related disconnects
+    // Log the disconnect reason (e.g., "io server disconnect", "transport close")
+    // Note: Do NOT clear the token here. 'io server disconnect' happens when the server restarts
+    // gracefully via Nodemon. Genuine auth errors are caught by 'connect_error' or Axios 401s.
+    console.log(`[Socket] Disconnected: ${reason}`);
+    
+    // If it was a forced disconnect by the server, we might want to manually reconnect
+    // but socket.io typically handles this or wait for page interactions.
     if (reason === 'io server disconnect') {
-      if (typeof window !== 'undefined') {
-        const currentPath = window.location.pathname;
-        const isPublicPage = currentPath.includes('/login') || currentPath.includes('/register') || currentPath === '/';
-        
-        if (!isPublicPage) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('userId');
-          localStorage.removeItem('userName');
-          localStorage.removeItem('userEmail');
-          window.location.href = '/login';
+      // the disconnection was initiated by the server, you need to reconnect manually
+      setTimeout(() => {
+        if (socket && !isInitializing) {
+          socket.connect();
         }
-      }
+      }, 5000);
     }
   });
 

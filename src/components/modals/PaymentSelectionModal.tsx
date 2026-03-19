@@ -24,6 +24,7 @@ interface PaymentSelectionModalProps {
   memberCount?: number;
   billingCycle?: 'monthly' | 'annual';
   whatsappNumber: string;
+  systemName: string;
 }
 
 export function PaymentSelectionModal({
@@ -32,7 +33,8 @@ export function PaymentSelectionModal({
   plan,
   memberCount = 1,
   billingCycle = 'annual',
-  whatsappNumber
+  whatsappNumber,
+  systemName,
 }: PaymentSelectionModalProps) {
   const [processingEsewa, setProcessingEsewa] = useState(false);
 
@@ -88,7 +90,7 @@ export function PaymentSelectionModal({
     const userName = localStorage.getItem('userName') || 'User';
     
     const billingText = billingCycle === 'monthly' ? 'month' : 'year';
-    const message = `Hi, I want to upgrade to the ${plan.name} plan.\n\nUser Details:\n- Name: ${userName}\n- User ID: ${userId}\n- Billing Cycle: ${billingCycle.charAt(0).toUpperCase() + billingCycle.slice(1)}\n- Team Members: ${memberCount}\n- Total Amount: ${totalAmount} ${plan.baseCurrency}/${billingText}\n\nPlease help me with the payment process.`;
+    const message = `Hi, I want to upgrade to the ${plan.name} plan on ${systemName}.\n\nUser Details:\n- Name: ${userName}\n- User ID: ${userId}\n- Billing Cycle: ${billingCycle.charAt(0).toUpperCase() + billingCycle.slice(1)}\n- Team Members: ${memberCount}\n- Total Amount: ${totalAmount} ${plan.baseCurrency}/${billingText}\n\nPlease help me with the payment process.`;
     
     const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
     

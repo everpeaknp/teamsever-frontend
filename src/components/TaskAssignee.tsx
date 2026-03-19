@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { User, UserPlus } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   Popover,
   PopoverContent,
@@ -16,6 +16,7 @@ interface Member {
   name: string;
   email: string;
   avatar?: string;
+  profilePicture?: string;
 }
 
 interface TaskAssigneeProps {
@@ -59,12 +60,11 @@ export function TaskAssignee({
           disabled={disabled}
         >
           {currentAssignee ? (
-            <Avatar className="h-8 w-8">
-              <AvatarImage src={currentAssignee.avatar} />
-              <AvatarFallback style={{ backgroundColor: spaceColor, color: 'white' }}>
-                {getInitials(currentAssignee.name)}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar 
+              user={currentAssignee} 
+              className="h-8 w-8" 
+              style={{ backgroundColor: spaceColor, color: 'white' }}
+            />
           ) : (
             <div className="h-8 w-8 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary transition-colors">
               <UserPlus className="h-4 w-4 text-muted-foreground" />
@@ -97,12 +97,11 @@ export function TaskAssignee({
                 }`}
                 onClick={() => handleAssign(member._id, member.name)}
               >
-                <Avatar className="h-8 w-8 mr-2">
-                  <AvatarImage src={member.avatar} />
-                  <AvatarFallback style={{ backgroundColor: spaceColor, color: 'white' }}>
-                    {getInitials(member.name)}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar 
+                  user={member} 
+                  className="h-8 w-8 mr-2" 
+                  style={{ backgroundColor: spaceColor, color: 'white' }}
+                />
                 <div className="flex flex-col items-start">
                   <span className="text-sm font-medium">{member.name}</span>
                   <span className="text-xs text-muted-foreground">{member.email}</span>

@@ -24,6 +24,8 @@ interface AdminUser {
     planBaseCurrency: 'USD' | 'NPR';
     isPaid: boolean;
     status: "free" | "active" | "expired";
+    billingCycle: "monthly" | "annual";
+    memberCount: number;
     expiresAt?: string;
     daysRemaining?: number;
   };
@@ -37,6 +39,32 @@ export default function UserManagementNew() {
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string>("");
+  const [assignMemberCount, setAssignMemberCount] = useState<number>(1);
+  const [assignBillingCycle, setAssignBillingCycle] = useState<"monthly" | "annual">("monthly");
+  const [featureOverrides, setFeatureOverrides] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (selectedPlan) {
+      const plan = plans.find(p => p._id === selectedPlan);
+      if (plan && plan.features) {
+        setFeatureOverrides({
+          maxWorkspaces: plan.features.maxWorkspaces ?? 0,
+          maxMembers: plan.features.maxMembers ?? 0,
+          maxAdmins: plan.features.maxAdmins ?? 0,
+          maxSpaces: plan.features.maxSpaces ?? 0,
+          maxLists: plan.features.maxLists ?? 0,
+          maxFolders: plan.features.maxFolders ?? 0,
+          maxTasks: plan.features.maxTasks ?? 0,
+          maxTablesCount: plan.features.maxTablesCount ?? 0,
+          maxRowsLimit: plan.features.maxRowsLimit ?? 0,
+          maxColumnsLimit: plan.features.maxColumnsLimit ?? 0,
+          maxFiles: plan.features.maxFiles ?? 0,
+          maxDocuments: plan.features.maxDocuments ?? 0,
+          maxDirectMessagesPerUser: plan.features.maxDirectMessagesPerUser ?? 0,
+        });
+      }
+    }
+  }, [selectedPlan, plans]);
 
   useEffect(() => {
     fetchUsers();
@@ -77,6 +105,14 @@ export default function UserManagementNew() {
     }
   };
 
+  useEffect(() => {
+    if (selectedUser) {
+      setSelectedPlan(selectedUser.subscription.planId || "");
+      setAssignMemberCount(selectedUser.subscription.memberCount || 1);
+      setAssignBillingCycle(selectedUser.subscription.billingCycle || "monthly");
+    }
+  }, [selectedUser]);
+
   const togglePaidStatus = async (userId: string, currentStatus: boolean) => {
     if (!currentStatus && !selectedPlan) {
       toast.error("Please select a plan first");
@@ -97,6 +133,9 @@ export default function UserManagementNew() {
           body: JSON.stringify({
             isPaid: !currentStatus,
             planId: !currentStatus ? selectedPlan : undefined,
+            memberCount: !currentStatus ? assignMemberCount : undefined,
+            billingCycle: !currentStatus ? assignBillingCycle : undefined,
+            featureOverrides: !currentStatus ? featureOverrides : undefined,
           }),
         }
       );
@@ -105,6 +144,9 @@ export default function UserManagementNew() {
         fetchUsers();
         setSelectedUser(null);
         setSelectedPlan("");
+        setAssignMemberCount(1);
+        setAssignBillingCycle("monthly");
+        setFeatureOverrides({});
       } else {
         toast.error("Failed to update subscription");
       }
@@ -296,7 +338,7 @@ export default function UserManagementNew() {
                     Workspaces
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Plan
+                    Plan / Seats
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Status
@@ -337,7 +379,10 @@ export default function UserManagementNew() {
                             amount={user.subscription.planPrice} 
                             baseCurrency={user.subscription.planBaseCurrency || 'NPR'} 
                             showCurrencyCode={false} 
-                          />/mo
+                          /> / {user.subscription.billingCycle === 'annual' ? 'yr' : 'mo'}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {user.subscription.memberCount} seats • {user.subscription.billingCycle}
                         </p>
                       </div>
                     </td>
@@ -371,13 +416,13 @@ export default function UserManagementNew() {
                     <td className="px-4 py-4 whitespace-nowrap">
                       {selectedUser?._id === user._id && !user.subscription.isPaid ? (
                         <div className="flex items-center gap-2">
-                          <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                           <Select value={selectedPlan} onValueChange={setSelectedPlan}>
                             <SelectTrigger className="w-[180px]">
                               <SelectValue placeholder="Select Plan" />
                             </SelectTrigger>
                             <SelectContent>
                               {plans.map((plan) => {
-                                const price = plan.basePrice || plan.price;
+                                const price = plan.pricePerMemberMonthly || plan.basePrice || plan.price;
                                 const baseCurrency = plan.baseCurrency || 'NPR';
                                 return (
                                   <SelectItem key={plan._id} value={plan._id}>
@@ -391,6 +436,68 @@ export default function UserManagementNew() {
                               })}
                             </SelectContent>
                           </Select>
+
+                          {/* New: Member Count & Billing Cycle */}
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              max="1000"
+                              value={assignMemberCount}
+                              onChange={(e) => setAssignMemberCount(parseInt(e.target.value) || 1)}
+                              className="w-16 h-9 px-2 text-sm border font-medium rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 text-center"
+                              placeholder="Seats"
+                            />
+                            <Select 
+                              value={assignBillingCycle} 
+                              onValueChange={(v: any) => setAssignBillingCycle(v)}
+                            >
+                              <SelectTrigger className="w-[100px] h-9 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="monthly">Monthly</SelectItem>
+                                <SelectItem value="annual">Annual</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-4 pt-4 border-t">
+                            <h4 className="text-sm font-semibold">Custom Limits (-1 for unlimited)</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              {[
+                                { key: 'maxWorkspaces', label: 'Max Workspaces' },
+                                { key: 'maxMembers', label: 'Max Members' },
+                                { key: 'maxAdmins', label: 'Max Admins' },
+                                { key: 'maxSpaces', label: 'Max Spaces' },
+                                { key: 'maxLists', label: 'Max Lists' },
+                                { key: 'maxFolders', label: 'Max Folders' },
+                                { key: 'maxTasks', label: 'Max Tasks' },
+                                { key: 'maxTablesCount', label: 'Max Tables' },
+                                { key: 'maxRowsLimit', label: 'Max Rows' },
+                                { key: 'maxColumnsLimit', label: 'Max Columns' },
+                                { key: 'maxFiles', label: 'Max Files' },
+                                { key: 'maxDocuments', label: 'Max Docs' },
+                                { key: 'maxDirectMessagesPerUser', label: 'Max DMs' },
+                              ].map((f) => (
+                                <div key={f.key} className="space-y-1.5">
+                                  <label className="text-xs font-medium text-muted-foreground">{f.label}</label>
+                                  <input
+                                    type="number"
+                                    className="w-full px-2 py-1 text-xs border rounded bg-background"
+                                    value={featureOverrides[f.key] ?? 0}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value);
+                                      setFeatureOverrides(prev => ({
+                                        ...prev,
+                                        [f.key]: isNaN(val) ? 0 : val
+                                      }));
+                                    }}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
                           <Button
                             size="sm"
                             onClick={() => togglePaidStatus(user._id, user.subscription.isPaid)}
@@ -463,12 +570,15 @@ export default function UserManagementNew() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Plan:</span>
-                    <span className="font-medium">
-                      {user.subscription.planName} (<CurrencyDisplay 
-                        amount={user.subscription.planPrice} 
-                        baseCurrency={user.subscription.planBaseCurrency || 'NPR'} 
-                        showCurrencyCode={false} 
-                      />/mo)
+                    <span className="font-medium flex flex-col items-end text-right">
+                      <span>{user.subscription.planName} ({user.subscription.memberCount} seats)</span>
+                      <span className="text-[10px] text-muted-foreground font-normal">
+                        <CurrencyDisplay 
+                          amount={user.subscription.planPrice} 
+                          baseCurrency={user.subscription.planBaseCurrency || 'NPR'} 
+                          showCurrencyCode={false} 
+                        /> / {user.subscription.billingCycle === 'annual' ? 'yr' : 'mo'} • {user.subscription.billingCycle || 'monthly'}
+                      </span>
                     </span>
                   </div>
                   {user.subscription.isPaid && user.subscription.status === 'active' && user.subscription.daysRemaining !== undefined && (
@@ -485,14 +595,15 @@ export default function UserManagementNew() {
                     </div>
                   )}
                   {selectedUser?._id === user._id && !user.subscription.isPaid ? (
-                    <div className="space-y-2">
+                    <div className="space-y-4">
+                      {/* Plan Selection */}
                       <Select value={selectedPlan} onValueChange={setSelectedPlan}>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select Plan" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[9999]">
                           {plans.map((plan) => {
-                            const price = plan.basePrice || plan.price;
+                            const price = plan.pricePerMemberMonthly || plan.basePrice || plan.price;
                             const baseCurrency = plan.baseCurrency || 'NPR';
                             return (
                               <SelectItem key={plan._id} value={plan._id}>
@@ -506,6 +617,37 @@ export default function UserManagementNew() {
                           })}
                         </SelectContent>
                       </Select>
+                      
+                      {/* Subscription Details: Seats & Cycle */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Seats</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="1000"
+                            value={assignMemberCount}
+                            onChange={(e) => setAssignMemberCount(parseInt(e.target.value) || 1)}
+                            className="w-full h-10 px-3 text-sm border font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-center"
+                            placeholder="Seats"
+                          />
+                        </div>
+                        <div className="flex-[1.5]">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Billing Cycle</label>
+                          <Select 
+                            value={assignBillingCycle} 
+                            onValueChange={(v: any) => setAssignBillingCycle(v)}
+                          >
+                            <SelectTrigger className="w-full h-10 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="z-[9999]">
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="annual">Annual</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
                       <div className="flex gap-2">
                         <Button
                           className="flex-1"

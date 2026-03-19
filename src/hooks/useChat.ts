@@ -14,6 +14,7 @@ export interface ChatMessage {
     name: string;
     email: string;
     avatar?: string;
+    profilePicture?: string;
   };
   content: string;
   type?: 'text' | 'system';

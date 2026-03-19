@@ -3,6 +3,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { initializeSocket, disconnectSocket, getSocket } from '@/lib/socket';
+import { api } from '@/lib/axios';
+import { useChatStore } from '@/store/useChatStore';
+import { useNotificationStore } from '@/store/useNotificationStore';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -105,10 +108,22 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setIsConnecting(false);
       }
 
-      const handleConnect = () => {
+      const handleConnect = async () => {
         console.log('[SocketContext] ✓ Connected');
         setIsConnected(true);
         setIsConnecting(false);
+
+        // Join all workspace rooms to receive chat updates globally
+        try {
+          const response = await api.get('/workspaces');
+          const workspaces = response.data.data || [];
+          workspaces.forEach((ws: any) => {
+            console.log(`[SocketContext] Joining workspace room: ${ws._id}`);
+            socketInstance.emit('join_workspace', { workspaceId: ws._id });
+          });
+        } catch (error) {
+          console.error('[SocketContext] Failed to join workspace rooms:', error);
+        }
       };
 
       const handleDisconnect = () => {
@@ -129,10 +144,70 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setOnlineUsers(data.onlineUsers);
       };
 
+      const handleGlobalChatMessage = (data: { message: any }) => {
+        const { addMessage, activeRoomId } = useChatStore.getState();
+        const { showBrowserNotification, permission } = useNotificationStore.getState();
+        
+        const roomId = `workspace_${data.message.workspace}`;
+        addMessage(roomId, data.message);
+
+        // Browser notification if applicable
+        const storedUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+        const isFromOthers = data.message.sender._id !== storedUserId;
+        const isDifferentRoom = activeRoomId !== roomId;
+
+        if (isFromOthers && isDifferentRoom) {
+          showBrowserNotification(
+            `New message in ${data.message.workspaceName || 'Chat'}`,
+            `${data.message.sender.name}: ${data.message.content}`,
+            { workspaceId: data.message.workspace }
+          );
+        }
+      };
+
+      const handleGlobalDM = (data: { message: any; conversation: any }) => {
+        const { addMessage, activeRoomId } = useChatStore.getState();
+        const { showBrowserNotification, permission } = useNotificationStore.getState();
+        
+        const roomId = data.message.conversation;
+        addMessage(roomId, data.message);
+
+        // Browser notification if applicable
+        const storedUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+        const isFromOthers = data.message.sender._id !== storedUserId;
+        const isDifferentRoom = activeRoomId !== roomId;
+
+        if (isFromOthers && isDifferentRoom) {
+          showBrowserNotification(
+            `New DM from ${data.message.sender.name}`,
+            data.message.content,
+            { conversationId: roomId }
+          );
+        }
+      };
+
+      const handleGlobalNotification = (data: { notification: any }) => {
+        const { addNotification } = useNotificationStore.getState();
+        const { showBrowserNotification } = useNotificationStore.getState();
+        
+        // Add to local notification store
+        addNotification(data.notification);
+
+        // Show browser notification
+        showBrowserNotification(
+          data.notification.title || 'New Notification',
+          data.notification.body || '',
+          { resourceId: data.notification.resourceId, resourceType: data.notification.resourceType }
+        );
+      };
+
       socketInstance.on('connect', handleConnect);
       socketInstance.on('disconnect', handleDisconnect);
       socketInstance.on('connect_error', handleConnectError);
       socketInstance.on('presence:update', handlePresenceUpdate);
+      socketInstance.on('chat:new', handleGlobalChatMessage);
+      socketInstance.on('dm:new', handleGlobalDM);
+      socketInstance.on('notification:new', handleGlobalNotification);
 
       // Cleanup only removes listeners, doesn't disconnect
       return () => {
@@ -141,6 +216,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         socketInstance.off('disconnect', handleDisconnect);
         socketInstance.off('connect_error', handleConnectError);
         socketInstance.off('presence:update', handlePresenceUpdate);
+        socketInstance.off('chat:new', handleGlobalChatMessage);
+        socketInstance.off('dm:new', handleGlobalDM);
+        socketInstance.off('notification:new', handleGlobalNotification);
       };
     } catch (error) {
       console.error('[SocketContext] Failed to initialize socket:', error);

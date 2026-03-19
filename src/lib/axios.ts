@@ -26,10 +26,10 @@ api.interceptors.request.use(
         return config;
       }
       
-      // Try both 'token' and 'authToken' for backwards compatibility
-      let token = localStorage.getItem('token');
+      // Prioritize 'authToken' as it is the current standard
+      let token = localStorage.getItem('authToken');
       if (!token || token === 'undefined' || token === 'null') {
-        token = localStorage.getItem('authToken');
+        token = localStorage.getItem('token');
       }
       
       // STRICT VALIDATION: Block request if token is invalid

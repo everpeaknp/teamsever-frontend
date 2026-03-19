@@ -533,10 +533,15 @@ export default function EditPlanPage() {
                       <Input
                         type="number"
                         placeholder="-1 for unlimited"
-                        value={formData.maxTablesCount === -1 ? '' : formData.maxTablesCount}
+                        value={formData.maxTablesCount}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setFormData({ ...formData, maxTablesCount: val === '' ? -1 : parseInt(val) });
+                          if (val === '' || val === '-' || val === '-1') {
+                            setFormData({ ...formData, maxTablesCount: val === '' ? -1 : parseInt(val) || -1 });
+                          } else {
+                            const num = parseInt(val);
+                            if (!isNaN(num)) setFormData({ ...formData, maxTablesCount: num });
+                          }
                         }}
                         min="-1"
                       />
@@ -546,10 +551,15 @@ export default function EditPlanPage() {
                       <Input
                         type="number"
                         placeholder="-1 for unlimited"
-                        value={formData.maxRowsLimit === -1 ? '' : formData.maxRowsLimit}
+                        value={formData.maxRowsLimit}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setFormData({ ...formData, maxRowsLimit: val === '' ? -1 : parseInt(val) });
+                          if (val === '' || val === '-' || val === '-1') {
+                            setFormData({ ...formData, maxRowsLimit: val === '' ? -1 : parseInt(val) || -1 });
+                          } else {
+                            const num = parseInt(val);
+                            if (!isNaN(num)) setFormData({ ...formData, maxRowsLimit: num });
+                          }
                         }}
                         min="-1"
                       />
@@ -559,10 +569,15 @@ export default function EditPlanPage() {
                       <Input
                         type="number"
                         placeholder="-1 for unlimited"
-                        value={formData.maxColumnsLimit === -1 ? '' : formData.maxColumnsLimit}
+                        value={formData.maxColumnsLimit}
                         onChange={(e) => {
                           const val = e.target.value;
-                          setFormData({ ...formData, maxColumnsLimit: val === '' ? -1 : parseInt(val) });
+                          if (val === '' || val === '-' || val === '-1') {
+                            setFormData({ ...formData, maxColumnsLimit: val === '' ? -1 : parseInt(val) || -1 });
+                          } else {
+                            const num = parseInt(val);
+                            if (!isNaN(num)) setFormData({ ...formData, maxColumnsLimit: num });
+                          }
                         }}
                         min="-1"
                       />
@@ -589,10 +604,15 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     placeholder="-1 for unlimited"
-                    value={formData.maxFiles === -1 ? '' : formData.maxFiles}
+                    value={formData.maxFiles}
                     onChange={(e) => {
                       const val = e.target.value;
-                      setFormData({ ...formData, maxFiles: val === '' ? -1 : parseInt(val) });
+                      if (val === '' || val === '-' || val === '-1') {
+                        setFormData({ ...formData, maxFiles: val === '' ? -1 : parseInt(val) || -1 });
+                      } else {
+                        const num = parseInt(val);
+                        if (!isNaN(num)) setFormData({ ...formData, maxFiles: num });
+                      }
                     }}
                     min="-1"
                   />
@@ -605,10 +625,15 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     placeholder="-1 for unlimited"
-                    value={formData.maxDocuments === -1 ? '' : formData.maxDocuments}
+                    value={formData.maxDocuments}
                     onChange={(e) => {
                       const val = e.target.value;
-                      setFormData({ ...formData, maxDocuments: val === '' ? -1 : parseInt(val) });
+                      if (val === '' || val === '-' || val === '-1') {
+                        setFormData({ ...formData, maxDocuments: val === '' ? -1 : parseInt(val) || -1 });
+                      } else {
+                        const num = parseInt(val);
+                        if (!isNaN(num)) setFormData({ ...formData, maxDocuments: num });
+                      }
                     }}
                     min="-1"
                   />
@@ -621,10 +646,15 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     placeholder="-1 for unlimited"
-                    value={formData.maxDirectMessagesPerUser === -1 ? '' : formData.maxDirectMessagesPerUser}
+                    value={formData.maxDirectMessagesPerUser}
                     onChange={(e) => {
                       const val = e.target.value;
-                      setFormData({ ...formData, maxDirectMessagesPerUser: val === '' ? -1 : parseInt(val) });
+                      if (val === '' || val === '-' || val === '-1') {
+                        setFormData({ ...formData, maxDirectMessagesPerUser: val === '' ? -1 : parseInt(val) || -1 });
+                      } else {
+                        const num = parseInt(val);
+                        if (!isNaN(num)) setFormData({ ...formData, maxDirectMessagesPerUser: num });
+                      }
                     }}
                     min="-1"
                   />

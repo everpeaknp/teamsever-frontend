@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { useTaskSidebarStore } from '@/store/useTaskSidebarStore';
 import { api } from '@/lib/axios';
 import {
@@ -33,6 +34,7 @@ import {
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 interface Task {
   _id: string;
@@ -70,10 +72,12 @@ interface Task {
 interface Comment {
   _id: string;
   content: string;
-  user: {
+  author: {
     _id: string;
     name: string;
     email: string;
+    profilePicture?: string;
+    avatar?: string;
   };
   createdAt: string;
 }
@@ -119,6 +123,12 @@ export function TaskDetailSidebar() {
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<Task['status']>('todo');
   const [priority, setPriority] = useState<Task['priority']>('medium');
+  const [startDate, setStartDate] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [deadline, setDeadline] = useState('');
+  const [assigneeId, setAssigneeId] = useState('null');
+  const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
+  const [commentText, setCommentText] = useState('');
 
   // Debounce timer
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
@@ -138,6 +148,10 @@ export function TaskDetailSidebar() {
       setDescription(taskData.description || '');
       setStatus(taskData.status);
       setPriority(taskData.priority);
+      setStartDate(taskData.startDate ? new Date(taskData.startDate).toISOString().split('T')[0] : '');
+      setDueDate(taskData.dueDate ? new Date(taskData.dueDate).toISOString().split('T')[0] : '');
+      setDeadline(taskData.deadline ? new Date(taskData.deadline).toISOString().split('T')[0] : '');
+      setAssigneeId(taskData.assignee?._id || 'null');
     } catch (err: any) {
       console.error('Failed to fetch task:', err);
       setError(err.response?.data?.message || 'Failed to load task');
@@ -151,6 +165,21 @@ export function TaskDetailSidebar() {
       fetchTask();
     }
   }, [isOpen, taskId, fetchTask]);
+
+  // Fetch workspace members for assignee selection
+  useEffect(() => {
+    const fetchMembers = async () => {
+      if (task?.list?.space?.workspace?._id) {
+        try {
+          const response = await api.get(`/workspaces/${task.list.space.workspace._id}/members`);
+          setWorkspaceMembers(response.data.data || []);
+        } catch (err) {
+          console.error('Failed to fetch members:', err);
+        }
+      }
+    };
+    fetchMembers();
+  }, [task?.list?.space?.workspace?._id]);
 
   // Auto-save with debounce
   const autoSave = useCallback(async (field: string, value: any) => {
@@ -203,6 +232,46 @@ export function TaskDetailSidebar() {
   const handlePriorityChange = (newPriority: Task['priority']) => {
     setPriority(newPriority);
     autoSave('priority', newPriority);
+  };
+
+  // Handle Date changes
+  const handleStartDateChange = (val: string) => {
+    setStartDate(val);
+    autoSave('startDate', val || null);
+  };
+
+  const handleDueDateChange = (val: string) => {
+    setDueDate(val);
+    autoSave('dueDate', val || null);
+  };
+
+  const handleDeadlineChange = (val: string) => {
+    setDeadline(val);
+    autoSave('deadline', val || null);
+  };
+
+  // Handle Assignee change
+  const handleAssigneeChange = (val: string) => {
+    const newVal = val === 'null' ? null : val;
+    setAssigneeId(val);
+    autoSave('assignee', newVal);
+  };
+
+  // Handle comment submit
+  const handleCommentSubmit = async () => {
+    if (!taskId || !commentText.trim() || saving) return;
+
+    try {
+      setSaving(true);
+      await api.post(`/tasks/${taskId}/comments`, { content: commentText });
+      setCommentText('');
+      await fetchTask(); // Refresh comments
+    } catch (err: any) {
+      console.error('Failed to submit comment:', err);
+      toast.error(err.response?.data?.message || 'Failed to submit comment');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Handle ESC key
@@ -338,9 +407,19 @@ export function TaskDetailSidebar() {
                       <User className="w-3 h-3" />
                       Assignee
                     </Label>
-                    <p className="text-sm font-medium">
-                      {task.assignee?.name || 'Unassigned'}
-                    </p>
+                    <Select value={assigneeId} onValueChange={handleAssigneeChange}>
+                      <SelectTrigger className="h-8 border-none p-0 focus:ring-0 bg-transparent hover:bg-slate-50">
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="null">Unassigned</SelectItem>
+                        {workspaceMembers.map((member) => (
+                          <SelectItem key={member._id} value={member._id}>
+                            {member.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-1">
@@ -348,7 +427,12 @@ export function TaskDetailSidebar() {
                       <Calendar className="w-3 h-3" />
                       Due Date
                     </Label>
-                    <p className="text-sm font-medium">{formatDate(task.dueDate)}</p>
+                    <Input 
+                      type="date" 
+                      value={dueDate} 
+                      onChange={(e) => handleDueDateChange(e.target.value)}
+                      className="h-8 border-none p-0 focus-visible:ring-0 bg-transparent text-sm font-medium"
+                    />
                   </div>
 
                   <div className="space-y-1">
@@ -356,7 +440,25 @@ export function TaskDetailSidebar() {
                       <Clock className="w-3 h-3" />
                       Start Date
                     </Label>
-                    <p className="text-sm font-medium">{formatDate(task.startDate)}</p>
+                    <Input 
+                      type="date" 
+                      value={startDate} 
+                      onChange={(e) => handleStartDateChange(e.target.value)}
+                      className="h-8 border-none p-0 focus-visible:ring-0 bg-transparent text-sm font-medium"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs text-gray-500 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Deadline
+                    </Label>
+                    <Input 
+                      type="date" 
+                      value={deadline} 
+                      onChange={(e) => handleDeadlineChange(e.target.value)}
+                      className="h-8 border-none p-0 focus-visible:ring-0 bg-transparent text-sm font-medium"
+                    />
                   </div>
 
                   <div className="space-y-1">
@@ -364,7 +466,7 @@ export function TaskDetailSidebar() {
                       <Timer className="w-3 h-3" />
                       Time Spent
                     </Label>
-                    <p className="text-sm font-medium">{formatTimeSpent(task.timeSpent)}</p>
+                    <p className="text-sm font-medium h-8 flex items-center">{formatTimeSpent(task.timeSpent)}</p>
                   </div>
                 </div>
 
@@ -431,11 +533,10 @@ export function TaskDetailSidebar() {
                       <div className="space-y-3">
                         {task.activity.map((activity) => (
                           <div key={activity._id} className="flex gap-3 text-sm">
-                            <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                              <span className="text-xs font-medium text-purple-600">
-                                {activity.user.name.charAt(0)}
-                              </span>
-                            </div>
+                          <UserAvatar 
+                            user={activity.user} 
+                            className="w-6 h-6 flex-shrink-0" 
+                          />
                             <div className="flex-1">
                               <p className="text-gray-700">
                                 <span className="font-medium">{activity.user.name}</span>{' '}
@@ -474,14 +575,13 @@ export function TaskDetailSidebar() {
                     <div className="space-y-4">
                       {task.comments.map((comment) => (
                         <div key={comment._id} className="flex gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm font-medium text-blue-600">
-                              {comment.user.name.charAt(0)}
-                            </span>
-                          </div>
+                          <UserAvatar 
+                            user={comment.author} 
+                            className="w-8 h-8 flex-shrink-0" 
+                          />
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">{comment.user.name}</span>
+                              <span className="text-sm font-medium">{comment.author.name}</span>
                               <span className="text-xs text-gray-500">
                                 {new Date(comment.createdAt).toLocaleString()}
                               </span>
@@ -498,15 +598,23 @@ export function TaskDetailSidebar() {
                     <Input
                       placeholder="Add a comment..."
                       className="flex-1"
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
-                          // TODO: Implement comment submission
-                          console.log('Submit comment');
+                          handleCommentSubmit();
                         }
                       }}
+                      disabled={saving}
                     />
-                    <Button size="sm">Send</Button>
+                    <Button 
+                      size="sm" 
+                      onClick={handleCommentSubmit}
+                      disabled={saving || !commentText.trim()}
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send'}
+                    </Button>
                   </div>
                 </div>
               </div>

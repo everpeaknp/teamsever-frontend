@@ -6,16 +6,19 @@ import { DashboardIcon, CardStackIcon, PersonIcon, Cross2Icon, ArrowLeftIcon, Ha
 import AnalyticsDashboard from "@/components/super-admin/AnalyticsDashboard";
 import PlanBuilderNew from "@/components/super-admin/PlanBuilderNew";
 import UserManagementNew from "@/components/super-admin/UserManagementNew";
+import SystemSettings from "@/components/super-admin/SystemSettings";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CurrencySwitcherDark } from "@/components/currency/CurrencySwitcherDark";
+import { GearIcon } from "@radix-ui/react-icons";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 export default function SuperAdminDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<"dashboard" | "plans" | "users">(
-    (tabParam as "dashboard" | "plans" | "users") || "dashboard"
+  const [activeTab, setActiveTab] = useState<"dashboard" | "plans" | "users" | "settings">(
+    (tabParam as "dashboard" | "plans" | "users" | "settings") || "dashboard"
   );
   const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // For desktop minimize
@@ -30,10 +33,12 @@ export default function SuperAdminDashboard() {
     }
   }, [router]);
 
+  const { systemName } = useSystemSettings();
+
   // Update active tab when URL changes
   useEffect(() => {
-    if (tabParam && ['dashboard', 'plans', 'users'].includes(tabParam)) {
-      setActiveTab(tabParam as "dashboard" | "plans" | "users");
+    if (tabParam && ['dashboard', 'plans', 'users', 'settings'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
     }
   }, [tabParam]);
 
@@ -41,6 +46,7 @@ export default function SuperAdminDashboard() {
     { id: "dashboard", label: "Analytics", icon: DashboardIcon },
     { id: "plans", label: "Plans", icon: CardStackIcon },
     { id: "users", label: "Users", icon: PersonIcon },
+    { id: "settings", label: "Settings", icon: GearIcon },
   ];
 
   return (
@@ -63,7 +69,7 @@ export default function SuperAdminDashboard() {
             <>
               <div>
                 <h1 className="text-lg sm:text-xl font-bold text-white">Super Admin</h1>
-                <p className="text-xs sm:text-sm text-gray-400 mt-1">Teamsever</p>
+                <p className="text-xs sm:text-sm text-gray-400 mt-1">{systemName}</p>
               </div>
               <Button
                 variant="ghost"
@@ -186,6 +192,7 @@ export default function SuperAdminDashboard() {
           {activeTab === "dashboard" && <AnalyticsDashboard />}
           {activeTab === "plans" && <PlanBuilderNew />}
           {activeTab === "users" && <UserManagementNew />}
+          {activeTab === "settings" && <SystemSettings />}
         </div>
       </main>
     </div>

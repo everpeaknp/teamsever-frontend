@@ -29,6 +29,10 @@ const PageLoadingIndicator = dynamic(
   () => import('@/components/layout/PageLoadingIndicator').then(mod => mod.PageLoadingIndicator),
   { ssr: false }
 );
+const TaskDetailSidebar = dynamic(
+  () => import('@/components/tasks/TaskDetailSidebar').then(mod => mod.TaskDetailSidebar),
+  { ssr: false }
+);
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -62,6 +66,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
     <SearchProvider>
       <NavigationLoader />
       <PageLoadingIndicator />
+      <TaskDetailSidebar />
       <Toaster position="top-right" richColors />
       {showShell && <GlobalTimer />}
 
