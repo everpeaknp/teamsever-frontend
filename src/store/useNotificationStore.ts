@@ -46,7 +46,7 @@ interface NotificationStore {
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   notifications: [],
   unreadCount: 0,
-  permission: typeof window !== 'undefined' ? Notification.permission : 'default',
+  permission: (typeof window !== 'undefined' && typeof Notification !== 'undefined') ? Notification.permission : 'default',
   isLoading: false,
   fcmToken: null,
 
@@ -106,14 +106,13 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   requestPermission: async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      console.error('❌ Notifications not supported in this browser');
+    if (typeof window === 'undefined' || typeof Notification === 'undefined') {
+      console.warn('⚠️ Notifications not supported in this environment');
       return 'denied';
     }
 
     try {
       console.log('🔔 Requesting browser notification permission...');
-      console.log('🔔 Current permission:', Notification.permission);
       
       // If already granted, just initialize FCM
       if (Notification.permission === 'granted') {
@@ -133,8 +132,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       if (permission === 'granted') {
         console.log('✅ Permission granted, initializing FCM...');
         await get().initializeFCM();
-      } else {
-        console.log('⚠️ Permission not granted:', permission);
       }
       
       return permission;
@@ -145,7 +142,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   showBrowserNotification: (title, body, data) => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
+    if (typeof window === 'undefined' || typeof Notification === 'undefined') {
       return;
     }
 
@@ -243,7 +240,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   syncPermission: () => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
+    if (typeof window !== 'undefined' && typeof Notification !== 'undefined') {
       const currentPermission = Notification.permission;
       console.log('🔄 Syncing permission:', currentPermission);
       set({ permission: currentPermission });

@@ -4,12 +4,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-comp
 
 // Initialize Firebase in the service worker
 firebase.initializeApp({
-  apiKey: "AIzaSyBirNNnpfILuQd4GWgfiMebesmc27i53LM",
-  authDomain: "clickup-cff5e.firebaseapp.com",
-  projectId: "clickup-cff5e",
-  storageBucket: "clickup-cff5e.firebasestorage.app",
-  messagingSenderId: "358123056186",
-  appId: "1:358123056186:web:4dca3faa95d9de245dd903"
+  apiKey: "AIzaSyAABzTocHiI8xvfevE4QvZwkUj7hF5PIxI",
+  authDomain: "teamsever-44340.firebaseapp.com",
+  projectId: "teamsever-44340",
+  storageBucket: "teamsever-44340.firebasestorage.app",
+  messagingSenderId: "279440133056",
+  appId: "1:279440133056:web:7ba552b4f6716490e8d625"
 });
 
 // Retrieve an instance of Firebase Messaging
