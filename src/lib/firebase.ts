@@ -13,15 +13,23 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app: FirebaseApp;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
+let app: any;
+const isConfigValid = firebaseConfig.apiKey && firebaseConfig.apiKey !== 'undefined';
+
+if (isConfigValid) {
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApps()[0];
+  }
 } else {
-  app = getApps()[0];
+  // Graceful fallback during build or if keys are missing
+  console.warn("Firebase API Key is missing. Skipping initialization.");
+  app = { name: '[DEFAULT]', options: {}, automaticDataCollectionEnabled: false }; 
 }
 
 // Initialize Firebase Auth
-export const auth: Auth = getAuth(app);
+export const auth: Auth = isConfigValid ? getAuth(app) : {} as Auth;
 
 // Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
