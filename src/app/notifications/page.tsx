@@ -393,8 +393,8 @@ export default function NotificationsPage() {
                 <h3 className="font-medium text-blue-900 dark:text-blue-300 mb-1">
                   Enable Desktop Notifications
                 </h3>
-                <p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
-                  Get notified even when TaskHub is in the background
+                <p className="text-sm text-foreground/60 transition-colors group-hover:text-foreground/80 mt-1">
+                  Get notified even when Teamsever is in the background
                 </p>
                 <button
                   onClick={handleEnableNotifications}

@@ -154,7 +154,7 @@ function JoinPageContent() {
               <div className="size-7 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
                 <Layers className="size-4" />
               </div>
-              <h2 className="text-base font-bold">TaskHub</h2>
+              <h2 className="text-base font-bold">Teamsever</h2>
             </div>
             <div className="inline-flex items-center justify-center size-11 bg-white/20 backdrop-blur-sm rounded-full mb-2">
               <Mail className="size-5 text-white" />
