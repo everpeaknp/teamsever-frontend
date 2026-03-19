@@ -1,4 +1,3 @@
-```javascript
 "use client";
 
 import { useEffect, useState } from "react";
@@ -42,7 +41,8 @@ export default function AnalyticsDashboard() {
   const fetchAnalytics = async () => {
     try {
       const token = localStorage.getItem("authToken");
-      const response = await fetch("http://localhost:5000/api/super-admin/analytics", {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/super-admin/analytics`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -272,4 +272,3 @@ export default function AnalyticsDashboard() {
     </div>
   );
 }
-

@@ -52,7 +52,8 @@ export default function UserManagementNew() {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("authToken");
-      const response = await fetch("http://localhost:5000/api/super-admin/users", {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/super-admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -69,7 +70,8 @@ export default function UserManagementNew() {
   const fetchPlans = async () => {
     try {
       const token = localStorage.getItem("authToken");
-      const response = await fetch("http://localhost:5000/api/plans", {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/plans`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
@@ -89,8 +91,9 @@ export default function UserManagementNew() {
 
     try {
       const token = localStorage.getItem("authToken");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const response = await fetch(
-        `http://localhost:5000/api/super-admin/users/${userId}/subscription`,
+        `${API_URL}/api/super-admin/users/${userId}/subscription`,
         {
           method: "PATCH",
           headers: {

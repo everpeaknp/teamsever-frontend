@@ -59,7 +59,8 @@ export default function PlanBuilderNew() {
     try {
       setLoading(true);
       const token = localStorage.getItem("authToken");
-      const response = await fetch("http://localhost:5000/api/plans?includeInactive=true", {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/plans?includeInactive=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -84,7 +85,8 @@ export default function PlanBuilderNew() {
 
     try {
       const token = localStorage.getItem("authToken");
-      const response = await fetch(`http://localhost:5000/api/plans/${planId}`, {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/plans/${planId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
