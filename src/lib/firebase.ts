@@ -70,40 +70,128 @@ export const initializeMessaging = async (): Promise<Messaging | null> => {
   }
 };
 
+// Global registration state to prevent race conditions
+let swRegistration: ServiceWorkerRegistration | null = null;
+let isRegistering = false;
+
 // Request notification permission and get FCM token
 export const requestNotificationPermission = async (): Promise<string | null> => {
+  if (typeof window === 'undefined' || typeof Notification === 'undefined' || !('serviceWorker' in navigator)) {
+    return null;
+  }
+
+  // Prevent concurrent registrations
+  if (isRegistering) {
+    console.log('🔄 SW registration already in progress, waiting...');
+    while (isRegistering) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    if (swRegistration) {
+      // If another call finished registration, we still need to proceed to get the token
+      return getFCMTokenInternal(swRegistration);
+    }
+  }
+
   try {
     const messagingInstance = await initializeMessaging();
     if (!messagingInstance) {
       return null;
     }
 
-    // Request permission
-    if (typeof Notification === 'undefined') {
-      console.warn('Notification API is not supported in this browser');
-      return null;
-    }
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.log('Notification permission denied');
-      return null;
-    }
-
-    // Get FCM token
     const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
     if (!vapidKey) {
       console.error('VAPID key not configured');
       return null;
     }
 
-    const token = await getToken(messagingInstance, { vapidKey });
-    console.log('FCM Token:', token);
-    return token;
-  } catch (error) {
+    // Request permission
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      console.log('Notification permission denied');
+      return null;
+    }
+
+    // Ensure Service Worker is registered
+    if (!swRegistration) {
+      isRegistering = true;
+      try {
+        console.log('👷 Registering Service Worker...');
+        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      } finally {
+        isRegistering = false;
+      }
+    }
+
+    return await getFCMTokenInternal(swRegistration);
+  } catch (error: any) {
     console.error('Failed to get FCM token:', error);
-    return null;
+    throw error;
   }
 };
+
+// Internal helper to get token once SW is ready
+async function getFCMTokenInternal(registration: ServiceWorkerRegistration): Promise<string | null> {
+  const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+  if (!vapidKey) return null;
+  const messagingInstance = await initializeMessaging();
+  if (!messagingInstance) return null;
+
+  try {
+    // NATIVE PUSH TEST (Bypassing Firebase to see raw error)
+    try {
+      console.log('🧪 Attempting native PushManager subscription...');
+      const sub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: vapidKey.trim()
+      });
+      console.log('✅ Native subscription successful! Unsubscribing to let Firebase take over...', sub);
+      await sub.unsubscribe();
+    } catch (nativeErr: any) {
+      console.error('❌ NATIVE Push Error:', nativeErr);
+    }
+
+    // Wait for service worker to be ready
+    await navigator.serviceWorker.ready;
+    console.log('✅ Service Worker ready. Waiting 2s for stability...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Ensure we are active
+    if (registration.installing) {
+      console.log('⏳ Waiting for SW installation...');
+      await new Promise<void>((resolve) => {
+        registration.installing!.addEventListener('statechange', (e: any) => {
+          if (e.target.state === 'activated') resolve();
+        });
+      });
+    }
+
+    // --- THE FIX: Unsubscribe from old conflicting subscriptions ---
+    try {
+      const existingSub = await registration.pushManager.getSubscription();
+      if (existingSub) {
+        console.log('🗑️ Found old subscription, clearing it...');
+        await existingSub.unsubscribe();
+        console.log('✅ Old subscription cleared');
+      }
+    } catch (subErr) {
+      console.warn('⚠️ Error clearing old subscription:', subErr);
+    }
+    
+    console.log('✅ Service Worker ready and active');
+
+    // Pass the registration directly to getToken
+    const token = await getToken(messagingInstance, { 
+      vapidKey: vapidKey.trim(),
+      serviceWorkerRegistration: registration
+    });
+    
+    console.log('✅ FCM Token received:', token ? 'YES' : 'NO');
+    return token;
+  } catch (swError: any) {
+    console.error('❌ Service Worker / FCM Error:', swError);
+    throw swError;
+  }
+}
 
 // Listen for foreground messages
 export const onMessageListener = async (callback: (payload: any) => void) => {

@@ -149,31 +149,75 @@ export default function NotificationsPage() {
     try {
       console.log('🔔 Requesting notification permission...');
       
-      // First, request basic browser notification permission
-      if (!('Notification' in window)) {
-        alert('This browser does not support notifications');
+      if (typeof window === 'undefined' || !('Notification' in window)) {
+        toast.error('This browser does not support notifications');
         return;
       }
 
-      console.log('🔔 Current permission:', Notification.permission);
-      
       const result = await requestPermission();
-      console.log('🔔 Permission result:', result);
       
       if (result === 'granted') {
         setShowBanner(false);
-        console.log('✅ Notification permission granted!');
-        alert('Browser notifications enabled! You will now receive notifications.');
+        toast.success('Browser notifications enabled!');
       } else if (result === 'denied') {
-        console.log('❌ Notification permission denied');
-        alert('Notification permission was denied. Please enable it in your browser settings.');
-      } else {
-        console.log('⚠️ Notification permission dismissed');
-        alert('Please allow notifications to receive updates.');
+        toast.error('Notification permission was denied. Please check browser settings.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error requesting permission:', error);
-      alert('Failed to enable notifications. Please check browser console for details.');
+      toast.error(`Error: ${error.message}`);
+    }
+  };
+
+  const runDiagnostic = async () => {
+    try {
+      setLoading(true);
+      console.log('🩺 Running FCM Diagnostic...');
+      
+      const results = [];
+      results.push('1. Checking environment variables...');
+      const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+      if (!vapidKey) {
+        results.push('❌ VAPID Key is missing from .env.local');
+      } else {
+        results.push(`✅ VAPID Key found (Length: ${vapidKey.length})`);
+      }
+
+      results.push('\n2. Checking Service Worker state...');
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        results.push(`✅ Found ${registrations.length} registrations`);
+        for (const reg of registrations) {
+          results.push(`  - Status: ${reg.active ? 'Active' : 'Not Active'}`);
+        }
+      } else {
+        results.push('❌ Service Workers not supported in this browser');
+      }
+
+      results.push('\n3. Requesting FCM Token...');
+      const { initializeFCM } = useNotificationStore.getState();
+      
+      try {
+        await initializeFCM();
+        const { fcmToken } = useNotificationStore.getState();
+        if (fcmToken) {
+          results.push(`✅ FCM Token RECEIVED: ${fcmToken.substring(0, 20)}...`);
+          results.push('\n🏆 SUCCESS: Your browser is registered!');
+        } else {
+          results.push('❌ FCM Token: FAILED (Initialization returned null)');
+        }
+      } catch (fcmErr: any) {
+        console.error('FCM Error during diagnostic:', fcmErr);
+        results.push(`❌ FCM Error: ${fcmErr.message}`);
+        if (fcmErr.message.includes('push service error')) {
+          results.push('\n🚨 BRAVE DETECTED: Your Orange Lion (Shields) is likely blocking Google Push Services. Please TURN OFF Shields for localhost and try again.');
+        }
+      }
+
+      alert(`🩺 Diagnostic Results:\n\n${results.join('\n')}`);
+    } catch (error: any) {
+      alert(`❌ Diagnostic Failed with unexpected error: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -298,6 +342,20 @@ export default function NotificationsPage() {
               }`}
             >
               Unread ({unreadCount})
+            </button>
+            <button
+              onClick={runDiagnostic}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 dark:bg-[#262626] text-gray-600 dark:text-slate-400 hover:bg-gray-200 dark:hover:bg-[#333] transition-colors ml-auto flex items-center gap-2"
+            >
+              <AlertCircle className="w-4 h-4" />
+              Run Diagnostic
+            </button>
+            <button
+              onClick={() => useNotificationStore.getState().nuclearReset()}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/30 transition-colors flex items-center gap-2"
+              title="Fix 'no active Service Worker' errors"
+            >
+              Reset Service Workers
             </button>
           </div>
         </div>

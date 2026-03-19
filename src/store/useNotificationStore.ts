@@ -38,8 +38,9 @@ interface NotificationStore {
   setLoading: (loading: boolean) => void;
   requestPermission: () => Promise<NotificationPermission>;
   showBrowserNotification: (title: string, body: string, data?: any) => void;
-  initializeFCM: () => Promise<void>;
+  initializeFCM: (isRetry?: boolean) => Promise<void>;
   setFCMToken: (token: string | null) => void;
+  nuclearReset: () => Promise<void>;
   syncPermission: () => void;
 }
 
@@ -174,19 +175,19 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     }
   },
 
-  initializeFCM: async () => {
+  initializeFCM: async (isRetry: boolean = false) => {
     try {
       console.log('🔔 Initializing FCM...');
       
       // Check if VAPID key is configured
-      const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+      let vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
       if (!vapidKey) {
         console.error('❌ VAPID key not configured in environment variables');
-        console.error('❌ Please add NEXT_PUBLIC_FIREBASE_VAPID_KEY to .env.local');
         return;
       }
       
-      console.log('✅ VAPID key found');
+      vapidKey = vapidKey.trim();
+      console.log(`✅ VAPID key found (Length: ${vapidKey.length})`);
       
       // Request FCM token
       const token = await requestNotificationPermission();
@@ -200,7 +201,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
           const authToken = localStorage.getItem('authToken');
           if (authToken) {
             console.log('📤 Sending FCM token to backend...');
-            await api.post('/notifications/fcm-token', { fcmToken: token });
+            await api.post('/notifications/devices/fcm-token', { fcmToken: token });
             console.log('✅ FCM Token sent to backend');
           } else {
             console.warn('⚠️ No auth token found, skipping backend registration');
@@ -230,13 +231,53 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       }
     } catch (error: any) {
       console.error('❌ Failed to initialize FCM:', error);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error stack:', error.stack);
+      
+      let errorMsg = error.message || 'Unknown error';
+      if (errorMsg.includes('no active Service Worker')) {
+        errorMsg = 'No active Service Worker! If you using BRAVE, please TURN OFF "Shields" for localhost (the Lion icon in address bar) and try again.';
+      } else if (errorMsg.includes('messaging/registration-token-not-registered')) {
+        errorMsg = 'FCM Registration failed. Please check your Firebase Project Settings and VAPID key.';
+      } else if (errorMsg.includes('sender id mismatch')) {
+        errorMsg = 'Project Sender ID mismatch. Ensure your .env.local matches your Firebase Console.';
+      } else if (errorMsg.includes('permission-blocked')) {
+        errorMsg = 'Notification permission is blocked by your browser. Please allow it in the URL bar.';
+      }
+
+      set({ fcmToken: null });
+      
+      // Auto-retry once by unregistering service workers
+      if (!isRetry && errorMsg.includes('push service error')) {
+        console.warn('🔄 Push service error detected. Attempting to unregister service workers and retry...');
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let registration of registrations) {
+            await registration.unregister();
+          }
+          console.log('🧹 All service workers unregistered. Retrying initialization...');
+          return get().initializeFCM(true);
+        }
+      }
+
+      throw new Error(errorMsg);
     }
   },
 
   setFCMToken: (token) => {
     set({ fcmToken: token });
+  },
+
+  nuclearReset: async () => {
+    if (typeof window === 'undefined') return;
+    if (!confirm('This will unregister all service workers and reload the page. Continue?')) return;
+    
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (let registration of registrations) {
+        await registration.unregister();
+      }
+      alert('Service workers cleared. Reloading...');
+      setTimeout(() => window.location.reload(), 1000);
+    }
   },
 
   syncPermission: () => {

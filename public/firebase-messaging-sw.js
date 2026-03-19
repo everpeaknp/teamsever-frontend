@@ -1,6 +1,16 @@
-// Firebase Cloud Messaging Service Worker
+// Give the service worker access to Firebase Messaging.
+// v1.0.3 - Force update for new VAPID key and Sender ID alignment
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+// Force the service worker to activate immediately
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
+});
 
 // Initialize Firebase in the service worker
 firebase.initializeApp({
@@ -17,41 +27,15 @@ const messaging = firebase.messaging();
 
 // Handle background messages
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message:', payload);
+  console.log('[firebase-messaging-sw.js] Received background message ', payload);
   
-  const notificationTitle = payload.notification?.title || 'New Notification';
+  const notificationTitle = payload.notification.title;
   const notificationOptions = {
-    body: payload.notification?.body || 'You have a new notification',
+    body: payload.notification.body,
     icon: '/logo.png',
     badge: '/badge.png',
-    tag: payload.data?.resourceId || 'default',
     data: payload.data,
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
-});
-
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
-  console.log('[firebase-messaging-sw.js] Notification clicked:', event);
-  
-  event.notification.close();
-
-  // Navigate to the appropriate page
-  const urlToOpen = event.notification.data?.url || '/notifications';
-  
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if there's already a window open
-      for (const client of clientList) {
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      // If no window is open, open a new one
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
-  );
 });

@@ -5,6 +5,9 @@ import { Toaster } from 'sonner';
 import dynamic from 'next/dynamic';
 import { SearchProvider } from '@/components/search/SearchProvider';
 import { NavigationLoader } from '@/components/layout/NavigationLoader';
+import { useNotificationStore } from '@/store/useNotificationStore';
+import { useEffect } from 'react';
+import { api } from '@/lib/axios';
 
 // Dynamic imports so these heavy components are excluded from pages that don't need them
 const AppSidebar = dynamic(
@@ -40,6 +43,20 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const isSuperAdminPage = pathname?.startsWith('/super-admin');
   const isStandalonePage = isDashboardPage || isSuperAdminPage || pathname === '/';
   const showShell = !isAuthPage && !isStandalonePage;
+
+  const { initializeFCM, syncPermission } = useNotificationStore();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && typeof Notification !== 'undefined') {
+      // Sync the permission state in the store
+      syncPermission();
+
+      // If already granted, ensure FCM is initialized and token is sent to backend
+      if (Notification.permission === 'granted') {
+        initializeFCM();
+      }
+    }
+  }, [initializeFCM, syncPermission]);
 
   return (
     <SearchProvider>
