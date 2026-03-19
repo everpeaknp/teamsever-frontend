@@ -1,0 +1,720 @@
+'use client';
+
+import React, { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
+import { usePathname, useParams, useRouter } from 'next/navigation';
+import {
+  Inbox,
+  Bell,
+  Settings as SettingsIcon,
+  Plus,
+  Star,
+  ChevronDown,
+  Loader2,
+  User,
+  Users,
+  BarChart3,
+  FileText,
+  MoreHorizontal,
+  MessageSquare,
+  Palette,
+  FolderOpen,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from 'next-themes';
+import { useUIStore } from '@/store/useUIStore';
+import { useModalStore } from '@/store/useModalStore';
+import { usePermissions, useWorkspaceContext } from '@/store/useAuthStore';
+import { useNotificationStore } from '@/store/useNotificationStore';
+import { useThemeStore, accentColors, getGradientColor } from '@/store/useThemeStore';
+import { useWorkspaceStore } from '@/store/useWorkspaceStore';
+import { HierarchyItemComponent } from './HierarchyItem';
+import { CreateItemModal } from '@/components/modals/CreateItemModal';
+import { EditSpaceModal } from '@/components/modals/EditSpaceModal';
+import { EditFolderModal } from '@/components/modals/EditFolderModal';
+import { EditListModal } from '@/components/modals/EditListModal';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { api } from '@/lib/axios';
+import UpgradeButton from '@/components/subscription/UpgradeButton';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
+
+export function ClickUpSidebar() {
+  const pathname = usePathname();
+  const params = useParams();
+  const router = useRouter();
+  const { favoriteIds, isSidebarOpen } = useUIStore();
+  const { openModal, setOnSuccess } = useModalStore();
+  const { can, isAdmin, isOwner } = usePermissions();
+  const { setWorkspaceContext } = useWorkspaceContext();
+  const { unreadCount } = useNotificationStore();
+  const { accentColor } = useThemeStore();
+  const { resolvedTheme } = useTheme();
+  const themeMode = resolvedTheme || 'light';
+  const { subscription, nextPlan } = useSubscription();
+  const { whatsappNumber } = useSystemSettings();
+
+  // Use workspace store instead of local state
+  const { hierarchy, loading, error, fetchHierarchy } = useWorkspaceStore();
+  const [userName, setUserName] = useState('User');
+  const [userEmail, setUserEmail] = useState('user@example.com');
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState(false);
+  const [allWorkspaces, setAllWorkspaces] = useState<any[]>([]);
+
+  // Extract workspaceId from URL
+  let workspaceId = params?.id as string;
+
+  if (!workspaceId && pathname) {
+    const workspaceMatch = pathname.match(/\/workspace\/([^\/]+)/);
+    if (workspaceMatch) {
+      workspaceId = workspaceMatch[1];
+    }
+  }
+
+  const themeColor = accentColors[accentColor];
+  const gradientStyle = getGradientColor(themeColor);
+
+  // Load user info from localStorage
+  useEffect(() => {
+    setIsClient(true);
+    if (typeof window !== 'undefined') {
+      const storedName = localStorage.getItem('userName');
+      const storedEmail = localStorage.getItem('userEmail');
+      const storedUserId = localStorage.getItem('userId');
+      const storedAvatar = localStorage.getItem('userAvatar');
+      if (storedName) setUserName(storedName);
+      if (storedEmail) setUserEmail(storedEmail);
+      if (storedUserId) setUserId(storedUserId);
+      if (storedAvatar) setUserAvatar(storedAvatar);
+    }
+  }, []);
+
+  // Listen for workspace updates to refresh logo/name
+  useEffect(() => {
+    const handleWorkspaceUpdate = () => {
+      if (workspaceId) {
+        fetchHierarchy(workspaceId, true);
+      }
+    };
+
+    window.addEventListener('workspace-updated', handleWorkspaceUpdate);
+    return () => window.removeEventListener('workspace-updated', handleWorkspaceUpdate);
+  }, [workspaceId, fetchHierarchy]);
+
+  // Fetch all workspaces for switcher
+  const fetchAllWorkspaces = async () => {
+    try {
+      const response = await api.get('/workspaces');
+      setAllWorkspaces(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to fetch workspaces:', error);
+    }
+  };
+
+  const handleWorkspaceClick = () => {
+    setShowWorkspaceSwitcher(true);
+    fetchAllWorkspaces();
+  };
+
+  const switchWorkspace = (newWorkspaceId: string) => {
+    setShowWorkspaceSwitcher(false);
+    router.push(`/workspace/${newWorkspaceId}`);
+  };
+
+  // Fetch hierarchy using the optimized endpoint
+  const loadHierarchy = useCallback(async () => {
+    if (!workspaceId) return;
+
+    if (!/^[0-9a-fA-F]{24}$/.test(workspaceId)) {
+      console.error('Invalid workspace ID format:', workspaceId);
+      return;
+    }
+
+    try {
+      // Fetch workspace details for context
+      const workspaceRes = await api.get(`/workspaces/${workspaceId}`);
+      const workspace = workspaceRes.data.data || workspaceRes.data;
+
+      if (!workspace || !workspace._id) {
+        throw new Error('Workspace not found');
+      }
+
+      // Set workspace context for permissions
+      if (userId) {
+        const userMember = workspace.members?.find((m: any) => m.user === userId || m.user._id === userId);
+        if (userMember) {
+          setWorkspaceContext(workspace._id, userMember.role);
+        }
+      }
+
+      // Use the optimized hierarchy endpoint
+      await fetchHierarchy(workspaceId);
+
+      // Auto-expand all spaces
+      const { hierarchy: currentHierarchy } = useWorkspaceStore.getState();
+      if (currentHierarchy?.spaces) {
+        const spaceIds = currentHierarchy.spaces.map(s => s._id);
+        const { expandedIds } = useUIStore.getState();
+        const newSpaceIds = spaceIds.filter(id => !expandedIds.includes(id));
+        if (newSpaceIds.length > 0) {
+          useUIStore.getState().expandAll(newSpaceIds);
+          console.log('[ClickUpSidebar] Auto-expanded spaces:', newSpaceIds);
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to load hierarchy:', err);
+      
+      if (err.response?.status === 404) {
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 2000);
+      }
+    }
+  }, [workspaceId, userId, setWorkspaceContext, fetchHierarchy, router]);
+
+  useEffect(() => {
+    if (workspaceId) {
+      loadHierarchy();
+      setOnSuccess(loadHierarchy);
+    }
+  }, [workspaceId, loadHierarchy, setOnSuccess]);
+
+  const favoriteItems = hierarchy?.spaces
+    .flatMap((space) => [
+      space,
+      ...(space.folders || []),
+      ...(space.lists || []), // Changed from listsWithoutFolder to lists
+    ])
+    .filter((item) => favoriteIds.includes(item._id)) || [];
+
+  const handleCreateSpace = () => {
+    if (workspaceId && hierarchy) {
+      openModal('space', workspaceId, 'workspace', hierarchy.workspaceName);
+    }
+  };
+
+  // Don't render if not in workspace or on dashboard
+  if (!workspaceId || pathname === '/dashboard') {
+    return null;
+  }
+
+  return (
+    <>
+      <CreateItemModal />
+      <EditSpaceModal />
+      <EditFolderModal />
+      <EditListModal />
+
+      <div className={cn(
+        "flex h-screen transition-all duration-300",
+        !isSidebarOpen && "w-0 overflow-hidden"
+      )}>
+        {/* Left Icon Bar - "Extra" Sidebar - Premium Redesign */}
+        <div
+          className="w-[64px] flex flex-col items-center py-5 transition-all duration-500 relative z-20 border-r border-white/5"
+          style={{
+            background: themeMode === 'dark' 
+              ? 'rgba(0, 0, 0, 0.2)' 
+              : 'rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+          }}
+        >
+          {/* Subtle glow background based on accent color */}
+          <div 
+            className="absolute inset-0 opacity-10 pointer-events-none"
+            style={{
+              background: `radial-gradient(circle at center, ${themeColor}, transparent 80%)`,
+            }}
+          />
+
+          {/* System Logo - Premium Styling */}
+          <div className="mb-8 relative group">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-11 h-11 rounded-md flex items-center justify-center shadow-2xl relative overflow-hidden"
+              style={{
+                backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)',
+                border: themeMode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
+              }}
+            >
+              <img 
+                src="/teamsever_logo.png" 
+                alt="System Logo" 
+                className="w-8 h-8 object-contain"
+              />
+              
+              {/* Subtle animated overlay */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none"
+                animate={{
+                  opacity: [0.3, 0.6, 0.3],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              />
+            </motion.div>
+            
+            {/* Active Workspace Indicator (Small dot) */}
+            <div 
+              className="absolute -right-1 -top-1 w-3 h-3 rounded-full border-2 border-[#1e1f21] z-10 shadow-lg"
+              style={{ backgroundColor: themeColor }}
+            />
+          </div>
+
+          {/* Primary Navigation */}
+          <div className="flex-1 flex flex-col gap-4 w-full px-2 relative">
+            {/* DASHBOARD */}
+            <div className="relative group">
+              <Link
+                href={`/workspace/${workspaceId}/analytics`}
+                className={cn(
+                  'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
+                  pathname === `/workspace/${workspaceId}/analytics`
+                    ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
+                    : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
+                )}
+                title="Dashboard"
+              >
+                <div className="relative">
+                  <BarChart3 className="w-5 h-5 relative z-10" />
+                  {pathname === `/workspace/${workspaceId}/analytics` && (
+                    <motion.div
+                      layoutId="active-glow"
+                      className="absolute inset-0 blur-md opacity-40 z-0"
+                      style={{ backgroundColor: themeColor }}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] font-semibold tracking-wide">
+                  Dash
+                </span>
+              </Link>
+              
+              {/* Smooth Indicator Pill */}
+              {pathname === `/workspace/${workspaceId}/analytics` && (
+                <motion.div
+                  layoutId="sidebar-indicator"
+                  className="absolute -left-1 top-2 bottom-2 w-1 rounded-r-full z-20 shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                  style={{ backgroundColor: themeColor }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                />
+              )}
+            </div>
+
+            {/* SETTINGS */}
+            <div className="relative group">
+              <Link
+                href={`/workspace/${workspaceId}/settings`}
+                className={cn(
+                  'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
+                  pathname.startsWith(`/workspace/${workspaceId}/settings`)
+                    ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
+                    : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
+                )}
+                title="Settings"
+              >
+                <div className="relative">
+                  <SettingsIcon className="w-5 h-5 relative z-10" />
+                  {pathname.startsWith(`/workspace/${workspaceId}/settings`) && (
+                    <motion.div
+                      layoutId="active-glow"
+                      className="absolute inset-0 blur-md opacity-40 z-0"
+                      style={{ backgroundColor: themeColor }}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] font-semibold tracking-wide">
+                  Settings
+                </span>
+              </Link>
+
+              {/* Smooth Indicator Pill */}
+              {pathname.startsWith(`/workspace/${workspaceId}/settings`) && (
+                <motion.div
+                  layoutId="sidebar-indicator"
+                  className="absolute -left-1 top-2 bottom-2 w-1 rounded-r-full z-20 shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                  style={{ backgroundColor: themeColor }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                />
+              )}
+            </div>
+
+            {/* MORE */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <motion.button
+                  whileHover={{ backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }}
+                  className={cn(
+                    "flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300",
+                    themeMode === 'dark' ? "text-white/50 hover:text-white/90" : "text-slate-500 hover:text-slate-900"
+                  )}
+                  title="More"
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                  <span className="text-[10px] font-semibold tracking-wide">
+                    More
+                  </span>
+                </motion.button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="right" align="start" className={cn(
+                "w-52 ml-2 backdrop-blur-xl border-white/10",
+                themeMode === 'dark' ? "bg-[#1a1a1a]/95 text-white" : "bg-white/95 text-slate-900"
+              )}>
+                <DropdownMenuItem className={cn(
+                  "cursor-pointer py-2.5",
+                  themeMode === 'dark' ? "focus:bg-white/10 focus:text-white" : "focus:bg-slate-100 focus:text-slate-900"
+                )}>
+                  <Palette className="h-4 w-4 mr-3 text-indigo-400" />
+                  Customize Theme
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className={cn(
+                    "cursor-pointer py-2.5",
+                    themeMode === 'dark' ? "focus:bg-white/10 focus:text-white" : "focus:bg-slate-100 focus:text-slate-900"
+                  )}
+                  onClick={() => router.push(`/workspace/${workspaceId}/settings`)}
+                >
+                  <SettingsIcon className="h-4 w-4 mr-3 text-slate-400" />
+                  Workspace Settings
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Main Sidebar Content - Reduced Width */}
+        <div className="w-[240px] bg-white dark:bg-[#1a1a1a] border-r border-slate-200 dark:border-slate-800 flex flex-col">
+          {/* Workspace Header */}
+          <div className="p-3 border-b border-slate-200 dark:border-slate-800">
+            <button
+              onClick={handleWorkspaceClick}
+              className="flex items-center gap-2 w-full hover:bg-slate-50 dark:hover:bg-[#262626] rounded-lg p-2 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <div 
+                  className={cn(
+                    "w-9 h-9 rounded-lg flex items-center justify-center text-[11px] font-bold shadow-sm overflow-hidden flex-shrink-0 transition-all duration-300",
+                    !hierarchy?.logo && accentColor === 'white' ? "text-slate-800 border border-slate-100" : "text-white"
+                  )}
+                  style={{ 
+                    backgroundColor: !hierarchy?.logo ? themeColor : 'rgba(255,255,255,0.05)',
+                  }}
+                >
+                  {hierarchy?.logo ? (
+                    <img src={hierarchy.logo} alt={hierarchy?.workspaceName} className="w-full h-full object-contain p-1" />
+                  ) : (
+                    hierarchy?.workspaceName?.charAt(0) || 'W'
+                  )}
+                </div>
+                <span className="text-sm font-semibold truncate max-w-[130px] transition-colors">
+                  {hierarchy?.workspaceName}
+                </span>
+              </div>
+              <ChevronDown className="w-3 h-3 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+            </button>
+          </div>
+
+
+
+          {/* Scrollable Content */}
+          <ScrollArea className="flex-1 px-3">
+            {loading ? (
+              <div className="space-y-4 py-2">
+                {/* Quick Links Skeleton */}
+                <div className="space-y-0.5">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-center gap-2 px-2 py-1.5">
+                      <div className="w-3.5 h-3.5 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                      <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse flex-1" />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Spaces Skeleton */}
+                <div>
+                  <div className="flex items-center justify-between px-2 py-1 mb-1">
+                    <div className="h-3 w-12 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                  </div>
+                  <div className="space-y-0.5">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center gap-2 px-2 py-1.5">
+                        <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                        <div className="w-4 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" />
+                        <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse flex-1" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="py-8 px-2 text-center">
+                <p className="text-xs text-red-600 dark:text-red-400 mb-2">Failed to load</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">{error}</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 h-7 text-xs"
+                  onClick={loadHierarchy}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4 py-2">
+                {/* Quick Links */}
+                <div>
+                  <div className="space-y-0.5">
+                    <Link
+                      href={`/workspace/${workspaceId}/chat`}
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                        pathname === `/workspace/${workspaceId}/chat`
+                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      )}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      Group Chat
+                    </Link>
+                    <Link
+                      href={`/workspace/${workspaceId}/inbox`}
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                        pathname === `/workspace/${workspaceId}/inbox`
+                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      )}
+                    >
+                      <Inbox className="w-3.5 h-3.5" />
+                      Inbox (DMs)
+                    </Link>
+                    <Link
+                      href={`/workspace/${workspaceId}/docs`}
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                        pathname?.includes('/docs')
+                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      )}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Documents
+                    </Link>
+                    <Link
+                      href={`/workspace/${workspaceId}/files`}
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                        pathname?.includes('/files')
+                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      )}
+                    >
+                      <FolderOpen className="w-3.5 h-3.5" />
+                      Files
+                    </Link>
+                    <Link
+                      href="/notifications"
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors relative',
+                        pathname === '/notifications'
+                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      )}
+                    >
+                      <Bell className="w-3.5 h-3.5" />
+                      Notifications
+                      {unreadCount > 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1 py-0.5 rounded-full min-w-[16px] text-center">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </Link>
+
+                  </div>
+                </div>
+
+                {/* Favorites */}
+                {favoriteItems.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-1.5 px-2 py-1 mb-1">
+                      <Star className="w-3 h-3 text-amber-500" />
+                      <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                        Favorites
+                      </span>
+                    </div>
+                    <div className="space-y-0.5">
+                      {favoriteItems.map((item) => (
+                        <HierarchyItemComponent
+                          key={item._id}
+                          item={item as any}
+                          level={0}
+                          workspaceId={workspaceId}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Spaces */}
+                <div>
+                  <div className="flex items-center justify-between px-2 py-1 mb-1">
+                    <span className="text-xs font-semibold text-slate-900 dark:text-white">
+                      Spaces
+                    </span>
+                    {isClient && can('create_space') && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={handleCreateSpace}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                  {hierarchy?.spaces && hierarchy.spaces.length > 0 ? (
+                    <div className="space-y-0.5">
+                      {hierarchy.spaces.map((space) => (
+                        <HierarchyItemComponent
+                          key={space._id}
+                          item={space as any}
+                          level={0}
+                          workspaceId={workspaceId}
+                          parentSpaceId={space._id}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-2 py-3 text-center">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">No spaces yet</p>
+                      {isClient && can('create_space') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 h-7 text-xs"
+                          onClick={handleCreateSpace}
+                        >
+                          <Plus className="h-3 w-3" />
+                          Create Space
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </ScrollArea>
+
+          {/* Upgrade Button - Show for non-paid users OR paid users with higher plans available */}
+          {subscription && (isAdmin() || isOwner()) && (
+            (!subscription.isPaid || (nextPlan?.hasNextPlan)) && (
+              <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-800">
+                <UpgradeButton 
+                  workspaceName={hierarchy?.workspaceName || 'Workspace'}
+                  whatsappNumber={whatsappNumber}
+                  nextPlanName={nextPlan?.nextPlan?.name}
+                />
+              </div>
+            )
+          )}
+
+          {/* User Profile */}
+          <div className="p-2 border-t border-slate-200 dark:border-slate-800">
+            <button className="flex items-center gap-2 w-full px-2 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md transition-colors">
+              <Avatar className="h-7 w-7 flex-shrink-0">
+                {userAvatar ? (
+                  <AvatarImage src={userAvatar} alt={userName} />
+                ) : null}
+                <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                  <User className="h-3.5 w-3.5" />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 text-left min-w-0">
+                <div className="font-medium truncate text-slate-900 dark:text-white text-[11px]">
+                  {userName}
+                </div>
+                <div className="text-[10px] truncate text-slate-500 dark:text-slate-400">
+                  {userEmail}
+                </div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Workspace Switcher Modal */}
+      {showWorkspaceSwitcher && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          onClick={() => setShowWorkspaceSwitcher(false)}
+        >
+          <div
+            className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-xl w-full max-w-md mx-4 max-h-[80vh] overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-slate-200 dark:border-[#262626]">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">Switch Workspace</h3>
+            </div>
+            <ScrollArea className="max-h-[60vh] p-4">
+              <div className="space-y-2">
+                {allWorkspaces.map((workspace) => (
+                  <button
+                    key={workspace._id}
+                    onClick={() => switchWorkspace(workspace._id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 rounded-lg transition-colors",
+                      workspace._id === workspaceId
+                        ? "bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500"
+                        : "hover:bg-slate-50 dark:hover:bg-[#262626] border-2 border-transparent"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "w-10 h-10 rounded-lg flex items-center justify-center font-semibold overflow-hidden",
+                        accentColor === 'white' ? "text-slate-900 border border-slate-200" : "text-white"
+                      )}
+                      style={{ backgroundColor: themeColor }}
+                    >
+                      {workspace.logo ? (
+                        <img src={workspace.logo} alt={workspace.name} className="w-full h-full object-contain" />
+                      ) : (
+                        workspace.name.charAt(0)
+                      )}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold text-slate-900 dark:text-white">
+                        {workspace.name}
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        {workspace.members?.length || 0} members
+                      </div>
+                    </div>
+                    {workspace._id === workspaceId && (
+                      <div className="text-blue-500 text-xs font-medium">Current</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
