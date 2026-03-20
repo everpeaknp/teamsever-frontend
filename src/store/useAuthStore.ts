@@ -18,6 +18,7 @@ interface User {
   name: string;
   email: string;
   avatar?: string;
+  profilePicture?: string;
   jobTitle?: string;
   department?: string;
   bio?: string;

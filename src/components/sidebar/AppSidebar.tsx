@@ -97,7 +97,7 @@ export function AppSidebar() {
   );
 
   // Use system accent color if user hasn't set one or as base
-  const themeColor = accentColors[accentColor] || accentColors[systemAccentColor as AccentColor] || accentColors.mint;
+  const themeColor = accentColors[accentColor as keyof typeof accentColors] || accentColors[systemAccentColor as keyof typeof accentColors] || accentColors.mint;
   const gradientStyle = getGradientColor(themeColor);
 
   // Load user info from localStorage

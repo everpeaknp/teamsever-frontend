@@ -73,7 +73,7 @@ export function TaskCard({ task, handleDragStart, canDrag, spaceMembers }: TaskC
         layout
         layoutId={task._id}
         draggable={canDrag}
-        onDragStart={(e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, task)}
+        onDragStart={(e: any) => handleDragStart(e, task)}
         onClick={() => openTask(task._id)}
         className={cn(
           "w-full rounded-md border p-2 mb-1.5 relative transition-all duration-200 group shadow-sm hover:shadow-md cursor-pointer active:scale-[0.98]",

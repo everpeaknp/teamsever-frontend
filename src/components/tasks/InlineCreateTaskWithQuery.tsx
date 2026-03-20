@@ -5,6 +5,7 @@ import { Plus, Loader2, Check, X } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/axios';
 import { Task } from '@/types';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface InlineCreateTaskProps {
   status: string;
@@ -36,6 +37,7 @@ export default function InlineCreateTaskWithQuery({
   const [title, setTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
 
   // Auto-focus input when it appears
   useEffect(() => {
@@ -71,6 +73,17 @@ export default function InlineCreateTaskWithQuery({
         isDeleted: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        createdBy: user ? {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          profilePicture: user.profilePicture,
+        } : {
+          _id: 'temp-user',
+          name: 'You',
+          email: '',
+        },
       };
 
       queryClient.setQueryData<Task[]>(queryKey, (old = []) => [...old, tempTask]);

@@ -47,6 +47,7 @@ interface User {
   name: string;
   email: string;
   avatar?: string;
+  profilePicture?: string;
 }
 
 interface Project {
