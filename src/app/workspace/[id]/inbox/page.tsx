@@ -7,6 +7,7 @@ import { initializeSocket, joinWorkspace } from '@/lib/socket';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { usePresence } from '@/hooks/usePresence';
 import { Loader2, User, Circle } from 'lucide-react';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/axios';
 import { ChatSkeleton } from '@/components/skeletons/PageSkeleton';
@@ -16,6 +17,8 @@ interface WorkspaceMember {
   name: string;
   email: string;
   role: string;
+  avatar?: string;
+  profilePicture?: string;
 }
 
 export default function InboxPage() {
@@ -167,9 +170,7 @@ export default function InboxPage() {
                     )}
                   >
                     <div className="relative flex-shrink-0">
-                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                        <User className="h-5 w-5 text-white" />
-                      </div>
+                      <UserAvatar user={member} className="h-10 w-10 border border-background shadow-sm" />
                       <Circle
                         className={cn(
                           'h-3 w-3 absolute -bottom-0.5 -right-0.5 border-2 border-background rounded-full',
@@ -213,9 +214,7 @@ export default function InboxPage() {
                 </svg>
               </button>
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
-                </div>
+                <UserAvatar user={selectedMember} className="h-8 w-8" />
                 <span className="font-semibold">{selectedMember.name}</span>
               </div>
             </div>

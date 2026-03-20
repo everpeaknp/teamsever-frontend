@@ -24,16 +24,21 @@ const COLUMNS = [
 ] as const;
 
 export function KanbanBoard({ tasks, onStatusChange, canChangeStatus, canDelete = false, spaceMembers }: KanbanBoardProps) {
-  const [cards, setCards] = useState<Task[]>([]);
+  const [cards, setCardsLocal] = useState<Task[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isOverDeleteZone, setIsOverDeleteZone] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const { deleteTask } = useTaskStore();
+  const { deleteTask, setTasks } = useTaskStore();
+
+  const setCards = (newCards: Task[]) => {
+    setCardsLocal(newCards);
+    setTasks(newCards); // Sync visual reordering to the global store immediately
+  };
 
   // Sync tasks prop with local state
   useEffect(() => {
-    setCards(tasks);
+    setCardsLocal(tasks);
   }, [tasks]);
 
   const handleDragStart = () => {

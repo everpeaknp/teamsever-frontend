@@ -208,10 +208,13 @@ export default function AccountSettingsPage() {
       const updatedUser = response.data.data || response.data;
       setUser(updatedUser);
       
-      // Update localStorage
+      // Update localStorage with latest user data
       localStorage.setItem('userName', updatedUser.name);
-      if (updatedUser.profilePicture || updatedUser.avatar) {
-        localStorage.setItem('userAvatar', updatedUser.profilePicture || updatedUser.avatar);
+      const newAvatar = updatedUser.profilePicture || updatedUser.avatar;
+      if (newAvatar) {
+        localStorage.setItem('userAvatar', newAvatar);
+      } else {
+        localStorage.removeItem('userAvatar');
       }
       
       toast.success('Profile updated successfully!');

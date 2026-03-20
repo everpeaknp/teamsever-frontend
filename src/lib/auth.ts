@@ -1,4 +1,5 @@
 import { api } from './axios';
+import { useAuthStore } from '@/store/useAuthStore';
 
 /**
  * Standardized auth response handler
@@ -11,6 +12,8 @@ interface AuthResponse {
     name: string;
     email: string;
     isSuperUser?: boolean;
+    profilePicture?: string;
+    avatar?: string;
   };
 }
 
@@ -31,6 +34,8 @@ function normalizeAuthResponse(data: any): AuthResponse {
         name: data.user.name,
         email: data.user.email,
         isSuperUser: data.user.isSuperUser || false,
+        profilePicture: data.user.profilePicture,
+        avatar: data.user.avatar,
       },
     };
   }
@@ -70,10 +75,28 @@ function storeAuthData(authData: AuthResponse): void {
   localStorage.setItem('userName', authData.user.name);
   localStorage.setItem('userEmail', authData.user.email);
   localStorage.setItem('isSuperUser', String(authData.user.isSuperUser || false));
+  // Store profile picture so it survives page refresh
+  if (authData.user.profilePicture || authData.user.avatar) {
+    localStorage.setItem('userAvatar', (authData.user.profilePicture || authData.user.avatar) as string);
+  }
   
   // Clean up legacy token keys
   localStorage.removeItem('token');
   
+  // Also update the Zustand auth store so components get live user data
+  try {
+    const setUser = useAuthStore.getState().setUser;
+    setUser({
+      _id: authData.user._id,
+      name: authData.user.name,
+      email: authData.user.email,
+      profilePicture: authData.user.profilePicture,
+      avatar: authData.user.avatar,
+    });
+  } catch (e) {
+    // Non-critical - store will rehydrate from localStorage persist on next render
+  }
+
   // Dispatch custom event to notify socket context
   window.dispatchEvent(new CustomEvent('auth-token-updated', { 
     detail: { token: authData.token } 

@@ -78,6 +78,20 @@ export function AppSidebar() {
   // Extract workspaceId from URL
   let workspaceId = params?.id as string;
 
+  // Hydrate auth store from localStorage if user is not yet loaded (e.g. after page refresh)
+  const { setUser } = useAuthStore();
+  useEffect(() => {
+    if (!user && typeof window !== 'undefined') {
+      const userId = localStorage.getItem('userId');
+      const userName = localStorage.getItem('userName');
+      const userEmail = localStorage.getItem('userEmail');
+      if (userId && userName && userEmail) {
+        const userAvatar = localStorage.getItem('userAvatar');
+        setUser({ _id: userId, name: userName, email: userEmail, profilePicture: userAvatar || undefined });
+      }
+    }
+  }, [user, setUser]);
+
   if (!workspaceId && pathname) {
     const workspaceMatch = pathname.match(/\/workspace\/([^\/]+)/);
     if (workspaceMatch) {
@@ -119,43 +133,75 @@ export function AppSidebar() {
     return () => window.removeEventListener('workspace-updated', handleWorkspaceUpdate);
   }, [workspaceId, fetchHierarchy]);
 
-  // Sync DMs unread counts on mount
+  // Sync unread counts on mount
   useEffect(() => {
-    const syncInboxUnread = async () => {
+    const syncUnreadCounts = async () => {
+      if (!isClient || !user?._id) return;
+      
       try {
-        const response = await api.get('/dm/conversations');
-        const conversations = response.data.data || [];
+        const { createRoom } = useChatStore.getState();
         
-        const { createRoom, incrementUnread } = useChatStore.getState();
-        
-        conversations.forEach((conv: any) => {
-          if (conv.unreadCount > 0) {
-            // Ensure room exists
-            createRoom(conv._id, 'direct', undefined, conv.participants.map((p: any) => p._id));
-            // Update unread count manually for existing rooms
-            const rooms = useChatStore.getState().rooms;
-            if (rooms[conv._id]) {
-              useChatStore.setState({
-                rooms: {
-                  ...rooms,
-                  [conv._id]: {
-                    ...rooms[conv._id],
-                    unreadCount: conv.unreadCount
+        // 1. Sync Inbox (DMs)
+        try {
+          const response = await api.get('/dm/conversations');
+          const conversations = response.data.data || [];
+          
+          conversations.forEach((conv: any) => {
+            if (conv.unreadCount > 0) {
+              // Ensure room exists
+              createRoom(conv._id, 'direct', undefined, conv.participants.map((p: any) => p._id));
+              // Update unread count manually
+              const rooms = useChatStore.getState().rooms;
+              if (rooms[conv._id]) {
+                useChatStore.setState({
+                  rooms: {
+                    ...rooms,
+                    [conv._id]: {
+                      ...rooms[conv._id],
+                      unreadCount: conv.unreadCount
+                    }
                   }
-                }
-              });
+                });
+              }
             }
+          });
+        } catch (error) {
+          console.error('[AppSidebar] Failed to sync inbox unread:', error);
+        }
+
+        // 2. Sync Workspace Group Chat
+        if (workspaceId) {
+          try {
+            const chatRes = await api.get(`/workspaces/${workspaceId}/chat/unread`);
+            const chatUnreadCount = chatRes.data?.data?.unreadCount || 0;
+            
+            if (chatUnreadCount > 0) {
+              const roomId = `workspace_${workspaceId}`;
+              createRoom(roomId, 'workspace', workspaceId);
+              const rooms = useChatStore.getState().rooms;
+              if (rooms[roomId]) {
+                useChatStore.setState({
+                  rooms: {
+                    ...rooms,
+                    [roomId]: {
+                      ...rooms[roomId],
+                      unreadCount: chatUnreadCount
+                    }
+                  }
+                });
+              }
+            }
+          } catch (error) {
+            console.error('[AppSidebar] Failed to sync group chat unread:', error);
           }
-        });
+        }
       } catch (error) {
-        console.error('[AppSidebar] Failed to sync inbox unread:', error);
+        console.error('[AppSidebar] Failed to outer sync unread counts:', error);
       }
     };
 
-    if (isClient && user?._id) {
-      syncInboxUnread();
-    }
-  }, [isClient, user?._id]);
+    syncUnreadCounts();
+  }, [isClient, user?._id, workspaceId]);
 
   // Fetch all workspaces for switcher
   const fetchAllWorkspaces = async () => {

@@ -28,9 +28,10 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
 
   // Get current user from store
   const { user: currentUser } = useAuthStore();
-  const currentUserId = currentUser?._id || null;
-  const currentUserName = currentUser?.name || null;
-  const currentUserEmail = currentUser?.email || null;
+  // Fall back to localStorage in case Zustand store hasn't been hydrated yet
+  const currentUserId = currentUser?._id || (typeof window !== 'undefined' ? localStorage.getItem('userId') : null);
+  const currentUserName = currentUser?.name || (typeof window !== 'undefined' ? localStorage.getItem('userName') : null);
+  const currentUserEmail = currentUser?.email || (typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null);
 
   // Generate room ID
   const roomId = type === 'workspace' 

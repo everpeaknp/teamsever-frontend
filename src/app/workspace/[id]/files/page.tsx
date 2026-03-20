@@ -21,7 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import {
   Dialog,
   DialogContent,
@@ -354,17 +354,7 @@ export default function FilesPage() {
                   </p>
 
                   <div className="flex items-center gap-2 pt-2 border-t border-border">
-                    <Avatar className="h-6 w-6">
-                      {file.uploadedBy.avatar ? (
-                        <AvatarImage
-                          src={file.uploadedBy.avatar}
-                          alt={file.uploadedBy.name}
-                        />
-                      ) : null}
-                      <AvatarFallback className="text-xs">
-                        {file.uploadedBy.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar user={file.uploadedBy} className="h-6 w-6" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-foreground truncate">
                         {file.uploadedBy.name}

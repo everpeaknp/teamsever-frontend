@@ -8,6 +8,7 @@ import { NavigationLoader } from '@/components/layout/NavigationLoader';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useEffect } from 'react';
 import { api } from '@/lib/axios';
+import { useAuthStore } from '@/store/useAuthStore';
 
 // Dynamic imports so these heavy components are excluded from pages that don't need them
 const AppSidebar = dynamic(
@@ -49,6 +50,52 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const showShell = !isAuthPage && !isStandalonePage;
 
   const { initializeFCM, syncPermission } = useNotificationStore();
+  const { user, setUser } = useAuthStore();
+
+  // Hydrate auth store on every page load so the user object is always available.
+  // First populate from localStorage immediately (fast, no flicker), then fetch
+  // the full profile from the API to get the latest profilePicture.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const userId = localStorage.getItem('userId');
+    const userName = localStorage.getItem('userName');
+    const userEmail = localStorage.getItem('userEmail');
+    const userAvatar = localStorage.getItem('userAvatar');
+
+    // Immediately hydrate from localStorage so components don't wait
+    if (userId && userName && userEmail) {
+      setUser({ _id: userId, name: userName, email: userEmail, profilePicture: userAvatar || undefined });
+    }
+
+    // Then fetch fresh profile data from the API (includes latest profilePicture)
+    if (userId) {
+      api.get('/users/profile')
+        .then(res => {
+          const userData = res.data.data || res.data;
+          if (userData?._id) {
+            const freshAvatar = userData.profilePicture || userData.avatar;
+            if (freshAvatar) {
+              localStorage.setItem('userAvatar', freshAvatar);
+            }
+            if (userData.name) {
+              localStorage.setItem('userName', userData.name);
+            }
+            setUser({
+              _id: userData._id,
+              name: userData.name,
+              email: userData.email,
+              profilePicture: userData.profilePicture,
+              avatar: userData.avatar,
+            });
+          }
+        })
+        .catch(() => {
+          // Silently ignore — the localStorage fallback is already set above
+        });
+    }
+  }, [setUser]); // Only run once on mount
+
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof Notification !== 'undefined') {
