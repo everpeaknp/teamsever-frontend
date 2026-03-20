@@ -106,12 +106,17 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
     try {
       setAccepting(notification._id);
       
-      const response = await api.post(`/invites/accept/${notification.data.token}`);
+      // Determine endpoint based on notification type
+      const endpoint = notification.type === 'SPACE_INVITATION' 
+        ? `/space-invitations/accept/${notification.data.token}`
+        : `/invites/accept/${notification.data.token}`;
+      
+      const response = await api.post(endpoint);
       const data = response.data.data;
 
       await handleMarkAsRead(notification._id, notification.type);
 
-      toast.success(`Successfully joined ${data.workspace.name}!`);
+      toast.success(`Successfully joined ${data.workspace?.name || data.space?.name || 'the resource'}!`);
 
       setTimeout(() => {
         window.location.reload();
@@ -131,6 +136,8 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'INVITATION':
+      case 'WORKSPACE_INVITATION':
+      case 'SPACE_INVITATION':
         return <Mail className="w-5 h-5 text-purple-500" />;
       case 'INVITE_ACCEPTED':
       case 'MEMBER_JOINED':
@@ -247,7 +254,7 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
                           })}
                         </p>
 
-                        {notification.type === 'INVITATION' && !notification.read && (
+                        {['INVITATION', 'WORKSPACE_INVITATION', 'SPACE_INVITATION'].includes(notification.type) && !notification.read && (
                           <div className="flex gap-2 mt-3">
                             <Button
                               onClick={() => handleAcceptInvitation(notification)}
