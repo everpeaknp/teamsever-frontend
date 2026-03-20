@@ -16,7 +16,10 @@ import {
   UserPlus,
   UserMinus,
   Clock,
-  Building2
+  Building2,
+  LogIn,
+  LogOut,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 import { api } from '@/lib/axios';
 
@@ -31,12 +34,14 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [skip, setSkip] = useState(0);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const INITIAL_LIMIT = 7;
   const LOAD_MORE_LIMIT = 10;
 
   useEffect(() => {
     fetchActivities(true);
-  }, [workspaceId]);
+  }, [workspaceId, startDate, endDate]);
 
   const fetchActivities = async (isInitial = false) => {
     try {
@@ -55,6 +60,8 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
         params: {
           limit: limit + 1, // Fetch one extra to check if there are more
           skip: currentSkip,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         },
       });
       
@@ -152,6 +159,8 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
       space_member_removed: <Users className="w-4 h-4 text-orange-500" />,
       list_member_added: <Users className="w-4 h-4 text-teal-500" />,
       list_member_removed: <Users className="w-4 h-4 text-pink-500" />,
+      clock_in: <LogIn className="w-4 h-4 text-emerald-500" />,
+      clock_out: <LogOut className="w-4 h-4 text-orange-500" />,
     };
     
     if (iconMap[activity.type]) {
@@ -248,6 +257,30 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
       );
     }
     
+    if (activity.type === 'clock_in') {
+      return (
+        <>
+          <span className="font-semibold">{user.name}</span>
+          {' '}
+          <span className="text-emerald-600 font-medium">clocked in</span>
+        </>
+      );
+    }
+
+    if (activity.type === 'clock_out') {
+      const duration = activity.metadata?.duration;
+      const formattedDuration = duration ? (duration > 3600 ? `${Math.floor(duration/3600)}h ${Math.floor((duration%3600)/60)}m` : `${Math.floor(duration/60)}m`) : null;
+      
+      return (
+        <>
+          <span className="font-semibold">{user.name}</span>
+          {' '}
+          <span className="text-orange-600 font-medium">clocked out</span>
+          {formattedDuration && <span className="text-xs text-muted-foreground ml-2">({formattedDuration} shift)</span>}
+        </>
+      );
+    }
+    
     return <span className="text-muted-foreground">Activity</span>;
   };
 
@@ -290,11 +323,46 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
 
   return (
     <Card>
-      <div className="px-6 py-4 border-b">
-        <h4 className="font-bold">Workspace Activity</h4>
-        <p className="text-xs text-muted-foreground mt-1">
-          {activities.length} recent {activities.length === 1 ? 'activity' : 'activities'}
-        </p>
+      <div className="px-6 py-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h4 className="font-bold">Workspace Activity</h4>
+          <p className="text-xs text-muted-foreground mt-1">
+            {activities.length} {activities.length === 1 ? 'activity' : 'activities'} shown
+          </p>
+        </div>
+        
+        {/* Date Filter */}
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <CalendarIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="pl-9 pr-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-primary w-[140px]"
+              placeholder="Start Date"
+            />
+          </div>
+          <span className="text-muted-foreground text-xs">to</span>
+          <div className="relative">
+            <CalendarIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="pl-9 pr-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-primary w-[140px]"
+              placeholder="End Date"
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button 
+              onClick={() => { setStartDate(''); setEndDate(''); }}
+              className="text-xs text-primary hover:underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </div>
       <CardContent className="p-6">
         {/* Activity Timeline */}

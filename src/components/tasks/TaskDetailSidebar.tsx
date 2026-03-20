@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useTaskSidebarStore } from '@/store/useTaskSidebarStore';
 import { api } from '@/lib/axios';
@@ -304,6 +304,17 @@ export function TaskDetailSidebar() {
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize description textarea based on content
+  useEffect(() => {
+    const el = descriptionRef.current;
+    if (el) {
+      el.style.height = 'auto';
+      el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
+    }
+  }, [description]);
+
   // Get priority color
   const getPriorityColor = (p: Task['priority']) => {
     switch (p) {
@@ -476,10 +487,12 @@ export function TaskDetailSidebar() {
                 <div className="space-y-2">
                   <Label className="text-sm font-semibold">Description</Label>
                   <textarea
+                    ref={descriptionRef}
                     value={description}
                     onChange={(e) => handleDescriptionChange(e.target.value)}
-                    className="w-full min-h-[120px] p-3 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                    className="w-full min-h-[120px] p-3 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none overflow-hidden leading-relaxed"
                     placeholder="Add a description..."
+                    style={{ height: 'auto' }}
                   />
                 </div>
 
