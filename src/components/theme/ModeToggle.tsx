@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Moon, Sun, Monitor } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useThemeStore } from '@/store/useThemeStore';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +15,7 @@ import {
 
 export function ModeToggle() {
   const { setTheme, theme } = useTheme();
+  const { setThemeMode } = useThemeStore();
   const [mounted, setMounted] = React.useState(false);
 
   // Avoid hydration mismatch
@@ -40,15 +42,15 @@ export function ModeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme('light')}>
+        <DropdownMenuItem onClick={() => { setTheme('light'); setThemeMode('light'); }}>
           <Sun className="mr-2 h-4 w-4" />
           <span>Light</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme('dark')}>
+        <DropdownMenuItem onClick={() => { setTheme('dark'); setThemeMode('dark'); }}>
           <Moon className="mr-2 h-4 w-4" />
           <span>Dark</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme('system')}>
+        <DropdownMenuItem onClick={() => { setTheme('system'); setThemeMode('auto'); }}>
           <Monitor className="mr-2 h-4 w-4" />
           <span>System</span>
         </DropdownMenuItem>

@@ -85,7 +85,7 @@ export const applyThemeVariables = (accent: AccentColor, mode: ThemeMode) => {
 export const useThemeStore = create<ThemeStore>()(
   persist(
     (set) => ({
-      themeMode: 'light',
+      themeMode: 'auto',
       accentColor: 'mint',
       
       setThemeMode: (mode: ThemeMode) => {

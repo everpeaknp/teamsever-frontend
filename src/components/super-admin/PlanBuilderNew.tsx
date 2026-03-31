@@ -259,6 +259,14 @@ export default function PlanBuilderNew() {
                       <span>{plan.features.maxDocuments === -1 ? 'Unlimited' : plan.features.maxDocuments} Document{plan.features.maxDocuments !== 1 ? 's' : ''}/user</span>
                     </div>
                   )}
+
+                  {/* Private Groups */}
+                  {plan.features.canCreatePrivateChannels && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <LockClosedIcon className="w-3 h-3 flex-shrink-0" />
+                      <span>{plan.features.maxPrivateChannelsCount === -1 ? 'Unlimited' : plan.features.maxPrivateChannelsCount} Private Group{plan.features.maxPrivateChannelsCount !== 1 ? 's' : ''} (max {plan.features.maxMembersPerPrivateChannel === -1 ? '∞' : plan.features.maxMembersPerPrivateChannel} members)</span>
+                    </div>
+                  )}
                   
                   {/* Announcement Cooldown */}
                   <div className="flex items-center gap-2 text-muted-foreground">

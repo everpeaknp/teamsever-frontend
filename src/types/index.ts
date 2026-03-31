@@ -128,6 +128,9 @@ export interface Plan {
     maxFiles?: number;
     maxDocuments?: number;
     maxDirectMessagesPerUser?: number;
+    canCreatePrivateChannels?: boolean;
+    maxPrivateChannelsCount?: number;
+    maxMembersPerPrivateChannel?: number;
     [key: string]: any; // Allow for extra features
   };
   isActive: boolean;

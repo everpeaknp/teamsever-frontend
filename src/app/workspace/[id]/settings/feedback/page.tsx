@@ -48,7 +48,7 @@ export default function FeedbackPage() {
       <div className="min-h-screen bg-background">
         {/* Header */}
         <header className="bg-card border-b border-border">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="w-full px-4 sm:px-6 py-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => router.back()}
@@ -64,7 +64,7 @@ export default function FeedbackPage() {
         </header>
 
         {/* Permission Error */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="w-full px-4 sm:px-6 py-8">
           <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 flex items-start gap-4">
             <AlertCircle className="w-6 h-6 text-destructive flex-shrink-0 mt-0.5" />
             <div>
@@ -83,7 +83,7 @@ export default function FeedbackPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="w-full px-4 sm:px-6 py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}
@@ -102,7 +102,7 @@ export default function FeedbackPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full px-4 sm:px-6 py-8">
         {/* Error Message */}
         {error && (
           <div className="mb-6 bg-destructive/10 border border-destructive/20 rounded-lg p-4">

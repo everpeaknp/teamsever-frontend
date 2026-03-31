@@ -5,6 +5,8 @@ import { useParams } from 'next/navigation';
 import { initializeSocket, joinWorkspace } from '@/lib/socket';
 import "react-day-picker/dist/style.css";
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
 export default function WorkspaceLayout({
   children,
 }: {
@@ -35,5 +37,9 @@ export default function WorkspaceLayout({
     }
   }, [workspaceId]);
 
-  return <>{children}</>;
+  return (
+    <ErrorBoundary>
+      <>{children}</>
+    </ErrorBoundary>
+  );
 }

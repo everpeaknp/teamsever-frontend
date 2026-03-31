@@ -61,6 +61,9 @@ export default function UserManagementNew() {
           maxFiles: plan.features.maxFiles ?? 0,
           maxDocuments: plan.features.maxDocuments ?? 0,
           maxDirectMessagesPerUser: plan.features.maxDirectMessagesPerUser ?? 0,
+          canCreatePrivateChannels: plan.features.canCreatePrivateChannels ? 1 : 0,
+          maxPrivateChannelsCount: plan.features.maxPrivateChannelsCount ?? 0,
+          maxMembersPerPrivateChannel: plan.features.maxMembersPerPrivateChannel ?? 0,
         });
       }
     }
@@ -479,6 +482,9 @@ export default function UserManagementNew() {
                                 { key: 'maxFiles', label: 'Max Files' },
                                 { key: 'maxDocuments', label: 'Max Docs' },
                                 { key: 'maxDirectMessagesPerUser', label: 'Max DMs' },
+                                { key: 'canCreatePrivateChannels', label: 'Private Groups (0/1)' },
+                                { key: 'maxPrivateChannelsCount', label: 'Max Private Groups' },
+                                { key: 'maxMembersPerPrivateChannel', label: 'Max Members/Group' },
                               ].map((f) => (
                                 <div key={f.key} className="space-y-1.5">
                                   <label className="text-xs font-medium text-muted-foreground">{f.label}</label>

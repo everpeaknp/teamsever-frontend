@@ -12,17 +12,19 @@ interface ProjectHealthProps {
 export function ProjectHealth({ spaces, tasks }: ProjectHealthProps) {
   const projectStats = useMemo(() => {
     return spaces.map(space => {
-      const spaceTasks = tasks.filter(t => t.space === space._id);
-      const completedTasks = spaceTasks.filter(t => t.status === 'done').length;
-      const progress = spaceTasks.length > 0 
-        ? Math.round((completedTasks / spaceTasks.length) * 100) 
+      // Use pre-calculated stats from backend if available, otherwise fallback to frontend filtering
+      const totalTasks = space.totalTasks ?? tasks.filter(t => t.space === space._id).length;
+      const completedTasks = space.completedTasks ?? tasks.filter(t => t.space === space._id && t.status === 'done').length;
+      
+      const progress = totalTasks > 0 
+        ? Math.round((completedTasks / totalTasks) * 100) 
         : 0;
       
       return {
         name: space.name,
         progress,
         color: space.color || '#ec5b13',
-        totalTasks: spaceTasks.length,
+        totalTasks,
         completedTasks,
       };
     });

@@ -78,31 +78,51 @@ export default function InboxPage() {
     }
   }, [router, workspaceId]);
 
-  // Fetch workspace members
   useEffect(() => {
     if (!currentUserId || !workspaceId) return;
 
-    const fetchMembers = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get(`/workspaces/${workspaceId}/members`);
+        const [membersRes, conversationsRes] = await Promise.all([
+          api.get(`/workspaces/${workspaceId}/members`),
+          api.get('/dm')
+        ]);
 
-        if (response.data.success) {
-          // Filter out current user
-          const allMembers = response.data.data || [];
+        if (membersRes.data.success) {
+          const allMembers = membersRes.data.data || [];
           const filteredMembers = allMembers.filter((m: WorkspaceMember) => m._id !== currentUserId);
-          setMembers(filteredMembers);
           
-          // Auto-select first member if available
-          if (filteredMembers.length > 0) {
-            handleMemberSelect(filteredMembers[0]);
+          // Get recent conversations to sort members
+          const conversations = conversationsRes.data.success ? conversationsRes.data.data : [];
+          
+          // Map lastMessageAt to members
+          const sortedMembers = [...filteredMembers].sort((a, b) => {
+            const convA = conversations.find((c: any) => 
+              c.participants.some((p: any) => p._id === a._id)
+            );
+            const convB = conversations.find((c: any) => 
+              c.participants.some((p: any) => p._id === b._id)
+            );
+            
+            const timeA = convA ? new Date(convA.lastMessageAt).getTime() : 0;
+            const timeB = convB ? new Date(convB.lastMessageAt).getTime() : 0;
+            
+            return timeB - timeA;
+          });
+
+          setMembers(sortedMembers);
+          
+          // Auto-select first member if available and nothing selected
+          if (sortedMembers.length > 0 && !selectedMember) {
+            handleMemberSelect(sortedMembers[0]);
           }
         }
       } catch (err) {
-        console.error('Failed to fetch members:', err);
+        console.error('Failed to fetch inbox data:', err);
       }
     };
 
-    fetchMembers();
+    fetchData();
   }, [workspaceId, currentUserId]);
 
   const handleMemberSelect = async (member: WorkspaceMember) => {

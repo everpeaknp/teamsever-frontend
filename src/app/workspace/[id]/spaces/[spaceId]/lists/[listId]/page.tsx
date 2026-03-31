@@ -455,7 +455,7 @@ export default function ListView() {
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-3 sm:py-4">
+        <div className="w-full px-4 sm:px-6 py-3 sm:py-4">
           {/* Breadcrumbs */}
           <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 overflow-x-auto whitespace-nowrap">
             <button
@@ -775,7 +775,7 @@ export default function ListView() {
       {/* Read-Only Banner */}
       {isReadOnly && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border-b border-yellow-200 dark:border-yellow-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="w-full px-4 sm:px-6 py-3">
             <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
               <AlertCircle className="w-5 h-5" />
               <p className="text-sm font-medium">
@@ -789,7 +789,7 @@ export default function ListView() {
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 overflow-x-hidden">
+      <main className="w-full px-4 sm:px-6 py-4 sm:py-6 lg:py-8 overflow-x-hidden">
         {view === 'list' && (
           <div className="space-y-6">
             {(['todo', 'inprogress', 'review', 'done', 'cancelled'] as const).map((status) => (

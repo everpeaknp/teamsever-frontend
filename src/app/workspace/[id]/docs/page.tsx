@@ -102,7 +102,7 @@ export default function DocumentsPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="w-full px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Documents</h1>
@@ -130,7 +130,7 @@ export default function DocumentsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="w-full px-4 sm:px-6 py-8">
         {error && (
           <div className="mb-6 bg-destructive/10 border border-destructive/20 rounded-lg p-4">
             <p className="text-sm text-destructive">{error}</p>

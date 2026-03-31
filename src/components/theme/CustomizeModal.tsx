@@ -21,7 +21,7 @@ interface CustomizeModalProps {
 export function CustomizeModal({ open, onOpenChange }: CustomizeModalProps) {
   const [activeTab, setActiveTab] = useState<'themes'>('themes');
   const { theme, setTheme } = useTheme();
-  const { accentColor, setAccentColor } = useThemeStore();
+  const { accentColor, setAccentColor, setThemeMode } = useThemeStore();
 
   const themeOptions: { value: ThemeMode; label: string; preview: string }[] = [
     { value: 'light', label: 'Light', preview: 'bg-white' },
@@ -98,7 +98,10 @@ export function CustomizeModal({ open, onOpenChange }: CustomizeModalProps) {
                   {themeOptions.map((option) => (
                     <button
                       key={option.value}
-                      onClick={() => setTheme(option.value)}
+                      onClick={() => {
+                        setTheme(option.value);
+                        setThemeMode(option.value);
+                      }}
                       className={cn(
                         'relative rounded-lg border-2 p-4 transition-all hover:scale-105',
                         theme === option.value

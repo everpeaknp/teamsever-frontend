@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw } from 'lucide-react';
+import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
@@ -14,17 +14,24 @@ import { format, isToday, isYesterday } from 'date-fns';
 
 interface ChatWindowProps {
   workspaceId?: string;
+  channelId?: string; // NEW: Support for channels
   conversationId?: string;
   userId?: string; // For DM - the other user's ID
   type: 'workspace' | 'direct';
   title: string;
+  isAdmin?: boolean;
 }
 
-export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }: ChatWindowProps) => {
+import { EditChannelModal } from './EditChannelModal';
+
+export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, isAdmin }: ChatWindowProps) => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastScrollHeightRef = useRef<number>(0);
+  const shouldAutoScrollRef = useRef(true);
 
   // Get current user from store
   const { user: currentUser } = useAuthStore();
@@ -35,7 +42,7 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
 
   // Generate room ID
   const roomId = type === 'workspace' 
-    ? `workspace_${workspaceId}` 
+    ? (channelId ? `channel_${channelId}` : `workspace_${workspaceId}`) 
     : userId && currentUserId 
       ? generateDMRoomId(currentUserId, userId)
       : conversationId || '';
@@ -91,9 +98,7 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
 
   // Callback for scrolling to bottom after initial load
   const handleInitialLoad = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, []);
 
   const {
@@ -109,6 +114,7 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
     loadMore
   } = useChat({ 
     workspaceId, 
+    channelId, // NEW
     conversationId, 
     userId, 
     type,
@@ -129,7 +135,7 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
       m.tempId && !fetchedIds.has(m.tempId) && (m.sending || m.failed)
     );
     
-    // Merge and sort
+    // Merge and sort ASCENDING (oldest at top)
     const merged = [...fetchedMessages, ...pendingOptimistic];
     merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     
@@ -150,20 +156,46 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
     }
   }, [roomId]); // Re-focus when room changes
 
-  // Auto-scroll to bottom when new messages arrive (only if near bottom)
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (isNearBottom && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current && shouldAutoScrollRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      
+      // If we are already near bottom or just sent a message, keep at bottom
+      if (distanceFromBottom < 100) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
     }
-  }, [localMessages, isNearBottom]);
+  }, [localMessages]);
 
-  // Check if user is near bottom
+  // Preserve scroll position when loading more messages
+  useEffect(() => {
+    if (loadingMore) {
+      lastScrollHeightRef.current = messagesContainerRef.current?.scrollHeight || 0;
+    } else if (lastScrollHeightRef.current > 0 && messagesContainerRef.current) {
+      const newScrollHeight = messagesContainerRef.current.scrollHeight;
+      const heightDifference = newScrollHeight - lastScrollHeightRef.current;
+      if (heightDifference > 0) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollTop + heightDifference;
+      }
+      lastScrollHeightRef.current = 0;
+    }
+  }, [loadingMore, messagesContainerRef]);
+
+  // Check if user is scrolling
   const handleScroll = () => {
     if (!messagesContainerRef.current) return;
     
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    setIsNearBottom(distanceFromBottom < 100);
+    
+    // Infinite Scroll: Load more when reaching the TOP (older messages are at the top)
+    if (scrollTop < 100 && hasMore && !loadingMore && !loading && localMessages.length > 0) {
+      loadMore();
+    }
+    
+    // Near Bottom means we should auto-scroll new messages at the bottom
+    setIsNearBottom(scrollHeight - scrollTop - clientHeight < 100);
   };
 
   // Handle send message with optimistic update
@@ -210,11 +242,9 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
       textareaRef.current.style.height = 'auto';
     }
 
-    // Scroll to bottom immediately
+    // Scroll to bottom immediately (newest message)
     setTimeout(() => {
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 50);
 
     // Send message to backend
@@ -346,15 +376,43 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
   return (
     <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
       {/* Header - Fixed */}
-      <div className="h-14 border-b border-border px-6 flex items-center flex-shrink-0">
-        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+      <div className="h-14 border-b border-border px-6 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        </div>
+        {type === 'workspace' && channelId && channelId !== 'general' && isAdmin && (
+          <button 
+            onClick={() => setIsEditModalOpen(true)}
+            className="p-2 hover:bg-muted rounded-full text-muted-foreground transition-colors"
+            title="Channel Settings"
+          >
+            <Settings className="h-5 w-5" />
+          </button>
+        )}
       </div>
+
+      {workspaceId && channelId && (
+        <EditChannelModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          workspaceId={workspaceId}
+          channelId={channelId}
+          onSuccess={() => {
+            // Ideally refetch channel list - this is handled by state in parent usually
+            window.location.reload(); // Simple sync for now or we could use custom events
+          }}
+        />
+      )}
 
       {/* Messages - Scrollable */}
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-6 space-y-4"
+        className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'rgba(155, 155, 155, 0.2) transparent'
+        }}
       >
         {error && (
           <div className="bg-destructive/10 text-destructive px-4 py-2 rounded-md text-sm">
@@ -362,29 +420,24 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
           </div>
         )}
 
-        {/* Load More Button */}
-        {hasMore && !loading && (
-          <div className="flex justify-center py-2">
-            <button
-              onClick={loadMore}
-              disabled={loadingMore}
-              className="px-4 py-2 text-sm bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {loadingMore ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                'Load More Messages'
-              )}
-            </button>
+        {/* Load More Indicator at the top (older messages) */}
+        {hasMore && !loadingMore && localMessages.length > 0 && (
+          <div className="flex justify-center p-4">
+            <span className="text-xs text-muted-foreground italic">Scroll up for older messages</span>
+          </div>
+        )}
+
+        {loadingMore && (
+          <div className="flex justify-center p-4">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         )}
 
         {localMessages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            No messages yet. Start the conversation!
+          <div className="flex-1 flex items-center justify-center text-muted-foreground min-h-[300px]">
+            <div className="text-center p-8 bg-muted/10 rounded-2xl border border-dashed border-border/50 max-w-sm mx-auto">
+              <p className="text-sm">No messages yet. Start the conversation!</p>
+            </div>
           </div>
         ) : (
           localMessages.map((message, index) => {
@@ -412,19 +465,19 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
                     !showAvatar && 'mr-11'
                   )}
                 >
-                  <div className="flex-1 min-w-0 flex flex-col items-end">
+                  <div className="flex flex-col items-end max-w-[85%]">
                     {showAvatar && (
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 mb-1.5 opacity-90">
+                        <span className="text-[10px] text-muted-foreground font-medium">
                           {formatMessageTime(message.createdAt)}
                         </span>
-                        <span className="font-semibold text-sm text-foreground">
+                        <span className="font-bold text-xs text-primary">
                           You
                         </span>
                       </div>
                     )}
                     <div className={cn(
-                      "px-4 py-2 rounded-lg text-sm whitespace-pre-wrap break-words max-w-[70%]",
+                      "px-4 py-2 rounded-lg text-sm whitespace-pre-wrap break-words w-fit min-w-[40px] max-w-full",
                       message.failed 
                         ? "bg-destructive/20 text-destructive border border-destructive" 
                         : "bg-primary text-primary-foreground"
@@ -483,18 +536,18 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
                   <UserAvatar user={message.sender} className="h-8 w-8 flex-shrink-0" />
                 )}
 
-                <div className="flex-1 min-w-0">
+                <div className="flex flex-col max-w-[85%]">
                   {showAvatar && (
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="font-semibold text-sm text-foreground">
+                    <div className="flex items-center gap-2 mb-1.5 opacity-90">
+                      <span className="font-bold text-xs text-foreground">
                         {message.sender.name}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-[10px] text-muted-foreground font-medium">
                         {formatMessageTime(message.createdAt)}
                       </span>
                     </div>
                   )}
-                  <div className="bg-muted px-4 py-2 rounded-lg text-sm text-foreground whitespace-pre-wrap break-words max-w-[70%]">
+                  <div className="bg-muted px-4 py-2 rounded-lg text-sm text-foreground whitespace-pre-wrap break-words w-fit min-w-[40px] max-w-full">
                     {message.content}
                   </div>
                 </div>
@@ -513,39 +566,40 @@ export const ChatWindow = ({ workspaceId, conversationId, userId, type, title }:
         </div>
       )}
 
-      {/* Input Area - Fixed at bottom */}
-      <div className="border-t border-border p-4 flex-shrink-0 bg-background">
-        <div className="flex gap-2 items-end">
+      {/* Input Area - Improved padding and layout */}
+      <div className="border-t border-border p-4 pb-4 md:pb-6 bg-background/95 backdrop-blur-sm sticky bottom-0 z-10 transition-all">
+        <div className="max-w-4xl mx-auto flex gap-2 items-end">
           <div className="flex-1 relative">
             <Textarea
               ref={textareaRef}
               value={inputValue}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
-              className="min-h-[44px] max-h-32 resize-none pr-10"
+              placeholder="Type a message..."
+              className="min-h-[44px] max-h-32 resize-none pr-10 rounded-xl bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary shadow-none"
               rows={1}
               autoFocus
             />
             <button
               type="button"
-              className="absolute right-2 bottom-2 p-1 hover:bg-accent rounded-md transition-colors"
+              className="absolute right-3 bottom-2.5 p-1 hover:bg-muted rounded-full transition-colors"
               title="Add emoji"
             >
-              <Smile className="h-5 w-5 text-muted-foreground" />
+              <Smile className="h-5 w-5 text-muted-foreground/60" />
             </button>
           </div>
           <Button
             onClick={handleSend}
             disabled={!inputValue.trim() || sending}
             size="icon"
-            className="h-[44px] w-[44px] flex-shrink-0"
+            className="h-[44px] w-[44px] flex-shrink-0 rounded-xl shadow-md transition-all hover:scale-105 active:scale-95"
           >
             <Send className="h-5 w-5" />
           </Button>
         </div>
-        <div className="text-xs text-muted-foreground mt-2">
-          Press Enter to send, Shift+Enter for new line
+        <div className="max-w-4xl mx-auto flex items-center justify-between text-[10px] text-muted-foreground mt-2 px-1">
+          <span className="hidden sm:inline">Shift + Enter for new line • Enter to send</span>
+          <span className="sm:hidden">Press send to transmit</span>
         </div>
       </div>
     </div>

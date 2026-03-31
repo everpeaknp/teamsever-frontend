@@ -104,7 +104,9 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
       // If already granted, ensure FCM is initialized and token is sent to backend
       if (Notification.permission === 'granted') {
-        initializeFCM();
+        initializeFCM().catch(err => {
+          console.error('Failed to auto-initialize FCM:', err);
+        });
       }
     }
   }, [initializeFCM, syncPermission]);

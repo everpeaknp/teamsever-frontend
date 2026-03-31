@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/axios';
 import { List, Workspace } from '@/types';
-import { CustomTableView } from '@/components/tables/CustomTableView';
+import dynamic from 'next/dynamic';
+import { Loader2 } from 'lucide-react';
+// import { CustomTableView } from '@/components/tables/CustomTableView';
 import { UpgradePrompt } from '@/components/roles/UpgradePrompt';
 import { useEntitlements } from '@/hooks/useEntitlements';
 import {
@@ -46,6 +48,21 @@ import { useWorkspaceStore } from '@/store/useWorkspaceStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePermission, SpacePermissionLevel } from '@/hooks/usePermission';
 import { toast } from 'sonner';
+
+// Lazy load heavy components
+const CustomTableView = dynamic(
+  () => import('@/components/tables/CustomTableView').then(mod => mod.CustomTableView),
+  { 
+    ssr: false, 
+    loading: () => (
+      <div className="p-12 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl bg-card/50">
+        <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+        <h3 className="text-lg font-medium">Loading Custom Table...</h3>
+        <p className="text-sm text-muted-foreground mt-1">This may take a moment for large data sets</p>
+      </div>
+    ) 
+  }
+);
 
 export default function SpaceHomePage() {
   const router = useRouter();

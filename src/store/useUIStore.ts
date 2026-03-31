@@ -43,7 +43,7 @@ export const useUIStore = create<UIState>()(
       
       setSidebarOpen: (open: boolean) => set({ isSidebarOpen: open }),
       
-      setSidebarWidth: (width: number) => set({ sidebarWidth: Math.max(240, Math.min(400, width)) }),
+      setSidebarWidth: (width: number) => set({ sidebarWidth: Math.max(200, Math.min(480, width)) }),
 
       // Expansion actions
       toggleExpanded: (id: string) => {

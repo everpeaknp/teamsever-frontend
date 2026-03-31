@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArchiveIcon, IdCardIcon, CubeIcon, ListBulletIcon, FileIcon, CheckboxIcon, BellIcon, ChatBubbleIcon, LockClosedIcon, PersonIcon, CounterClockwiseClockIcon, TableIcon, FileTextIcon } from "@radix-ui/react-icons";
+import { ArchiveIcon, IdCardIcon, CubeIcon, ListBulletIcon, FileIcon, CheckboxIcon, BellIcon, ChatBubbleIcon, LockClosedIcon, PersonIcon, CounterClockwiseClockIcon, TableIcon, FileTextIcon, LockOpen1Icon } from "@radix-ui/react-icons";
 import { Shield, ArrowLeft, Loader2 } from "lucide-react";
 import { Plan } from "@/types";
 
@@ -48,6 +49,9 @@ export default function EditPlanPage() {
     maxFiles: -1,
     maxDocuments: -1,
     maxDirectMessagesPerUser: -1,
+    canCreatePrivateChannels: false,
+    maxPrivateChannelsCount: -1,
+    maxMembersPerPrivateChannel: -1,
   });
 
   useEffect(() => {
@@ -100,6 +104,9 @@ export default function EditPlanPage() {
           maxFiles: plan.features.maxFiles ?? -1,
           maxDocuments: plan.features.maxDocuments ?? -1,
           maxDirectMessagesPerUser: plan.features.maxDirectMessagesPerUser ?? -1,
+          canCreatePrivateChannels: plan.features.canCreatePrivateChannels || false,
+          maxPrivateChannelsCount: plan.features.maxPrivateChannelsCount ?? -1,
+          maxMembersPerPrivateChannel: plan.features.maxMembersPerPrivateChannel ?? -1,
         });
       } else {
         toast.error('Failed to load plan');
@@ -144,6 +151,9 @@ export default function EditPlanPage() {
         maxFiles: Number(formData.maxFiles) || -1,
         maxDocuments: Number(formData.maxDocuments) || -1,
         maxDirectMessagesPerUser: Number(formData.maxDirectMessagesPerUser) || -1,
+        canCreatePrivateChannels: Boolean(formData.canCreatePrivateChannels),
+        maxPrivateChannelsCount: Number(formData.maxPrivateChannelsCount) || -1,
+        maxMembersPerPrivateChannel: Number(formData.maxMembersPerPrivateChannel) || -1,
       },
     };
 
@@ -180,7 +190,7 @@ export default function EditPlanPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">Loading plan...</p>
@@ -190,7 +200,7 @@ export default function EditPlanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-background">
       <div className="max-w-5xl mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -403,17 +413,63 @@ export default function EditPlanPage() {
               </div>
               
               {formData.hasGroupChat && (
-                <div className="space-y-2 ml-4 pl-4 border-l-2">
-                  <Label className="flex items-center gap-2">
-                    <ChatBubbleIcon className="w-4 h-4" />
-                    Message Limit (monthly)
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.messageLimit}
-                    onChange={(e) => setFormData({ ...formData, messageLimit: parseInt(e.target.value) })}
-                    required
-                  />
+                <div className="space-y-4 ml-4 pl-4 border-l-2">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <ChatBubbleIcon className="w-4 h-4" />
+                      Message Limit (monthly)
+                    </Label>
+                    <Input
+                      type="number"
+                      value={formData.messageLimit}
+                      onChange={(e) => setFormData({ ...formData, messageLimit: parseInt(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between p-2">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-medium">Private Groups</Label>
+                      <p className="text-xs text-muted-foreground">Allow creating restricted private channels</p>
+                    </div>
+                    <Switch
+                      checked={formData.canCreatePrivateChannels}
+                      onCheckedChange={(checked) => setFormData({ ...formData, canCreatePrivateChannels: checked })}
+                    />
+                  </div>
+
+                  {formData.canCreatePrivateChannels && (
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2 text-xs">
+                          <LockClosedIcon className="w-3 h-3" />
+                          Max Private Groups
+                        </Label>
+                        <Input
+                          type="number"
+                          value={formData.maxPrivateChannelsCount}
+                          onChange={(e) => setFormData({ ...formData, maxPrivateChannelsCount: parseInt(e.target.value) || -1 })}
+                          className="h-8 text-xs"
+                          placeholder="-1 for unlimited"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2 text-xs">
+                          <PersonIcon className="w-3 h-3" />
+                          Max Members Per Group
+                        </Label>
+                        <Input
+                          type="number"
+                          value={formData.maxMembersPerPrivateChannel}
+                          onChange={(e) => setFormData({ ...formData, maxMembersPerPrivateChannel: parseInt(e.target.value) || -1 })}
+                          className="h-8 text-xs"
+                          placeholder="-1 for unlimited"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>

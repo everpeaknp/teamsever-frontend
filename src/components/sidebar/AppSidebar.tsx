@@ -19,6 +19,7 @@ import {
   MessageSquare,
   Palette,
   FolderOpen,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -67,6 +68,46 @@ export function AppSidebar() {
   const themeMode = resolvedTheme || 'light';
   const { subscription, nextPlan } = useSubscription();
   const { whatsappNumber, systemName, accentColor: systemAccentColor, logoUrl } = useSystemSettings();
+  
+  const sidebarWidth = useUIStore(state => state.sidebarWidth);
+  const setSidebarWidth = useUIStore(state => state.setSidebarWidth);
+  const isResizing = React.useRef(false);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    setIsResizingState(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    isResizing.current = false;
+    setIsResizingState(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, []);
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizing.current) {
+      // Subtract the left icon bar width (64px) to get the sidebar's relative width
+      const newWidth = e.clientX - 64;
+      setSidebarWidth(newWidth);
+    }
+  }, [setSidebarWidth]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resize);
+    window.addEventListener('mouseup', stopResizing);
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [resize, stopResizing]);
+
+  const resetSidebarWidth = useCallback(() => {
+    setSidebarWidth(280);
+  }, [setSidebarWidth]);
 
   // Use workspace store instead of local state
   const { hierarchy, loading, error, fetchHierarchy } = useWorkspaceStore();
@@ -74,6 +115,7 @@ export function AppSidebar() {
   const [isClient, setIsClient] = useState(false);
   const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState(false);
   const [allWorkspaces, setAllWorkspaces] = useState<any[]>([]);
+  const [isResizingState, setIsResizingState] = useState(false);
 
   // Extract workspaceId from URL
   let workspaceId = params?.id as string;
@@ -143,7 +185,7 @@ export function AppSidebar() {
         
         // 1. Sync Inbox (DMs)
         try {
-          const response = await api.get('/dm/conversations');
+          const response = await api.get('/dm');
           const conversations = response.data.data || [];
           
           conversations.forEach((conv: any) => {
@@ -307,13 +349,10 @@ export function AppSidebar() {
       <EditFolderModal />
       <EditListModal />
 
-      <div className={cn(
-        "flex h-screen transition-all duration-300",
-        !isSidebarOpen && "w-0 overflow-hidden"
-      )}>
-        {/* Left Icon Bar - "Extra" Sidebar - Premium Redesign */}
+      <div className="flex h-screen overflow-hidden">
+        {/* Left Icon Bar - "Extra" Sidebar - Always Visible */}
         <div
-          className="w-[64px] flex flex-col items-center py-5 transition-all duration-500 relative z-20 border-r border-white/5"
+          className="w-[64px] flex flex-col items-center py-5 transition-all duration-500 relative z-20 border-r border-white/5 flex-shrink-0"
           style={{
             background: themeMode === 'dark' 
               ? 'rgba(0, 0, 0, 0.2)' 
@@ -488,8 +527,25 @@ export function AppSidebar() {
           </div>
         </div>
 
-        {/* Main Sidebar Content - Reduced Width */}
-        <div className="w-[240px] bg-white dark:bg-[#1a1a1a] border-r border-slate-200 dark:border-slate-800 flex flex-col">
+        {/* Main Sidebar Content - Resizable & Collapsible */}
+        <div 
+          className={cn(
+            "bg-white dark:bg-[#1a1a1a] border-r border-slate-200 dark:border-slate-800 flex flex-col relative group/sidebar overflow-hidden",
+            !isResizingState && "transition-all duration-300"
+          )}
+          style={{ width: isSidebarOpen ? `${sidebarWidth}px` : '0px' }}
+        >
+          {/* Resize Handle - Only show when sidebar is open */}
+          {isSidebarOpen && (
+            <div
+              onMouseDown={startResizing}
+              onDoubleClick={resetSidebarWidth}
+              className="absolute top-0 right-0 w-1 h-full cursor-col-resize z-50 hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors"
+              title="Drag to resize, double-click to reset"
+            >
+              <div className="absolute right-0 top-0 w-[2px] h-full bg-blue-500 opacity-0 group-hover/sidebar:opacity-50 transition-opacity" />
+            </div>
+          )}
           {/* Workspace Header */}
           <div className="p-3 border-b border-slate-200 dark:border-slate-800">
             <button
@@ -627,6 +683,18 @@ export function AppSidebar() {
                     >
                       <FolderOpen className="w-3.5 h-3.5" />
                       Files
+                    </Link>
+                    <Link
+                      href={`/workspace/${workspaceId}/attendance`}
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                        pathname === `/workspace/${workspaceId}/attendance`
+                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
+                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                      )}
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      Attendance
                     </Link>
                     <Link
                       href="/notifications"

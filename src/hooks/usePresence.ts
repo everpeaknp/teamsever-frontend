@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getSocket } from '@/lib/socket';
 import axios from 'axios';
 
@@ -23,9 +23,7 @@ export const usePresence = (workspaceId: string) => {
       const token = localStorage.getItem('token');
       const finalToken = authToken || token;
       
-      // Skip if no valid token
       if (!finalToken || finalToken === 'undefined' || finalToken === 'null' || finalToken.trim() === '') {
-        console.warn('[usePresence] No valid token available, skipping presence fetch');
         return;
       }
 
@@ -37,23 +35,16 @@ export const usePresence = (workspaceId: string) => {
       );
 
       if (response.data.success) {
-        const users = response.data.data || [];
-        // Ensure users is an array before mapping
+        const users = response.data.data?.onlineUsers || [];
         if (Array.isArray(users)) {
           const onlineSet = new Set<string>(users.map((u: any) => u._id as string));
           setOnlineUsers(onlineSet);
-        } else {
-          console.warn('[usePresence] Expected array but got:', typeof users);
-          setOnlineUsers(new Set());
         }
       }
     } catch (err: any) {
-      // Only log non-auth errors to avoid console spam
       if (err?.response?.status !== 401) {
         console.error('Failed to fetch presence:', err);
       }
-      // Ensure we have a valid state even on error
-      setOnlineUsers(new Set());
     }
   }, [workspaceId]);
 
@@ -63,7 +54,12 @@ export const usePresence = (workspaceId: string) => {
 
     const handleUserOnline = (data: { userId: string; userName: string; workspaceId: string }) => {
       if (data.workspaceId === workspaceId) {
-        setOnlineUsers(prev => new Set(prev).add(data.userId));
+        setOnlineUsers(prev => {
+          if (prev.has(data.userId)) return prev;
+          const next = new Set(prev);
+          next.add(data.userId);
+          return next;
+        });
         setUserPresence(prev => {
           const newMap = new Map(prev);
           newMap.set(data.userId, {
@@ -79,9 +75,10 @@ export const usePresence = (workspaceId: string) => {
     const handleUserOffline = (data: { userId: string; userName: string; workspaceId: string }) => {
       if (data.workspaceId === workspaceId) {
         setOnlineUsers(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(data.userId);
-          return newSet;
+          if (!prev.has(data.userId)) return prev;
+          const next = new Set(prev);
+          next.delete(data.userId);
+          return next;
         });
         setUserPresence(prev => {
           const newMap = new Map(prev);
@@ -99,7 +96,6 @@ export const usePresence = (workspaceId: string) => {
     socket.on('user:online', handleUserOnline);
     socket.on('user:offline', handleUserOffline);
 
-    // Fetch initial presence
     fetchPresence();
 
     return () => {
@@ -112,10 +108,12 @@ export const usePresence = (workspaceId: string) => {
     return onlineUsers.has(userId);
   }, [onlineUsers]);
 
-  return {
-    onlineUsers: Array.from(onlineUsers),
+  const memoizedOnlineUsers = useMemo(() => Array.from(onlineUsers), [onlineUsers]);
+
+  return useMemo(() => ({
+    onlineUsers: memoizedOnlineUsers,
     isUserOnline,
     userPresence,
     refetch: fetchPresence
-  };
+  }), [memoizedOnlineUsers, isUserOnline, userPresence, fetchPresence]);
 };

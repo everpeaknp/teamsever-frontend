@@ -4,6 +4,7 @@ import './globals.css'
 import { Providers } from './providers'
 import { ClientLayout } from '@/components/layout/ClientLayout'
 import { CurrencyProvider } from '@/contexts/CurrencyContext'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -35,11 +36,13 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} ${inter.variable} bg-background text-foreground font-display`}>
         <Providers>
-          <CurrencyProvider>
-            <ClientLayout>
-              {children}
-            </ClientLayout>
-          </CurrencyProvider>
+          <ErrorBoundary>
+            <CurrencyProvider>
+              <ClientLayout>
+                {children}
+              </ClientLayout>
+            </CurrencyProvider>
+          </ErrorBoundary>
         </Providers>
       </body>
     </html>

@@ -107,7 +107,6 @@ export default function AnalyticsPage() {
             if (force) {
                 console.log('[Analytics] Force refresh - clearing cache and fetching in background');
                 sessionStorage.removeItem(CACHE_KEY);
-                // Don't set loading to true for background refresh
             } else {
                 // Check if we have cached data in sessionStorage
                 const cachedData = sessionStorage.getItem(CACHE_KEY);
@@ -130,8 +129,6 @@ export default function AnalyticsPage() {
                             setIsAdmin(parsed.isAdmin || false);
                             setLoading(false);
                             return;
-                        } else {
-                            console.log('[Analytics] Cache expired, fetching fresh data');
                         }
                     } catch (e) {
                         console.error('[Analytics] Failed to parse cached data:', e);
@@ -139,36 +136,37 @@ export default function AnalyticsPage() {
                     }
                 }
                 
-                // Only show loading spinner on initial load (not on force refresh)
                 setLoading(true);
             }
             
             const localUserId = localStorage.getItem('userId') || '';
             if (localUserId) setUserId(localUserId);
 
-            // Fetch core analytics and workspace data
-            const [analyticsRes, spacesRes, workspaceRes] = await Promise.all([
-                api.get(`/workspaces/${workspaceId}/analytics?t=${Date.now()}`),
-                api.get(`/workspaces/${workspaceId}/spaces`),
-                api.get(`/workspaces/${workspaceId}`),
-            ]);
+            // THE GRAND UNIFIED FETCH - Single call replaces 3 parallel calls + N+1 loop
+            console.log('[Analytics] Fetching unified analytics data from backend');
+            const response = await api.get(`/workspaces/${workspaceId}/analytics?t=${Date.now()}`);
+            const { 
+                workspace: workspaceData, 
+                stats: statsData, 
+                hierarchy: spacesData, 
+                members: membersData, 
+                tasks: tasksData,
+                currentRunningTimer 
+            } = response.data.data;
 
-            const { members: membersData, currentRunningTimer } = analyticsRes.data.data;
-            const spacesData = spacesRes.data.data || [];
-            const workspaceData = workspaceRes.data.data;
-
-            setMembers(membersData);
-            setRunningTimer(currentRunningTimer);
-            setSpaces(spacesData);
-            setWorkspace(workspaceData);
+            setMembers(membersData || []);
+            setRunningTimer(currentRunningTimer || null);
+            setSpaces(spacesData || []);
+            setWorkspace(workspaceData || null);
+            setTasks(tasksData || []);
 
             // Determine current user's status and admin role
             let currentUserStatus: 'active' | 'inactive' = 'inactive';
             let currentIsAdmin = false;
             
             if (localUserId) {
-                // Determine Status
-                const currentMember = membersData.find((m: any) => {
+                // Determine Status from members array
+                const currentMember = membersData?.find((m: any) => {
                     const mId = typeof m.user === 'string' ? m.user : m.user?._id;
                     return mId === localUserId;
                 });
@@ -187,27 +185,11 @@ export default function AnalyticsPage() {
                     setIsAdmin(currentIsAdmin);
                 }
             }
-
-            // Fetch Tasks logic
-            const allTasks: Task[] = [];
-            for (const space of spacesData) {
-                try {
-                    const listsRes = await api.get(`/spaces/${space._id}/lists`);
-                    const lists = listsRes.data.data || [];
-                    for (const list of lists) {
-                        const tasksRes = await api.get(`/lists/${list._id}/tasks`);
-                        allTasks.push(...(tasksRes.data.data || []));
-                    }
-                } catch (err) {
-                    console.error(`Error fetching tasks for space ${space._id}`, err);
-                }
-            }
-            setTasks(allTasks);
             
-            // Cache the data in sessionStorage
+            // Cache the consolidated data
             const cacheData = {
                 timestamp: Date.now(),
-                tasks: allTasks,
+                tasks: tasksData,
                 spaces: spacesData,
                 members: membersData,
                 workspace: workspaceData,
@@ -217,10 +199,11 @@ export default function AnalyticsPage() {
                 isAdmin: currentIsAdmin
             };
             sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-            console.log('[Analytics] Data cached to sessionStorage');
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Failed to fetch analytics data:', error);
+            const message = error.response?.data?.message || 'Failed to load dashboard data. Please try again later.';
+            import('sonner').then(({ toast }) => toast.error(message));
         } finally {
             setLoading(false);
         }
