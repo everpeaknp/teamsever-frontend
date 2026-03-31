@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatWindow } from '@/components/chat/ChatWindow';
-import { initializeSocket, joinWorkspace } from '@/lib/socket';
+import { initializeSocket, joinWorkspace, getSocket } from '@/lib/socket';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { usePresence } from '@/hooks/usePresence';
 import { Loader2, User, Circle } from 'lucide-react';
@@ -11,6 +11,8 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/axios';
 import { ChatSkeleton } from '@/components/skeletons/PageSkeleton';
+import { format, isToday, isYesterday } from 'date-fns';
+import { useMemo } from 'react';
 
 interface WorkspaceMember {
   _id: string;
@@ -27,6 +29,7 @@ export default function InboxPage() {
   const workspaceId = params.id as string;
   
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
   const [selectedMember, setSelectedMember] = useState<WorkspaceMember | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -90,32 +93,11 @@ export default function InboxPage() {
 
         if (membersRes.data.success) {
           const allMembers = membersRes.data.data || [];
-          const filteredMembers = allMembers.filter((m: WorkspaceMember) => m._id !== currentUserId);
-          
-          // Get recent conversations to sort members
-          const conversations = conversationsRes.data.success ? conversationsRes.data.data : [];
-          
-          // Map lastMessageAt to members
-          const sortedMembers = [...filteredMembers].sort((a, b) => {
-            const convA = conversations.find((c: any) => 
-              c.participants.some((p: any) => p._id === a._id)
-            );
-            const convB = conversations.find((c: any) => 
-              c.participants.some((p: any) => p._id === b._id)
-            );
-            
-            const timeA = convA ? new Date(convA.lastMessageAt).getTime() : 0;
-            const timeB = convB ? new Date(convB.lastMessageAt).getTime() : 0;
-            
-            return timeB - timeA;
-          });
+          setMembers(allMembers.filter((m: WorkspaceMember) => m._id !== currentUserId));
+        }
 
-          setMembers(sortedMembers);
-          
-          // Auto-select first member if available and nothing selected
-          if (sortedMembers.length > 0 && !selectedMember) {
-            handleMemberSelect(sortedMembers[0]);
-          }
+        if (conversationsRes.data.success) {
+          setConversations(conversationsRes.data.data || []);
         }
       } catch (err) {
         console.error('Failed to fetch inbox data:', err);
@@ -124,6 +106,72 @@ export default function InboxPage() {
 
     fetchData();
   }, [workspaceId, currentUserId]);
+
+  // Socket listener for real-time updates
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleNewMessage = (payload: any) => {
+      // Update conversations with new lastMessageAt
+      const { conversation, message } = payload;
+      if (!conversation || !conversation._id) return;
+
+      setConversations(prev => {
+        const index = prev.findIndex(c => c._id === conversation._id);
+        if (index === -1) {
+          // Add new conversation if it doesn't exist
+          return [conversation, ...prev];
+        }
+        
+        const updated = [...prev];
+        updated[index] = {
+          ...updated[index],
+          lastMessageAt: conversation.lastMessageAt || new Date().toISOString(),
+          lastMessage: message
+        };
+        return updated;
+      });
+    };
+
+    socket.on('dm:new', handleNewMessage);
+    
+    return () => {
+      socket.off('dm:new', handleNewMessage);
+    };
+  }, [getSocket()]);
+
+  // Memoized sorted members
+  const sortedMembers = useMemo(() => {
+    return [...members].sort((a, b) => {
+      const convA = conversations.find((c: any) => 
+        c.participants.some((p: any) => p._id === a._id || p === a._id)
+      );
+      const convB = conversations.find((c: any) => 
+        c.participants.some((p: any) => p._id === b._id || p === b._id)
+      );
+      
+      const timeA = convA ? new Date(convA.lastMessageAt).getTime() : 0;
+      const timeB = convB ? new Date(convB.lastMessageAt).getTime() : 0;
+      
+      return timeB - timeA;
+    });
+  }, [members, conversations]);
+
+  // Helper to format last message time
+  const formatLastMessageTime = (date: string | Date | undefined) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+
+    if (isToday(d)) {
+      return format(d, 'h:mm aa');
+    }
+    if (isYesterday(d)) {
+      return 'Yesterday';
+    }
+    return format(d, 'MMM d');
+  };
 
   const handleMemberSelect = async (member: WorkspaceMember) => {
     try {
@@ -165,18 +213,23 @@ export default function InboxPage() {
         </div>
         
         <div className="flex-1 overflow-y-auto">
-          {members.length === 0 ? (
+          {sortedMembers.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground">
               No members available
             </div>
           ) : (
             <div className="p-2">
-              {members.map((member) => {
+              {sortedMembers.map((member) => {
                 const online = isUserOnline(member._id);
                 const dmRoomId = currentUserId ? generateDMRoomId(currentUserId, member._id) : '';
                 const dmRoom = getRoom(dmRoomId);
                 const unreadCount = dmRoom?.unreadCount || 0;
                 const isSelected = selectedMember?._id === member._id;
+
+                const conversation = conversations.find((c: any) => 
+                  c.participants.some((p: any) => p._id === member._id || p === member._id)
+                );
+                const lastMessageTime = conversation?.lastMessageAt;
 
                 return (
                   <button
@@ -199,7 +252,17 @@ export default function InboxPage() {
                       />
                     </div>
                     <div className="flex-1 text-left min-w-0">
-                      <div className="font-medium truncate">{member.name}</div>
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium truncate">{member.name}</div>
+                        {lastMessageTime && (
+                          <div className={cn(
+                            "text-[10px] whitespace-nowrap ml-2",
+                            isSelected ? "text-primary-foreground/70" : "text-muted-foreground"
+                          )}>
+                            {formatLastMessageTime(lastMessageTime)}
+                          </div>
+                        )}
+                      </div>
                       <div className="text-xs opacity-70 truncate">{member.email}</div>
                     </div>
                     {unreadCount > 0 && (
