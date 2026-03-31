@@ -303,9 +303,10 @@ export default function DashboardPage() {
   // Get member limit from purchased count (for paid users) or default for free users
   // For paid users: use memberCount from subscription (set during purchase)
   // For free users: default to 5 members
-  const maxMembers = subscription?.isPaid && subscription?.memberCount 
-    ? subscription.memberCount 
-    : 5; // Free plan default
+  // Get member limit: prioritize plan features, then purchased seat count, then default
+  const maxMembers = plan?.features?.maxMembers !== undefined
+    ? plan.features.maxMembers
+    : (subscription?.isPaid && subscription?.memberCount ? subscription.memberCount : 5);
   
   // Calculate percentages
   const workspacePercentage = maxWorkspaces === -1 ? 0 : (workspaces.length / maxWorkspaces) * 100;

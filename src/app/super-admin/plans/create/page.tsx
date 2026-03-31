@@ -24,6 +24,7 @@ export default function CreatePlanPage() {
     pricePerMemberAnnual: 0,
     description: "",
     maxWorkspaces: 1,
+    maxMembers: 5,
     maxAdmins: 1,
     maxSpaces: 10,
     maxLists: 50,
@@ -84,6 +85,7 @@ export default function CreatePlanPage() {
       description: formData.description.trim(),
       features: {
         maxWorkspaces: Number(formData.maxWorkspaces),
+        maxMembers: Number(formData.maxMembers),
         maxAdmins: Number(formData.maxAdmins),
         maxSpaces: Number(formData.maxSpaces),
         maxLists: Number(formData.maxLists),
@@ -254,6 +256,18 @@ export default function CreatePlanPage() {
                     type="number"
                     value={formData.maxWorkspaces}
                     onChange={(e) => setFormData({ ...formData, maxWorkspaces: parseInt(e.target.value) || 0 })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <PersonIcon className="w-4 h-4" />
+                    Max Members per Workspace
+                  </Label>
+                  <Input
+                    type="number"
+                    value={formData.maxMembers}
+                    onChange={(e) => setFormData({ ...formData, maxMembers: parseInt(e.target.value) || 0 })}
                     required
                   />
                 </div>

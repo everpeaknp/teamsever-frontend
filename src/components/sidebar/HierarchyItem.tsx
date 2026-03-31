@@ -9,6 +9,7 @@ import {
   Plus,
   MoreHorizontal,
   Star,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/store/useUIStore';
@@ -299,18 +300,60 @@ const getRoute = () => {
                         </DropdownMenuItem>
                       )}
                       {item.type === 'list' && (
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // For lists, parent is either folder or space
-                            const parentType = (item as any).folder ? 'folder' : 'space';
-                            openModal('editList', item._id, parentType, item.name);
-                          }}
-                        >
-                          <MoreHorizontal className="h-4 w-4 mr-2" />
-                          Rename list
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              // For lists, parent is either folder or space
+                              const parentType = (item as any).folder ? 'folder' : 'space';
+                              openModal('editList', item._id, parentType, item.name);
+                            }}
+                          >
+                            <MoreHorizontal className="h-4 w-4 mr-2" />
+                            Rename list
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const parentType = (item as any).folder ? 'folder' : 'space';
+                              const spaceId = parentSpaceId || (item as any).space || (item as any).spaceId;
+                              openModal('deleteList', item._id, parentType, item.name, spaceId);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete list
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      {item.type === 'folder' && (
+                         <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const spaceId = parentSpaceId || (item as any).space || (item as any).spaceId;
+                              openModal('deleteFolder', item._id, 'space', item.name, spaceId);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete folder
+                          </DropdownMenuItem>
+                      )}
+                      {item.type === 'space' && (
+                         <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openModal('deleteSpace', item._id, 'workspace', item.name, item._id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete space
+                          </DropdownMenuItem>
                       )}
                     </>
                   )}

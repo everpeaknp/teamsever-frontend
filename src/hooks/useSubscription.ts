@@ -14,6 +14,7 @@ interface SubscriptionInfo {
     name: string;
     price: number;
     features: {
+      maxMembers: number;
       maxWorkspaces: number;
       maxAdmins: number;
       maxSpaces: number;

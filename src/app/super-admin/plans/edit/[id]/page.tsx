@@ -29,6 +29,7 @@ export default function EditPlanPage() {
     pricePerMemberMonthly: 0,
     pricePerMemberAnnual: 0,
     description: "",
+    maxMembers: 5,
     maxWorkspaces: 1,
     maxAdmins: 1,
     maxSpaces: 10,
@@ -84,6 +85,7 @@ export default function EditPlanPage() {
           pricePerMemberMonthly: plan.pricePerMemberMonthly || plan.basePrice || plan.price || 0,
           pricePerMemberAnnual: plan.pricePerMemberAnnual || (plan.basePrice || plan.price || 0) * 10,
           description: plan.description,
+          maxMembers: plan.features.maxMembers ?? 5,
           maxWorkspaces: plan.features.maxWorkspaces,
           maxAdmins: plan.features.maxAdmins,
           maxSpaces: plan.features.maxSpaces,
@@ -132,6 +134,7 @@ export default function EditPlanPage() {
       description: formData.description.trim(),
       features: {
         maxWorkspaces: Number(formData.maxWorkspaces),
+        maxMembers: Number(formData.maxMembers),
         maxAdmins: Number(formData.maxAdmins),
         maxSpaces: Number(formData.maxSpaces),
         maxLists: Number(formData.maxLists),
@@ -317,7 +320,19 @@ export default function EditPlanPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <IdCardIcon className="w-4 h-4" />
+                    <PersonIcon className="w-4 h-4" />
+                    Max Members per Workspace
+                  </Label>
+                  <Input
+                    type="number"
+                    value={formData.maxMembers}
+                    onChange={(e) => setFormData({ ...formData, maxMembers: parseInt(e.target.value) })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Shield className="w-4 h-4" />
                     Max Admins
                   </Label>
                   <Input

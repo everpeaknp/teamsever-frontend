@@ -38,6 +38,7 @@ import { CreateItemModal } from '@/components/modals/CreateItemModal';
 import { EditSpaceModal } from '@/components/modals/EditSpaceModal';
 import { EditFolderModal } from '@/components/modals/EditFolderModal';
 import { EditListModal } from '@/components/modals/EditListModal';
+import { DeleteItemModal } from '@/components/modals/DeleteItemModal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -348,6 +349,7 @@ export function AppSidebar() {
       <EditSpaceModal />
       <EditFolderModal />
       <EditListModal />
+      <DeleteItemModal />
 
       <div className="flex h-screen overflow-hidden">
         {/* Left Icon Bar - "Extra" Sidebar - Always Visible */}
