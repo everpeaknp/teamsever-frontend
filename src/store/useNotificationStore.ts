@@ -59,6 +59,12 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
   addNotification: (notification) => {
     const { notifications } = get();
+
+    // Prevent duplicate notifications from being added or triggering multiple popups
+    if (notifications.some((n) => n._id === notification._id)) {
+      return;
+    }
+
     const newNotifications = [notification, ...notifications];
     const unreadCount = newNotifications.filter((n) => !n.read).length;
     

@@ -52,24 +52,6 @@ export function NotificationBell() {
     fetchUnreadCount();
   }, []);
 
-  // Socket listener for real-time notifications
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleNewNotification = (data: { notification: Notification }) => {
-      console.log('[NotificationBell] New notification received:', data);
-      addNotification(data.notification);
-      
-      // Play notification sound (optional)
-      // playNotificationSound();
-    };
-
-    socket.on('notification:new', handleNewNotification);
-
-    return () => {
-      socket.off('notification:new', handleNewNotification);
-    };
-  }, [socket, addNotification]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
