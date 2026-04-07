@@ -319,8 +319,8 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Teamsever</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, {userName}</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">Teamsever</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Welcome back, {userName}</p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Currency Switcher */}
@@ -374,11 +374,11 @@ export default function DashboardPage() {
               {/* Logout Button */}
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
+                className="flex items-center gap-2 px-2 sm:px-4 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors flex-shrink-0"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="text-sm font-medium hidden sm:inline">Logout</span>
+                <span className="text-sm font-medium hidden md:inline">Logout</span>
               </button>
             </div>
           </div>
@@ -483,15 +483,15 @@ export default function DashboardPage() {
               )}
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
               {/* Workspaces */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Briefcase className="w-4 h-4" />
                   <span className="text-sm">Workspaces</span>
                 </div>
-                <div className="text-2xl font-semibold">
+                <div className="text-xl sm:text-2xl font-semibold">
                   {workspaces.length} / {maxWorkspaces === -1 ? '∞' : maxWorkspaces}
                 </div>
                 {maxWorkspaces !== -1 && (
@@ -505,7 +505,7 @@ export default function DashboardPage() {
                   <Layout className="w-4 h-4" />
                   <span className="text-sm">Spaces</span>
                 </div>
-                <div className="text-2xl font-semibold">
+                <div className="text-xl sm:text-2xl font-semibold">
                   {usage?.spaces || 0} / {maxSpaces === -1 ? '∞' : maxSpaces}
                 </div>
                 {maxSpaces !== -1 && (
@@ -519,7 +519,7 @@ export default function DashboardPage() {
                   <CheckSquare className="w-4 h-4" />
                   <span className="text-sm">Tasks</span>
                 </div>
-                <div className="text-2xl font-semibold">
+                <div className="text-xl sm:text-2xl font-semibold">
                   {usage?.tasks || 0} / {maxTasks === -1 ? '∞' : maxTasks}
                 </div>
                 {maxTasks !== -1 && (
@@ -533,7 +533,7 @@ export default function DashboardPage() {
                   <Users className="w-4 h-4" />
                   <span className="text-sm">Members</span>
                 </div>
-                <div className="text-2xl font-semibold">
+                <div className="text-xl sm:text-2xl font-semibold">
                   {maxMembers === -1 ? 'Unlimited' : `Up to ${maxMembers}`}
                 </div>
               </div>
