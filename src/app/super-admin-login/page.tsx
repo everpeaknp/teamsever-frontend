@@ -103,7 +103,7 @@ export default function SuperAdminLoginPage() {
               <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 ml-1">Admin Email</label>
               <input
                 className="w-full h-11 px-4 rounded-2xl bg-slate-100/50 dark:bg-white/[0.05] border-transparent focus:bg-white dark:focus:bg-white/[0.08] border-none focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-white/10 transition-all outline-none text-sm dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
-                placeholder="admin@taskflow.com"
+                placeholder="admin@teamsever.com"
                 required
                 type="email"
                 value={email}
@@ -170,10 +170,10 @@ export default function SuperAdminLoginPage() {
       <AnimatePresence>
         {error && (
           <motion.div 
-            initial={{ opacity: 0, y: 20, scale: 0.9 }}
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 py-3 px-5 bg-red-500/90 dark:bg-red-500/20 backdrop-blur-md border border-red-200 dark:border-red-500/30 text-white dark:text-red-400 rounded-2xl shadow-xl flex items-center gap-3 min-w-[300px]"
+            className="fixed top-4 left-4 right-4 sm:top-8 sm:left-auto sm:right-8 sm:w-auto z-[100] py-3 px-5 bg-red-500/90 dark:bg-red-500/20 backdrop-blur-md border border-red-200 dark:border-red-500/30 text-white dark:text-red-400 rounded-2xl shadow-[0_20px_40px_rgba(239,68,68,0.2)] flex items-center gap-3 sm:min-w-[300px]"
           >
             <div className="w-2 h-2 rounded-full bg-white dark:bg-red-500 animate-pulse" />
             <p className="text-sm font-bold tracking-tight">{error}</p>
