@@ -21,8 +21,18 @@ api.interceptors.request.use(
         config.url?.includes('/auth/forgot-password') ||
         config.url?.includes('/auth/reset-password');
       
-      if (isAuthEndpoint) {
-        // Allow auth requests to proceed without token
+      const isPublicEndpoint = 
+        isAuthEndpoint || 
+        (config.method === 'get' && config.url?.includes('/super-admin/settings')) ||
+        config.url?.includes('/subscription/next-plan');
+
+      if (isPublicEndpoint) {
+        // Allow public and expected semi-public requests to proceed without token
+        // Token will still be added below if it exists
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        if (token && token !== 'undefined' && token !== 'null') {
+           config.headers.Authorization = `Bearer ${token}`;
+        }
         return config;
       }
       

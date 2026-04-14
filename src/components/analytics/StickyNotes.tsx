@@ -7,35 +7,62 @@ import { StickyNote } from 'lucide-react';
 interface StickyNotesProps {
   workspaceId: string;
   userId: string;
+  initialContent?: string;
 }
 
-export function StickyNotes({ workspaceId, userId }: StickyNotesProps) {
+export function StickyNotes({ workspaceId, userId, initialContent }: StickyNotesProps) {
   const [content, setContent] = useState('');
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const isLoadingRef = useRef(false);
+  const isFirstLoad = useRef(true);
 
   const storageKey = `notes_${workspaceId}_${userId}`;
 
-  // Load from local storage specifically for this user and workspace
+  // Load from API (via initialContent) or local storage
   useEffect(() => {
     if (isLoadingRef.current) return;
     
     try {
       isLoadingRef.current = true;
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        setContent(saved);
-        if (editorRef.current && editorRef.current.textContent !== saved) {
-          editorRef.current.textContent = saved;
+      
+      // Prioritize API content if available
+      if (initialContent !== undefined && isFirstLoad.current) {
+        setContent(initialContent);
+        if (editorRef.current && editorRef.current.textContent !== initialContent) {
+          editorRef.current.textContent = initialContent;
         }
+        isFirstLoad.current = false;
+        return;
+      }
+
+      // Fallback to local storage only if it's the first load and no initialContent
+      if (isFirstLoad.current) {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          setContent(saved);
+          if (editorRef.current && editorRef.current.textContent !== saved) {
+            editorRef.current.textContent = saved;
+          }
+        }
+        isFirstLoad.current = false;
       }
     } catch (error) {
       console.error('Failed to load notes:', error);
     } finally {
       isLoadingRef.current = false;
     }
-  }, [storageKey]);
+  }, [storageKey, initialContent]);
+
+  const saveToAPI = async (newContent: string) => {
+    try {
+      const { api } = await import('@/lib/axios');
+      await api.patch(`/workspaces/${workspaceId}/sticky-note`, { content: newContent });
+      console.log('[StickyNotes] Saved to API');
+    } catch (error) {
+      console.error('[StickyNotes] Failed to save to API:', error);
+    }
+  };
 
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
     const newContent = e.currentTarget.textContent || '';
@@ -46,14 +73,15 @@ export function StickyNotes({ workspaceId, userId }: StickyNotesProps) {
       clearTimeout(saveTimeoutRef.current);
     }
 
-    // Debounce save to localStorage (auto-save after 500ms of no typing)
+    // Debounce save to localStorage and API
     saveTimeoutRef.current = setTimeout(() => {
       try {
         localStorage.setItem(storageKey, newContent);
+        saveToAPI(newContent);
       } catch (error) {
         console.error('Failed to auto-save notes:', error);
       }
-    }, 500);
+    }, 1000); // 1s debounce for API calls
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
@@ -102,6 +130,7 @@ export function StickyNotes({ workspaceId, userId }: StickyNotesProps) {
               const currentContent = editorRef.current.textContent || '';
               try {
                 localStorage.setItem(storageKey, currentContent);
+                saveToAPI(currentContent);
               } catch (error) {
                 console.error('Failed to save notes on blur:', error);
               }

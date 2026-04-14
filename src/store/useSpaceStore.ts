@@ -29,7 +29,7 @@ interface SpaceStore {
   updateSpace: (spaceId: string, data: Partial<Space>) => Promise<Space>;
   deleteList: (listId: string) => Promise<void>;
   deleteFolder: (folderId: string) => Promise<void>;
-  addMemberToSpace: (spaceId: string, userId: string, role?: 'admin' | 'member') => Promise<void>;
+  addMemberToSpace: (spaceId: string, userId: string, role?: 'admin' | 'member', permissionLevel?: string) => Promise<void>;
   removeMemberFromSpace: (spaceId: string, userId: string) => Promise<void>;
   addListOptimistic: (list: List) => void; // Add optimistic update method
   clearSpace: () => void;
@@ -174,9 +174,9 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
     }
   },
 
-  addMemberToSpace: async (spaceId: string, userId: string, role = 'member' as 'admin' | 'member') => {
+  addMemberToSpace: async (spaceId: string, userId: string, role = 'member' as 'admin' | 'member', permissionLevel?: string) => {
     try {
-      await api.post(`/spaces/${spaceId}/members`, { userId, role });
+      await api.post(`/spaces/${spaceId}/members`, { userId, role, permissionLevel });
       // Refresh space to get updated members
       const response = await api.get(`/spaces/${spaceId}`);
       set({ currentSpace: response.data.data });

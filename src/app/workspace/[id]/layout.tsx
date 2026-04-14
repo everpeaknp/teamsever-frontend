@@ -17,7 +17,7 @@ export default function WorkspaceLayout({
 
   useEffect(() => {
     // Initialize socket connection for the workspace
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken') || localStorage.getItem('token');
     
     if (!token) {
       console.warn('[Workspace Layout] No auth token found');

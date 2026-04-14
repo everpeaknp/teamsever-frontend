@@ -90,6 +90,7 @@ export default function AnalyticsPage() {
     const [spaces, setSpaces] = useState<any[]>([]);
     const [members, setMembers] = useState<any[]>([]);
     const [workspace, setWorkspace] = useState<any>(null);
+    const [stickyNote, setStickyNote] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState<string>('');
     const [userStatus, setUserStatus] = useState<'active' | 'inactive'>('inactive');
@@ -127,6 +128,7 @@ export default function AnalyticsPage() {
                             setUserStatus(parsed.userStatus || 'inactive');
                             setRunningTimer(parsed.runningTimer || null);
                             setIsAdmin(parsed.isAdmin || false);
+                            setStickyNote(parsed.stickyNote || null);
                             setLoading(false);
                             return;
                         }
@@ -151,7 +153,8 @@ export default function AnalyticsPage() {
                 hierarchy: spacesData, 
                 members: membersData, 
                 tasks: tasksData,
-                currentRunningTimer 
+                currentRunningTimer,
+                stickyNote: stickyNoteData
             } = response.data.data;
 
             setMembers(membersData || []);
@@ -159,6 +162,7 @@ export default function AnalyticsPage() {
             setSpaces(spacesData || []);
             setWorkspace(workspaceData || null);
             setTasks(tasksData || []);
+            setStickyNote(stickyNoteData || null);
 
             // Determine current user's status and admin role
             let currentUserStatus: 'active' | 'inactive' = 'inactive';
@@ -196,7 +200,8 @@ export default function AnalyticsPage() {
                 userId: localUserId,
                 userStatus: currentUserStatus,
                 runningTimer: currentRunningTimer,
-                isAdmin: currentIsAdmin
+                isAdmin: currentIsAdmin,
+                stickyNote: stickyNoteData
             };
             sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
 
@@ -349,7 +354,11 @@ export default function AnalyticsPage() {
                 {/* Utilities */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     <Announcements workspaceId={workspaceId} isAdmin={isAdmin} />
-                    <StickyNotes workspaceId={workspaceId} userId={userId} />
+                    <StickyNotes 
+                        workspaceId={workspaceId} 
+                        userId={userId} 
+                        initialContent={stickyNote?.content}
+                    />
                 </div>
 
                 {/* Workspace Activity Timeline */}

@@ -126,6 +126,7 @@ export default function SpaceHomePage() {
   const [newFolderData, setNewFolderData] = useState({ name: '', color: '#3b82f6' });
   const [spaceSettings, setSpaceSettings] = useState({ name: '', description: '' });
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [memberPermissions, setMemberPermissions] = useState<Record<string, SpacePermissionLevel>>({});
   const [searchMemberQuery, setSearchMemberQuery] = useState('');
   const [showAllMembersModal, setShowAllMembersModal] = useState(false);
 
@@ -470,7 +471,14 @@ export default function SpaceHomePage() {
       return;
     }
     try {
-      await Promise.all(selectedMembers.map(memberId => addMemberToSpace(spaceId, memberId)));
+      await Promise.all(
+        selectedMembers.map(memberId => {
+          // Get the selected permission or default to workspace role based logic
+          const member = workspace?.members.find(m => (typeof m.user === 'string' ? m.user : m.user?._id) === memberId);
+          const level = memberPermissions[memberId] || (member?.role === 'admin' ? 'FULL' : 'EDIT');
+          return addMemberToSpace(spaceId, memberId, 'member', level);
+        })
+      );
       
       // Send notifications to assigned members
       try {
@@ -511,7 +519,22 @@ export default function SpaceHomePage() {
   };
 
   const toggleMemberSelection = (memberId: string) => {
-    setSelectedMembers(prev => prev.includes(memberId) ? prev.filter(id => id !== memberId) : [...prev, memberId]);
+    setSelectedMembers(prev => {
+      const isSelected = prev.includes(memberId);
+      if (isSelected) {
+        // Remove from selection and permissions mapping
+        const { [memberId]: _, ...rest } = memberPermissions;
+        setMemberPermissions(rest);
+        return prev.filter(id => id !== memberId);
+      } else {
+        // Add to selection
+        return [...prev, memberId];
+      }
+    });
+  };
+
+  const handlePermissionChange = (memberId: string, level: SpacePermissionLevel) => {
+    setMemberPermissions(prev => ({ ...prev, [memberId]: level }));
   };
 
   const toggleFolder = (folderId: string) => {
@@ -719,7 +742,9 @@ export default function SpaceHomePage() {
                   spaceColor={spaceColor}
                   availableMembers={availableMembers}
                   selectedMembers={selectedMembers}
+                  memberPermissions={memberPermissions}
                   onToggleMemberSelection={toggleMemberSelection}
+                  onPermissionChange={handlePermissionChange}
                   onAddMembers={handleAddMembers}
                   searchQuery={searchMemberQuery}
                   onSearchChange={setSearchMemberQuery}

@@ -4,7 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Users, Shield, Edit, MessageSquare, Eye } from 'lucide-react';
+
+export type SpacePermissionLevel = 'FULL' | 'EDIT' | 'COMMENT' | 'VIEW';
 
 interface InviteMemberModalProps {
   open: boolean;
@@ -12,12 +15,28 @@ interface InviteMemberModalProps {
   spaceColor: string;
   availableMembers: any[];
   selectedMembers: string[];
+  memberPermissions: Record<string, SpacePermissionLevel>;
   onToggleMemberSelection: (memberId: string) => void;
+  onPermissionChange: (memberId: string, level: SpacePermissionLevel) => void;
   onAddMembers: () => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   getInitials: (name: string) => string;
 }
+
+const PERMISSION_ICONS = {
+  FULL: Shield,
+  EDIT: Edit,
+  COMMENT: MessageSquare,
+  VIEW: Eye,
+};
+
+const PERMISSION_DESCRIPTIONS = {
+  FULL: 'Full access - can create, edit, and delete',
+  EDIT: 'Can create and edit tasks',
+  COMMENT: 'Can only comment on tasks',
+  VIEW: 'Read-only access',
+};
 
 export function InviteMemberModal({
   open,
@@ -25,7 +44,9 @@ export function InviteMemberModal({
   spaceColor,
   availableMembers,
   selectedMembers,
+  memberPermissions,
   onToggleMemberSelection,
+  onPermissionChange,
   onAddMembers,
   searchQuery,
   onSearchChange,
@@ -101,7 +122,37 @@ export function InviteMemberModal({
                           <p className="font-medium truncate">{user.name}</p>
                           <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                         </div>
-                        <Badge variant="outline" className="capitalize">{member.role}</Badge>
+                        
+                        {isSelected ? (
+                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                            <Select
+                              value={memberPermissions[user._id] || (member.role === 'admin' ? 'FULL' : 'EDIT')}
+                              onValueChange={(value) => onPermissionChange(user._id, value as SpacePermissionLevel)}
+                            >
+                              <SelectTrigger className="h-8 w-[140px] text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.entries(PERMISSION_DESCRIPTIONS).map(([level, description]) => {
+                                  const Icon = PERMISSION_ICONS[level as SpacePermissionLevel];
+                                  return (
+                                    <SelectItem key={level} value={level}>
+                                      <div className="flex flex-col">
+                                        <div className="flex items-center gap-2 font-medium">
+                                          <Icon className="w-3.5 h-3.5" />
+                                          <span>{level}</span>
+                                        </div>
+                                        <span className="text-[10px] text-muted-foreground">{description}</span>
+                                      </div>
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        ) : (
+                          <Badge variant="outline" className="capitalize">{member.role}</Badge>
+                        )}
                       </div>
                     </div>
                   );

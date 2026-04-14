@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Search, Users, UserPlus } from 'lucide-react';
+import { Trash2, Search, Users, UserPlus, Shield, Edit, MessageSquare, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ListMember {
@@ -18,7 +18,7 @@ interface ListMember {
   avatar?: string;
   profilePicture?: string;
   workspaceRole: string;
-  listPermissionLevel: string | null;
+  listPermissionLevel: 'FULL' | 'EDIT' | 'COMMENT' | 'VIEW' | null;
   hasOverride: boolean;
   addedBy: string | null;
   addedAt: string | null;
@@ -81,7 +81,7 @@ export function ListMemberManagement({
 
   const fetchSpaceMembers = async () => {
     try {
-      const response = await api.get(`/spaces/${spaceId}/members`);
+      const response = await api.get(`/spaces/${spaceId}/space-members`);
       setSpaceMembers(response.data.data || []);
     } catch (error) {
       console.error('Failed to fetch space members:', error);
@@ -153,10 +153,21 @@ export function ListMemberManagement({
   const getPermissionLabel = (level: string) => {
     const labels: Record<string, string> = {
       FULL: 'Full Access',
-      EDIT: 'Can Edit',
+      EDIT: 'Edit',
+      COMMENT: 'Comment',
       VIEW: 'View Only',
     };
     return labels[level] || level;
+  };
+
+  const getPermissionIcon = (level: string) => {
+    const icons: Record<string, any> = {
+      FULL: Shield,
+      EDIT: Edit,
+      COMMENT: MessageSquare,
+      VIEW: Eye,
+    };
+    return icons[level] || Users;
   };
 
   // Simplified access control tier logic (no 'none' tier):
@@ -171,6 +182,7 @@ export function ListMemberManagement({
     const colors: Record<string, string> = {
       FULL: 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400',
       EDIT: 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
+      COMMENT: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400',
       VIEW: 'bg-slate-100 text-slate-700 dark:bg-slate-900/20 dark:text-slate-400',
     };
     return colors[level] || '';
@@ -193,24 +205,34 @@ export function ListMemberManagement({
           <DialogTitle>Manage List Members - {listName}</DialogTitle>
           <DialogDescription>
             Assign members to this list and manage their permissions.
-            <br />
-            <strong>Full Access:</strong> Create, edit, delete tasks (Available in all tiers)
-            <br />
-            <strong>Can Edit:</strong> Change status only {isCanEditLocked && '(Requires Pro tier or higher)'}
-            <br />
-            <strong>View Only:</strong> View tasks only {isCanViewLocked && '(Requires Advanced tier)'}
-            {accessControlTier === 'basic' && (
-              <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-xs text-blue-800 dark:text-blue-200">
-                <strong>Basic Tier:</strong> Members can be assigned "Full Access" only. Upgrade to Pro for "Can Edit" or Advanced for "View Only" permissions.
-              </div>
-            )}
-            {accessControlTier === 'pro' && (
-              <div className="mt-2 p-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded text-xs text-purple-800 dark:text-purple-200">
-                <strong>Pro Tier:</strong> Members can have "Full Access" or "Can Edit" permissions. Upgrade to Advanced for "View Only" option.
-              </div>
-            )}
           </DialogDescription>
         </DialogHeader>
+
+        <div className="px-6 py-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] sm:text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1.5">
+              <Shield className="w-3 h-3 text-purple-600" />
+              <span><strong>Full:</strong> Create, edit, delete</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Edit className="w-3 h-3 text-blue-600" />
+              <span><strong>Edit:</strong> Can edit tasks</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MessageSquare className="w-3 h-3 text-green-600" />
+              <span><strong>Comment:</strong> Only comments</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Eye className="w-3 h-3 text-slate-600" />
+              <span><strong>View:</strong> Read-only access</span>
+            </div>
+          </div>
+          {accessControlTier === 'basic' && (
+            <div className="mt-2 p-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded text-[10px] text-blue-800 dark:text-blue-200">
+              <strong>Basic Tier:</strong> Assign "Full Access" only. Upgrade to Pro for granular permissions.
+            </div>
+          )}
+        </div>
 
         {/* Search */}
         <div className="relative">
@@ -265,7 +287,13 @@ export function ListMemberManagement({
                             </p>
                           </div>
                           <Badge className={getPermissionBadgeColor(member.listPermissionLevel!)}>
-                            {getPermissionLabel(member.listPermissionLevel!)}
+                            <div className="flex items-center gap-1">
+                              {(() => {
+                                const Icon = getPermissionIcon(member.listPermissionLevel!);
+                                return <Icon className="w-3 h-3" />;
+                              })()}
+                              {getPermissionLabel(member.listPermissionLevel!)}
+                            </div>
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 ml-3">
@@ -285,7 +313,14 @@ export function ListMemberManagement({
                                 disabled={isCanEditLocked}
                                 className={isCanEditLocked ? 'opacity-50 cursor-not-allowed' : ''}
                               >
-                                Can Edit {isCanEditLocked && '🔒'}
+                                Edit {isCanEditLocked && '🔒'}
+                              </SelectItem>
+                              <SelectItem 
+                                value="COMMENT"
+                                disabled={isCanViewLocked} // Use same lock as VIEW for COMMENT
+                                className={isCanViewLocked ? 'opacity-50 cursor-not-allowed' : ''}
+                              >
+                                Comment {isCanViewLocked && '🔒'}
                               </SelectItem>
                               <SelectItem 
                                 value="VIEW"
