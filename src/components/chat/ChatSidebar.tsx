@@ -203,16 +203,16 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
         
         {/* Public Channels */}
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="flex items-center justify-between mb-3 px-2">
+            <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
               Channels
             </h3>
             {isAdmin && (
               <button 
-                className="p-1 hover:bg-accent rounded-md transition-colors text-muted-foreground"
+                className="p-1 hover:bg-primary/10 hover:text-primary rounded-md transition-colors text-muted-foreground active:scale-95"
                 onClick={() => setIsModalOpen(true)}
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-[14px] w-[14px]" />
               </button>
             )}
           </div>
@@ -224,16 +224,16 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                   key={channel._id}
                   onClick={() => onChannelSelect(channel._id, 'workspace', channel.name)}
                   className={cn(
-                    'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative group',
+                    'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[14px] font-medium transition-all relative group',
                     activeChannel === channel._id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-accent text-foreground'
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'hover:bg-accent/50 text-foreground/80 hover:text-foreground'
                   )}
                 >
-                  <Hash className={cn("h-4 w-4 flex-shrink-0", activeChannel === channel._id ? "text-primary-foreground" : "text-muted-foreground")} />
-                  <span className="flex-1 text-left truncate font-medium">{channel.name}</span>
+                  <Hash className={cn("h-[18px] w-[18px] flex-shrink-0 transition-colors", activeChannel === channel._id ? "text-primary" : "text-muted-foreground/70 group-hover:text-foreground/70")} />
+                  <span className="flex-1 text-left truncate">{channel.name}</span>
                   {unread > 0 && activeChannel !== channel._id && (
-                    <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                    <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 shadow-sm shadow-primary/20" />
                   )}
                 </button>
               );
@@ -244,7 +244,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
         {/* Private Groups */}
         {privateChannels.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3 px-2">
               Private Groups
             </h3>
             <div className="space-y-0.5">
@@ -255,16 +255,16 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                     key={channel._id}
                     onClick={() => onChannelSelect(channel._id, 'workspace', channel.name)}
                     className={cn(
-                      'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative',
+                      'w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[14px] font-medium transition-all relative group',
                       activeChannel === channel._id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'hover:bg-accent text-foreground'
+                        ? 'bg-primary/10 text-primary font-semibold'
+                        : 'hover:bg-accent/50 text-foreground/80 hover:text-foreground'
                     )}
                   >
-                    <Lock className={cn("h-4 w-4 flex-shrink-0", activeChannel === channel._id ? "text-primary-foreground" : "text-muted-foreground")} />
-                    <span className="flex-1 text-left truncate font-medium">{channel.name}</span>
+                    <Lock className={cn("h-[16px] w-[16px] flex-shrink-0 transition-colors", activeChannel === channel._id ? "text-primary" : "text-muted-foreground/70 group-hover:text-foreground/70")} />
+                    <span className="flex-1 text-left truncate">{channel.name}</span>
                     {unread > 0 && activeChannel !== channel._id && (
-                      <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                      <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 shadow-sm shadow-primary/20" />
                     )}
                   </button>
                 );
@@ -275,10 +275,10 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
 
         {/* Direct Messages */}
         <div>
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+          <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-3 px-2 mt-4">
             Direct Messages
           </h3>
-          <div className="space-y-0.5">
+          <div className="space-y-1">
             {useMemo(() => {
               // Create a map of targetUserId to lastMessageAt for quick lookup
               const conversationMap = new Map<string, string>();
@@ -311,22 +311,22 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                   key={member._id}
                   onClick={() => handleMemberClick(member)}
                   className={cn(
-                    'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative',
+                    'w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[14px] font-medium transition-all relative group',
                     activeChannel === member._id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-accent text-foreground'
+                      ? 'bg-primary/10 text-primary font-semibold'
+                      : 'hover:bg-accent/50 text-foreground/80 hover:text-foreground'
                   )}
                 >
                   <div className="relative flex-shrink-0">
                     <UserAvatar 
                       user={member} 
-                      className="h-6 w-6" 
-                      fallbackClassName="text-[8px]"
+                      className="h-[28px] w-[28px] shadow-sm transition-transform group-hover:scale-105" 
+                      fallbackClassName="text-[10px]"
                     />
                     <Circle
                       className={cn(
-                        'h-2 w-2 absolute -bottom-0.5 -right-0.5',
-                        online ? 'fill-green-500 text-green-500' : 'fill-gray-400 text-gray-400 border-background border'
+                        'h-2.5 w-2.5 absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-background',
+                        online ? 'fill-green-500 text-green-500' : 'fill-muted-foreground text-muted-foreground'
                       )}
                     />
                   </div>
