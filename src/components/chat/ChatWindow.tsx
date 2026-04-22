@@ -23,6 +23,7 @@ interface ChatWindowProps {
 }
 
 import { EditChannelModal } from './EditChannelModal';
+import { MessageBubble } from './MessageBubble';
 
 export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, isAdmin }: ChatWindowProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -374,16 +375,24 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
-      {/* Header - Fixed */}
-      <div className="h-14 border-b border-border px-6 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+    <div className="flex-1 flex flex-col bg-[#FDFDFD] dark:bg-background h-full overflow-hidden relative">
+      {/* Header - Sticky & Premium */}
+      <div className="h-16 border-b border-border/40 bg-background/80 backdrop-blur-xl px-6 flex items-center justify-between flex-shrink-0 sticky top-0 z-20 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold shadow-sm">
+            {type === 'workspace' ? '#' : '@'}
+          </div>
+          <div>
+            <h2 className="text-[15px] font-semibold text-foreground tracking-tight">{title}</h2>
+            <p className="text-[11px] text-muted-foreground font-medium">
+              {type === 'workspace' ? 'Workspace Channel' : 'Direct Message'}
+            </p>
+          </div>
         </div>
         {type === 'workspace' && channelId && channelId !== 'general' && isAdmin && (
           <button 
             onClick={() => setIsEditModalOpen(true)}
-            className="p-2 hover:bg-muted rounded-full text-muted-foreground transition-colors"
+            className="p-2 hover:bg-muted/80 rounded-full text-muted-foreground hover:text-foreground transition-all active:scale-95"
             title="Channel Settings"
           >
             <Settings className="h-5 w-5" />
@@ -434,126 +443,36 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         )}
 
         {localMessages.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground min-h-[300px]">
-            <div className="text-center p-8 bg-muted/10 rounded-2xl border border-dashed border-border/50 max-w-sm mx-auto">
-              <p className="text-sm">No messages yet. Start the conversation!</p>
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground min-h-[400px] h-full">
+            <div className="h-16 w-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+              <Send className="h-6 w-6 text-primary ml-1" />
             </div>
+            <h3 className="text-foreground font-medium text-lg mb-1">Start the conversation</h3>
+            <p className="text-sm text-center max-w-[250px]">Send a message to kick things off.</p>
           </div>
         ) : (
-          localMessages.map((message, index) => {
-            const showAvatar = shouldShowAvatar(message, index);
-            const isSystemMessage = message.type === 'system';
-            const isOwnMessage = message.sender._id === currentUserId;
+          <div className="flex flex-col justify-end min-h-full">
+            {localMessages.map((message, index) => {
+              const showAvatar = shouldShowAvatar(message, index);
+              const isSystemMessage = message.type === 'system';
+              const isOwnMessage = message.sender._id === currentUserId;
 
-            if (isSystemMessage) {
               return (
-                <div key={message._id} className="flex justify-center">
-                  <div className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
-                    {message.content}
-                  </div>
-                </div>
+                <MessageBubble
+                  key={message._id || `msg-${index}`}
+                  message={message}
+                  isOwn={isOwnMessage}
+                  showAvatar={showAvatar}
+                  isSystemMessage={isSystemMessage}
+                  onRetry={message.failed ? () => {
+                    setInputValue(message.content);
+                    setOptimisticMessages(prev => prev.filter(m => m._id !== message._id));
+                    removeMessage(roomId, message._id);
+                  } : undefined}
+                />
               );
-            }
-
-            // Own messages on the right, others on the left
-            if (isOwnMessage) {
-              return (
-                <div
-                  key={message._id}
-                  className={cn(
-                    'flex gap-3 justify-end',
-                    !showAvatar && 'mr-11'
-                  )}
-                >
-                  <div className="flex flex-col items-end max-w-[85%]">
-                    {showAvatar && (
-                      <div className="flex items-center gap-2 mb-1.5 opacity-90">
-                        <span className="text-[10px] text-muted-foreground font-medium">
-                          {formatMessageTime(message.createdAt)}
-                        </span>
-                        <span className="font-bold text-xs text-primary">
-                          You
-                        </span>
-                      </div>
-                    )}
-                    <div className={cn(
-                      "px-4 py-2 rounded-lg text-sm whitespace-pre-wrap break-words w-fit min-w-[40px] max-w-full",
-                      message.failed 
-                        ? "bg-destructive/20 text-destructive border border-destructive" 
-                        : "bg-primary text-primary-foreground"
-                    )}>
-                      {message.content}
-                      
-                      {/* Status indicators */}
-                      <div className="flex items-center gap-1 mt-1 justify-end text-xs opacity-70">
-                        {message.sending && (
-                          <><Loader2 className="h-3 w-3 animate-spin" /> Sending...</>
-                        )}
-                        {message.failed && (
-                          <div className="flex items-center gap-1">
-                            <AlertCircle className="h-3 w-3" />
-                            <span>Failed</span>
-                            <button
-                              onClick={() => {
-                                setInputValue(message.content);
-                                // Remove from optimistic state
-                                setOptimisticMessages(prev => prev.filter(m => m._id !== message._id));
-                                // Remove from store
-                                removeMessage(roomId, message._id);
-                              }}
-                              className="underline hover:no-underline ml-1"
-                            >
-                              Retry
-                            </button>
-                          </div>
-                        )}
-                        {!message.sending && !message.failed && !message.tempId && (
-                          <CheckCheck className="h-3 w-3" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {showAvatar ? (
-                    <UserAvatar user={message.sender} className="h-8 w-8 flex-shrink-0" />
-                  ) : (
-                    <div className="w-8 flex-shrink-0" />
-                  )}
-                </div>
-              );
-            }
-
-            // Other users' messages on the left
-            return (
-              <div
-                key={message._id}
-                className={cn(
-                  'flex gap-3 items-start',
-                  !showAvatar && 'ml-11'
-                )}
-              >
-                {showAvatar && (
-                  <UserAvatar user={message.sender} className="h-8 w-8 flex-shrink-0" />
-                )}
-
-                <div className="flex flex-col max-w-[85%]">
-                  {showAvatar && (
-                    <div className="flex items-center gap-2 mb-1.5 opacity-90">
-                      <span className="font-bold text-xs text-foreground">
-                        {message.sender.name}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground font-medium">
-                        {formatMessageTime(message.createdAt)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="bg-muted px-4 py-2 rounded-lg text-sm text-foreground whitespace-pre-wrap break-words w-fit min-w-[40px] max-w-full">
-                    {message.content}
-                  </div>
-                </div>
-              </div>
-            );
-          })
+            })}
+          </div>
         )}
 
         <div ref={messagesEndRef} />
@@ -566,39 +485,45 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         </div>
       )}
 
-      {/* Input Area - Improved padding and layout */}
-      <div className="border-t border-border p-4 pb-4 md:pb-6 bg-background/95 backdrop-blur-sm sticky bottom-0 z-10 transition-all">
-        <div className="max-w-4xl mx-auto flex gap-2 items-end">
-          <div className="flex-1 relative">
-            <Textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={(e) => handleInputChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
-              className="min-h-[44px] max-h-32 resize-none pr-10 rounded-xl bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary shadow-none"
-              rows={1}
-              autoFocus
-            />
-            <button
-              type="button"
-              className="absolute right-3 bottom-2.5 p-1 hover:bg-muted rounded-full transition-colors"
-              title="Add emoji"
-            >
-              <Smile className="h-5 w-5 text-muted-foreground/60" />
-            </button>
+      {/* Input Area - Polished & Premium */}
+      <div className="border-t border-border/40 p-4 pb-4 md:pb-6 bg-background/80 backdrop-blur-xl sticky bottom-0 z-20">
+        <div className="max-w-4xl mx-auto flex gap-3 items-end">
+          <div className="flex-1 relative group">
+            <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 to-primary/0 rounded-[18px] blur opacity-0 group-focus-within:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative flex items-end bg-card border border-border/60 focus-within:border-primary/50 shadow-sm rounded-[16px] transition-colors">
+              <button
+                type="button"
+                className="p-3 text-muted-foreground/60 hover:text-foreground transition-colors"
+                title="Add emoji"
+              >
+                <Smile className="h-[22px] w-[22px]" />
+              </button>
+              <Textarea
+                ref={textareaRef}
+                value={inputValue}
+                onChange={(e) => handleInputChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Message..."
+                className="min-h-[48px] max-h-32 resize-none py-3 px-1 border-none focus-visible:ring-0 shadow-none bg-transparent flex-1 text-[15px]"
+                rows={1}
+                autoFocus
+              />
+            </div>
           </div>
           <Button
             onClick={handleSend}
             disabled={!inputValue.trim() || sending}
             size="icon"
-            className="h-[44px] w-[44px] flex-shrink-0 rounded-xl shadow-md transition-all hover:scale-105 active:scale-95"
+            className={cn(
+              "h-[48px] w-[48px] flex-shrink-0 rounded-[16px] transition-all duration-300",
+              inputValue.trim() ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0" : "bg-muted text-muted-foreground opacity-50"
+            )}
           >
-            <Send className="h-5 w-5" />
+            <Send className="h-5 w-5 ml-0.5" />
           </Button>
         </div>
-        <div className="max-w-4xl mx-auto flex items-center justify-between text-[10px] text-muted-foreground mt-2 px-1">
-          <span className="hidden sm:inline">Shift + Enter for new line • Enter to send</span>
+        <div className="max-w-4xl mx-auto flex items-center justify-between text-[11px] font-medium text-muted-foreground mt-3 px-1">
+          <span className="hidden sm:inline">Press <kbd className="font-sans px-1.5 py-0.5 bg-muted rounded-md border border-border/50 shadow-sm">Enter</kbd> to send</span>
           <span className="sm:hidden">Press send to transmit</span>
         </div>
       </div>
