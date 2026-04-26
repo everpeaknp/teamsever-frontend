@@ -22,9 +22,10 @@ interface ChatWindowProps {
   isAdmin?: boolean;
 }
 
+import { useSocket } from '@/contexts/SocketContext';
 import { EditChannelModal } from './EditChannelModal';
 import { MessageBubble } from './MessageBubble';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, isAdmin }: ChatWindowProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -54,7 +55,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     getRoom, 
     createRoom, 
     addMessage, 
-    setMessages,
+    setMessages: setMessagesInStore,
     updateMessage,
     removeMessage,
     getDraft, 
@@ -103,8 +104,16 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
   }, []);
 
+  const { 
+    socket,
+    isConnected, 
+    connectionState, 
+    reconnect 
+  } = useSocket();
+
   const {
-    messages: fetchedMessages,
+    messages,
+    setMessages,
     loading,
     loadingMore,
     sending,
@@ -116,40 +125,19 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     loadMore
   } = useChat({ 
     workspaceId, 
-    channelId, // NEW
+    channelId,
     conversationId, 
     userId, 
     type,
     onInitialLoad: handleInitialLoad
   });
 
-  // Local state for messages (includes optimistic messages)
-  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
-  const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
-
-  // Merge fetched messages with optimistic messages
-  useEffect(() => {
-    // Combine fetched messages with optimistic messages that haven't been confirmed yet
-    const fetchedIds = new Set(fetchedMessages.map(m => m._id));
-    
-    // Keep only optimistic messages that haven't been replaced by real messages
-    const pendingOptimistic = optimisticMessages.filter(m => 
-      m.tempId && !fetchedIds.has(m.tempId) && (m.sending || m.failed)
-    );
-    
-    // Merge and sort ASCENDING (oldest at top)
-    const merged = [...fetchedMessages, ...pendingOptimistic];
-    merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    
-    setLocalMessages(merged);
-  }, [fetchedMessages, optimisticMessages]);
-
   // Sync messages to store
   useEffect(() => {
-    if (fetchedMessages.length > 0 && roomId) {
-      setMessages(roomId, fetchedMessages);
+    if (messages.length > 0 && roomId) {
+      setMessagesInStore(roomId, messages);
     }
-  }, [fetchedMessages, roomId, setMessages]);
+  }, [messages, roomId, setMessagesInStore]);
 
   // Auto-focus textarea on mount
   useEffect(() => {
@@ -158,18 +146,31 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     }
   }, [roomId]); // Re-focus when room changes
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll and Read Receipts
   useEffect(() => {
     if (messagesContainerRef.current && shouldAutoScrollRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       
-      // If we are already near bottom or just sent a message, keep at bottom
       if (distanceFromBottom < 100) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [localMessages]);
+
+    // Emit read receipt for the last message if it's from someone else
+    if (messages.length > 0 && isConnected) {
+      const lastMessage = messages[messages.length - 1];
+      const isFromOthers = lastMessage.sender._id !== currentUserId;
+      
+      if (isFromOthers) {
+        socket?.emit('message:read', {
+          messageId: lastMessage._id,
+          channelId,
+          conversationId
+        });
+      }
+    }
+  }, [messages, isConnected, currentUserId, socket, channelId, conversationId]);
 
   // Preserve scroll position when loading more messages
   useEffect(() => {
@@ -192,7 +193,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
     
     // Infinite Scroll: Load more when reaching the TOP (older messages are at the top)
-    if (scrollTop < 100 && hasMore && !loadingMore && !loading && localMessages.length > 0) {
+    if (scrollTop < 100 && hasMore && !loadingMore && !loading && messages.length > 0) {
       loadMore();
     }
     
@@ -200,14 +201,21 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     setIsNearBottom(scrollHeight - scrollTop - clientHeight < 100);
   };
 
+  const handleSendRetry = (message: ChatMessage) => {
+    setInputValue(message.content);
+    removeMessage(roomId, message._id);
+    // Remove from hook state as well
+    setMessages(prev => prev.filter(m => m._id !== message._id && m.tempId !== message._id));
+  };
+
   // Handle send message with optimistic update
   const handleSend = async () => {
-    if (!inputValue.trim() || sending || !currentUserId || !currentUserName) return;
+    if (!inputValue.trim() || !currentUserId || !currentUserName) return;
 
     const messageContent = inputValue.trim();
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     
-    // Create optimistic message with sending status
+    // Create optimistic message
     const optimisticMessage: ChatMessage = {
       _id: tempId,
       tempId: tempId,
@@ -222,74 +230,35 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       type: 'text',
-      sending: true,  // Mark as sending
+      sending: true,
       failed: false,
       ...(type === 'workspace' ? { workspace: workspaceId } : { conversation: conversationId }),
     };
 
-    console.log('[ChatWindow] Adding optimistic message:', tempId);
-
-    // Add optimistic message to optimistic state
-    setOptimisticMessages(prev => [...prev, optimisticMessage]);
-
-    // Also add to Zustand store
+    // Add to local state and store
+    setMessages(prev => [...prev, optimisticMessage]);
     addMessage(roomId, optimisticMessage);
 
-    // Clear input immediately for better UX
     setInputValue('');
     clearDraft(roomId);
-    
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
-    // Scroll to bottom immediately (newest message)
+    // Auto-scroll to bottom
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 50);
 
-    // Send message to backend
     try {
-      await sendMessage(messageContent);
-      
-      console.log('[ChatWindow] Message sent successfully, waiting for socket confirmation');
-      
-      // Update optimistic message status
-      setOptimisticMessages(prev => 
-        prev.map(m => 
-          m._id === tempId 
-            ? { ...m, sending: false } 
-            : m
-        )
+      // Send with callback acknowledgment
+      await sendMessage(messageContent, tempId);
+    } catch (err) {
+      console.error('[ChatWindow] Send failed:', err);
+      // Mark as failed
+      setMessages(prev => 
+        prev.map(m => m.tempId === tempId ? { ...m, sending: false, failed: true } : m)
       );
-      
-      // Update in store
-      updateMessage(roomId, tempId, { sending: false });
-      
-    } catch (error) {
-      console.error('[ChatWindow] Failed to send message:', error);
-      
-      // Mark message as failed in optimistic state
-      setOptimisticMessages(prev => 
-        prev.map(m => 
-          m._id === tempId 
-            ? { ...m, sending: false, failed: true } 
-            : m
-        )
-      );
-      
-      // Update in store
-      updateMessage(roomId, tempId, { 
-        sending: false, 
-        failed: true 
-      });
+      updateMessage(roomId, tempId, { sending: false, failed: true });
     }
-
-    // Focus back to textarea
-    setTimeout(() => {
-      textareaRef.current?.focus();
-    }, 0);
   };
 
   // Handle keyboard events - Enter to send
@@ -332,7 +301,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const shouldShowAvatar = (message: ChatMessage, index: number) => {
     if (index === 0) return true;
     
-    const prevMessage = localMessages[index - 1];
+    const prevMessage = messages[index - 1];
     if (!prevMessage) return true;
     
     // Show avatar if different sender or more than 5 minutes apart
@@ -425,6 +394,35 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         </div>
       </div>
 
+      {/* Connection Status Banner */}
+      <AnimatePresence>
+        {connectionState !== 'connected' && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className={cn(
+              "w-full text-[10px] font-black uppercase tracking-[0.2em] py-2 flex items-center justify-center gap-2 z-40 transition-colors",
+              connectionState === 'reconnecting' || connectionState === 'connecting' 
+                ? "bg-amber-500/10 text-amber-600 border-b border-amber-500/20"
+                : "bg-red-500/10 text-red-600 border-b border-red-500/20"
+            )}
+          >
+            {connectionState === 'reconnecting' || connectionState === 'connecting' ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Reconnecting to server...
+              </>
+            ) : (
+              <>
+                <AlertCircle className="h-3 w-3" />
+                Connection lost. <button onClick={reconnect} className="underline ml-1 hover:text-red-700">Retry now</button>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {workspaceId && channelId && (
         <EditChannelModal
           isOpen={isEditModalOpen}
@@ -444,7 +442,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         className="flex-1 overflow-y-auto px-6 md:px-10 py-8 space-y-2 custom-scrollbar bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-primary/[0.02] via-transparent to-transparent"
       >
         {/* Load More Indicator */}
-        {hasMore && !loadingMore && localMessages.length > 0 && (
+        {hasMore && !loadingMore && messages.length > 0 && (
           <div className="flex justify-center mb-8">
             <button 
               onClick={loadMore}
@@ -464,7 +462,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           </div>
         )}
 
-        {localMessages.length === 0 ? (
+        {messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground min-h-[500px] h-full">
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
@@ -480,7 +478,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           </div>
         ) : (
           <div className="flex flex-col justify-end min-h-full">
-            {localMessages.map((message, index) => {
+            {messages.map((message, index) => {
               const showAvatar = shouldShowAvatar(message, index);
               const isSystemMessage = message.type === 'system';
               const isOwnMessage = message.sender._id === currentUserId;
@@ -493,9 +491,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                   showAvatar={showAvatar}
                   isSystemMessage={isSystemMessage}
                   onRetry={message.failed ? () => {
-                    setInputValue(message.content);
-                    setOptimisticMessages(prev => prev.filter(m => m._id !== message._id));
-                    removeMessage(roomId, message._id);
+                    handleSendRetry(message);
                   } : undefined}
                 />
               );
