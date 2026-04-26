@@ -1,34 +1,55 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { Socket } from 'socket.io-client';
 import { initializeSocket, disconnectSocket, getSocket } from '@/lib/socket';
 import { api } from '@/lib/axios';
 import { useChatStore } from '@/store/useChatStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 
+export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'error';
+
 interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
   isConnecting: boolean;
+  connectionState: ConnectionState;
   onlineUsers: string[];
+  reconnect: () => void;
 }
 
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   isConnected: false,
   isConnecting: false,
+  connectionState: 'disconnected',
   onlineUsers: [],
+  reconnect: () => { },
 });
 
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [token, setToken] = useState<string | null>(null);
+
+  const reconnectAttemptsRef = useRef(0);
+
+  // Sync state with convenience flags
+  const isConnected = connectionState === 'connected';
+  const isConnecting = connectionState === 'connecting' || connectionState === 'reconnecting';
+
+  const reconnect = useCallback(() => {
+    if (token) {
+      console.log('[SocketContext] Manual reconnection triggered');
+      disconnectSocket();
+      const newSocket = initializeSocket(token);
+      setSocket(newSocket);
+      setConnectionState('connecting');
+    }
+  }, [token]);
 
   // Monitor token changes
   useEffect(() => {
@@ -37,199 +58,157 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const checkToken = () => {
       const currentToken = localStorage.getItem('authToken');
       if (currentToken !== token) {
-        console.log('[SocketContext] Token changed:', currentToken ? 'Token found' : 'No token');
         setToken(currentToken);
-        // Set connecting state immediately when token is found
-        if (currentToken && !token) {
-          setIsConnecting(true);
-        }
       }
     };
 
-    // Check immediately
     checkToken();
-
-    // Listen for auth token updates (from login/register)
-    const handleAuthUpdate = (event: CustomEvent) => {
-      console.log('[SocketContext] Auth token updated event received');
-      setIsConnecting(true);
-      checkToken();
-    };
-
-    window.addEventListener('auth-token-updated', handleAuthUpdate as EventListener);
-
-    // Listen for storage changes (for multi-tab support)
+    const handleAuthUpdate = () => checkToken();
+    window.addEventListener('auth-token-updated', handleAuthUpdate);
     window.addEventListener('storage', checkToken);
 
     return () => {
-      window.removeEventListener('auth-token-updated', handleAuthUpdate as EventListener);
+      window.removeEventListener('auth-token-updated', handleAuthUpdate);
       window.removeEventListener('storage', checkToken);
     };
   }, [token]);
 
-  // Initialize socket when token is available
+  // Network Interruption Handling
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
+    const handleOnline = () => {
+      console.log('[SocketContext] Browser online - reconnecting...');
+      reconnect();
+    };
+    const handleOffline = () => {
+      console.log('[SocketContext] Browser offline');
+      setConnectionState('disconnected');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [reconnect]);
+
+  // Initialize and handle listeners
+  useEffect(() => {
     if (!token) {
-      // No token, disconnect if connected
       if (socket) {
-        console.log('[SocketContext] No token, disconnecting...');
         disconnectSocket();
         setSocket(null);
-        setIsConnected(false);
-        setIsConnecting(false);
+        setConnectionState('disconnected');
       }
       return;
     }
 
-    // Check if socket already exists and is connected
-    const existingSocket = getSocket();
-    if (existingSocket && existingSocket.connected) {
-      console.log('[SocketContext] Socket already connected, reusing...');
-      setSocket(existingSocket);
-      setIsConnected(true);
-      setIsConnecting(false);
-      return;
-    }
+    const socketInstance = initializeSocket(token);
+    setSocket(socketInstance);
+    setConnectionState(socketInstance.connected ? 'connected' : 'connecting');
 
-    // Token exists, initialize socket
-    try {
-      console.log('[SocketContext] Initializing socket with token...');
-      setIsConnecting(true);
-      
-      const socketInstance = initializeSocket(token);
-      setSocket(socketInstance);
-
-      // Set initial connection state
-      if (socketInstance.connected) {
-        console.log('[SocketContext] Socket already connected on init');
-        setIsConnected(true);
-        setIsConnecting(false);
-      }
-
-      const handleConnect = async () => {
+    const setupListeners = (s: Socket) => {
+      s.on('connect', () => {
         console.log('[SocketContext] ✓ Connected');
-        setIsConnected(true);
-        setIsConnecting(false);
+        setConnectionState('connected');
+        reconnectAttemptsRef.current = 0;
 
-        // Join all workspace rooms to receive chat updates globally
-        try {
-          const response = await api.get('/workspaces');
-          const workspaces = response.data.data || [];
-          workspaces.forEach((ws: any) => {
-            console.log(`[SocketContext] Joining workspace room: ${ws._id}`);
-            socketInstance.emit('join_workspace', { workspaceId: ws._id });
-          });
-        } catch (error) {
-          console.error('[SocketContext] Failed to join workspace rooms:', error);
+        // Fetch missed messages on reconnect
+        // We trigger a refetch in the active chat if it exists
+        const { activeRoomId } = useChatStore.getState();
+        if (activeRoomId) {
+          console.log('[SocketContext] Reconnected - Triggering message sync for:', activeRoomId);
+          // This will be caught by useChat hook or can be manually triggered
+          window.dispatchEvent(new CustomEvent('socket-reconnected', { detail: { roomId: activeRoomId } }));
         }
-      };
+      });
 
-      const handleDisconnect = () => {
-        console.log('[SocketContext] ✗ Disconnected');
-        setIsConnected(false);
-        setIsConnecting(false);
-      };
-
-      const handleConnectError = (error: Error) => {
-        // Only log non-websocket errors to reduce console noise
-        if (!error.message?.includes('websocket error')) {
-          console.log('[SocketContext] ✗ Connection error:', error.message);
+      s.on('disconnect', (reason) => {
+        console.log(`[SocketContext] ✗ Disconnected: ${reason}`);
+        if (reason === 'io server disconnect' || reason === 'io client disconnect') {
+          setConnectionState('disconnected');
+        } else {
+          setConnectionState('reconnecting');
         }
-        setIsConnecting(false);
-      };
+      });
 
-      const handlePresenceUpdate = (data: { workspaceId: string; onlineUsers: string[] }) => {
-        setOnlineUsers(data.onlineUsers);
-      };
+      s.on('connect_error', (err) => {
+        console.error('[SocketContext] Connection error:', err.message);
+        setConnectionState('error');
+      });
 
-      const handleGlobalChatMessage = (data: { message: any }) => {
-        const { addMessage, activeRoomId } = useChatStore.getState();
-        const { showBrowserNotification, permission } = useNotificationStore.getState();
-        
-        const roomId = `workspace_${data.message.workspace}`;
+      s.on('reconnect_attempt', (attempt) => {
+        console.log(`[SocketContext] Reconnection attempt ${attempt}`);
+        setConnectionState('reconnecting');
+      });
+
+      // Presence & Chat Listeners
+      s.on('user:online', (data: { userId: string }) => {
+        const { setUserOnline } = useChatStore.getState();
+        setUserOnline(data.userId);
+      });
+
+      s.on('user:offline', (data: { userId: string }) => {
+        const { setUserOffline } = useChatStore.getState();
+        setUserOffline(data.userId);
+      });
+
+      s.on('chat:new', (data: { message: any }) => {
+        const { addMessage } = useChatStore.getState();
+        const roomId = data.message.channel ? `channel_${data.message.channel}` : `workspace_${data.message.workspace}`;
         addMessage(roomId, data.message);
+      });
 
-        // Browser notification if applicable
-        const storedUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
-        const isFromOthers = data.message.sender._id !== storedUserId;
-        const isDifferentRoom = activeRoomId !== roomId;
+      s.on('dm:new', (data: { message: any; conversation: string }) => {
+        const { addMessage } = useChatStore.getState();
+        addMessage(data.conversation, data.message);
+      });
 
-        if (isFromOthers && isDifferentRoom) {
-          showBrowserNotification(
-            `New message in ${data.message.workspaceName || 'Chat'}`,
-            `${data.message.sender.name}: ${data.message.content}`,
-            { workspaceId: data.message.workspace }
-          );
-        }
-      };
-
-      const handleGlobalDM = (data: { message: any; conversation: any }) => {
-        const { addMessage, activeRoomId } = useChatStore.getState();
-        const { showBrowserNotification, permission } = useNotificationStore.getState();
-        
-        const roomId = data.message.conversation;
+      s.on('message:sent:sync', (data: { message: any }) => {
+        // Handle sync across multiple sessions
+        const { addMessage } = useChatStore.getState();
+        const roomId = data.message.conversation || (data.message.channel ? `channel_${data.message.channel}` : `workspace_${data.message.workspace}`);
         addMessage(roomId, data.message);
+      });
 
-        // Browser notification if applicable
-        const storedUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
-        const isFromOthers = data.message.sender._id !== storedUserId;
-        const isDifferentRoom = activeRoomId !== roomId;
-
-        if (isFromOthers && isDifferentRoom) {
-          showBrowserNotification(
-            `New DM from ${data.message.sender.name}`,
-            data.message.content,
-            { conversationId: roomId }
-          );
-        }
-      };
-
-      const handleGlobalNotification = (data: { notification: any }) => {
-        const { addNotification } = useNotificationStore.getState();
-        const { showBrowserNotification } = useNotificationStore.getState();
-        
-        // Add to local notification store
+      s.on('notification:new', (data: { notification: any }) => {
+        const { addNotification, showBrowserNotification } = useNotificationStore.getState();
         addNotification(data.notification);
-
-        // Show browser notification
         showBrowserNotification(
           data.notification.title || 'New Notification',
           data.notification.body || '',
           { resourceId: data.notification.resourceId, resourceType: data.notification.resourceType }
         );
-      };
+      });
+    };
 
-      socketInstance.on('connect', handleConnect);
-      socketInstance.on('disconnect', handleDisconnect);
-      socketInstance.on('connect_error', handleConnectError);
-      socketInstance.on('presence:update', handlePresenceUpdate);
-      socketInstance.on('chat:new', handleGlobalChatMessage);
-      socketInstance.on('dm:new', handleGlobalDM);
-      socketInstance.on('notification:new', handleGlobalNotification);
+    setupListeners(socketInstance);
 
-      // Cleanup only removes listeners, doesn't disconnect
-      return () => {
-        console.log('[SocketContext] Removing event listeners...');
-        socketInstance.off('connect', handleConnect);
-        socketInstance.off('disconnect', handleDisconnect);
-        socketInstance.off('connect_error', handleConnectError);
-        socketInstance.off('presence:update', handlePresenceUpdate);
-        socketInstance.off('chat:new', handleGlobalChatMessage);
-        socketInstance.off('dm:new', handleGlobalDM);
-        socketInstance.off('notification:new', handleGlobalNotification);
-      };
-    } catch (error) {
-      console.error('[SocketContext] Failed to initialize socket:', error);
-      setSocket(null);
-      setIsConnected(false);
-      setIsConnecting(false);
-    }
+    return () => {
+      console.log('[SocketContext] Cleaning up listeners...');
+      socketInstance.off('connect');
+      socketInstance.off('disconnect');
+      socketInstance.off('connect_error');
+      socketInstance.off('reconnect_attempt');
+      socketInstance.off('user:online');
+      socketInstance.off('user:offline');
+      socketInstance.off('chat:new');
+      socketInstance.off('dm:new');
+      socketInstance.off('message:sent:sync');
+      socketInstance.off('notification:new');
+    };
   }, [token]);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected, isConnecting, onlineUsers }}>
+    <SocketContext.Provider value={{
+      socket,
+      isConnected,
+      isConnecting,
+      connectionState,
+      onlineUsers,
+      reconnect
+    }}>
       {children}
     </SocketContext.Provider>
   );
