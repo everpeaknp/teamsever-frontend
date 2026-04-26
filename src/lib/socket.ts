@@ -38,10 +38,11 @@ export const initializeSocket = (token: string): Socket => {
     auth: { token },
     transports: ['websocket', 'polling'],
     reconnection: true,
-    reconnectionDelay: 2000, // Increased delay between reconnection attempts
-    reconnectionDelayMax: 10000, // Max delay between attempts
-    reconnectionAttempts: 3, // Reduced from 5 to 3 attempts
-    timeout: 10000, // Connection timeout
+    reconnectionDelay: 1000, // Start at 1s
+    reconnectionDelayMax: 30000, // Max 30s
+    reconnectionAttempts: Infinity, // Keep trying
+    timeout: 20000,
+    randomizationFactor: 0.5,
   });
 
   socket.on('connect', () => {
