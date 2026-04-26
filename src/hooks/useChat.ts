@@ -47,16 +47,16 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(1);
-  
+
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const onInitialLoadRef = useRef(onInitialLoad);
   const socket = getSocket();
-  
+
   // Update ref when callback changes
   useEffect(() => {
     onInitialLoadRef.current = onInitialLoad;
   }, [onInitialLoad]);
-  
+
   // Get Zustand store actions
   const { addMessage: addMessageToStore } = useChatStore();
 
@@ -69,7 +69,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
         setLoading(true);
       }
       setError(null);
-      
+
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       if (!token) {
         setError('Authentication required');
@@ -80,7 +80,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
 
       let response;
       const limit = 50;
-      
+
       if (type === 'workspace' && channelId && channelId !== 'general') {
         response = await api.get(`/chat/channels/${channelId}/messages?page=${pageNum}&limit=${limit}`);
       } else if (type === 'workspace' && workspaceId) {
@@ -97,7 +97,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       if (response?.data?.success) {
         const newMessages = response.data.data || [];
         const pagination = response.data.pagination;
-        
+
         if (append) {
           setMessages(prev => [...newMessages, ...prev]);
         } else {
@@ -106,7 +106,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
             setTimeout(() => onInitialLoadRef.current?.(), 100);
           }
         }
-        
+
         setHasMore(pagination?.hasMore || false);
         setPage(pageNum);
       }
@@ -119,74 +119,87 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
   }, [workspaceId, channelId, conversationId, type]);
 
   // Send message
-  const sendMessage = useCallback(async (content: string, mentions: string[] = []) => {
+  const sendMessage = useCallback(async (content: string, tempId: string, mentions: string[] = []) => {
     if (!content.trim()) return;
 
-    try {
-      setSending(true);
-      if (type === 'workspace' && workspaceId) {
-        socket?.emit('chat:send', {
-          workspaceId,
-          channelId: channelId === 'general' ? undefined : channelId,
-          content: content.trim(),
-          mentions
-        });
-      } else if (type === 'direct' && userId) {
-        await api.post(`/dm/${userId}/message`, { content: content.trim() });
+    return new Promise((resolve, reject) => {
+      if (!socket || !socket.connected) {
+        reject(new Error('Socket disconnected'));
+        return;
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send message');
-    } finally {
-      setSending(false);
-    }
-  }, [workspaceId, channelId, userId, type, socket]);
+
+      const payload = {
+        workspaceId,
+        channelId: channelId === 'general' ? undefined : channelId,
+        conversationId,
+        content: content.trim(),
+        mentions,
+        tempId // Pass tempId for server to echo back
+      };
+
+      const event = type === 'workspace' ? 'chat:send' : 'dm:send';
+
+      socket.emit(event, payload, (response: any) => {
+        if (response.status === 'ok') {
+          resolve(response.messageId);
+        } else {
+          reject(new Error(response.message || 'Failed to send message'));
+        }
+      });
+    });
+  }, [workspaceId, channelId, conversationId, type, socket]);
 
   // Typing indicator
   const sendTypingIndicator = useCallback(() => {
-    if (type === 'workspace' && channelId) {
-      socket?.emit('chat:typing', { channelId });
-      
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      
-      typingTimeoutRef.current = setTimeout(() => {
-        socket?.emit('chat:stop_typing', { channelId });
-      }, 3000);
-    }
-  }, [channelId, type, socket]);
+    if (!socket || !socket.connected) return;
+
+    const payload = type === 'workspace' ? { channelId } : { conversationId };
+    socket.emit('chat:typing', payload);
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit('chat:stop_typing', payload);
+    }, 3000);
+  }, [channelId, conversationId, type, socket]);
 
   // Socket event listeners
   useEffect(() => {
     if (!socket) return;
 
-    // Join appropriate room
+    // Join appropriate rooms
     if (type === 'workspace' && channelId) {
       socket.emit('join_channel', { channelId });
     } else if (type === 'direct' && conversationId) {
-      joinDM(conversationId);
+      socket.emit('join_dm', { conversationId });
     }
 
     const handleNewMessage = (data: { message: ChatMessage }) => {
       const msg = data.message;
-      const isTargetChannel = type === 'workspace' && channelId && msg.channel === channelId;
-      const isTargetDM = type === 'direct' && conversationId && msg.conversation === conversationId;
 
-      if (isTargetChannel || isTargetDM) {
-        setMessages(prev => {
-          if (prev.some(m => m._id === msg._id)) return prev;
-          return [...prev, msg];
-        });
-        
-        const roomId = type === 'workspace' 
-          ? (channelId ? `channel_${channelId}` : `workspace_${workspaceId}`) 
-          : (userId && (localStorage.getItem('userId') || localStorage.getItem('userId')) 
-            ? generateDMRoomId(localStorage.getItem('userId')!, userId) 
-            : conversationId!);
-        addMessageToStore(roomId, msg);
-      }
+      // Syncing messages: if we receive a message with a tempId that matches one of our optimistic messages
+      setMessages(prev => {
+        // If message already exists (by ID or tempId), update it
+        const index = prev.findIndex(m => m._id === msg._id || (msg.tempId && m.tempId === msg.tempId));
+        if (index !== -1) {
+          const next = [...prev];
+          next[index] = { ...next[index], ...msg, sending: false, failed: false };
+          return next;
+        }
+        return [...prev, msg];
+      });
+
+      // Also update store
+      const roomId = type === 'workspace'
+        ? (channelId ? `channel_${channelId}` : `workspace_${workspaceId}`)
+        : conversationId!;
+      addMessageToStore(roomId, msg);
     };
 
     const handleUserTyping = (data: { channelId?: string; conversationId?: string; userName: string }) => {
-      if ((data.channelId && data.channelId === channelId) || (data.conversationId && data.conversationId === conversationId)) {
+      const isRelevant = (data.channelId && data.channelId === channelId) ||
+        (data.conversationId && data.conversationId === conversationId);
+      if (isRelevant) {
         setTypingUsers(prev => new Set(prev).add(data.userName));
       }
     };
@@ -204,29 +217,40 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
     socket.on('chat:user_typing', handleUserTyping);
     socket.on('chat:user_stop_typing', handleUserStopTyping);
 
-    return () => {
-      if (type === 'workspace' && channelId) {
-        socket.emit('leave_channel', { channelId });
-      } else if (type === 'direct' && conversationId) {
-        leaveDM(conversationId);
+    // Missed messages sync
+    const handleReconnectSync = (e: any) => {
+      const { roomId: reconnectedRoomId } = e.detail;
+      const currentRoomId = type === 'workspace' 
+        ? (channelId ? `channel_${channelId}` : `workspace_${workspaceId}`) 
+        : conversationId!;
+        
+      if (reconnectedRoomId === currentRoomId) {
+        console.log('[useChat] Syncing missed messages after reconnect...');
+        fetchMessages(1, false);
       }
+    };
+
+    window.addEventListener('socket-reconnected', handleReconnectSync);
+
+    return () => {
       socket.off('chat:new', handleNewMessage);
       socket.off('dm:new', handleNewMessage);
       socket.off('chat:user_typing', handleUserTyping);
       socket.off('chat:user_stop_typing', handleUserStopTyping);
+      window.removeEventListener('socket-reconnected', handleReconnectSync);
     };
   }, [socket, type, workspaceId, channelId, conversationId, addMessageToStore]);
 
   // Load messages on mount/change
   useEffect(() => {
     if ((type === 'workspace' && (channelId || workspaceId)) || (type === 'direct' && conversationId)) {
-      setMessages([]); // Clear messages when switching channels
       fetchMessages(1, false);
     }
   }, [fetchMessages, type, workspaceId, channelId, conversationId]);
 
   return {
     messages,
+    setMessages, // Exported to allow optimistic updates from outside
     loading,
     loadingMore,
     sending,
@@ -239,3 +263,4 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
     refetch: fetchMessages
   };
 };
+
