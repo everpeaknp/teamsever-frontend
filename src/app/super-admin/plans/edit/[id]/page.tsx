@@ -204,9 +204,9 @@ export default function EditPlanPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background">
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-3 sm:items-center sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
@@ -253,7 +253,7 @@ export default function EditPlanPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="pricePerMemberMonthly">Monthly Price (Per Member) *</Label>
                   <Input
@@ -305,7 +305,7 @@ export default function EditPlanPage() {
               <CardDescription>Set limits for workspaces, members, and content (-1 for unlimited)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <ArchiveIcon className="w-4 h-4" />
@@ -456,7 +456,7 @@ export default function EditPlanPage() {
                   </div>
 
                   {formData.canCreatePrivateChannels && (
-                    <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                       <div className="space-y-2">
                         <Label className="flex items-center gap-2 text-xs">
                           <LockClosedIcon className="w-3 h-3" />
@@ -598,7 +598,7 @@ export default function EditPlanPage() {
               
               {formData.canCreateTables && (
                 <div className="space-y-4 ml-4 pl-4 border-l-2">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Max Tables per Space</Label>
                       <Input
@@ -666,7 +666,7 @@ export default function EditPlanPage() {
               <CardDescription>Set limits for files, documents, and direct messages (-1 for unlimited)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <FileIcon className="w-4 h-4" />
@@ -735,7 +735,7 @@ export default function EditPlanPage() {
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 sticky bottom-0 bg-gray-50 py-4 border-t">
+          <div className="sticky bottom-0 flex flex-col-reverse gap-3 border-t bg-gray-50 py-4 sm:flex-row">
             <Button type="submit" className="flex-1" disabled={submitting}>
               {submitting ? 'Updating...' : 'Update Plan'}
             </Button>

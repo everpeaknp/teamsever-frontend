@@ -30,6 +30,7 @@ export default function GroupChatPage() {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [dmUserId, setDmUserId] = useState<string | undefined>();
   const [chatTitle, setChatTitle] = useState('General');
+  const [showMobileSidebar, setShowMobileSidebar] = useState(true);
 
   const { setActiveRoom } = useChatStore();
 
@@ -96,6 +97,7 @@ export default function GroupChatPage() {
     setConversationId(convId);
     setDmUserId(uId);
     setChatTitle(name);
+    setShowMobileSidebar(false);
   }, []);
 
   if (isLoading || checkingAccess) {
@@ -142,15 +144,16 @@ export default function GroupChatPage() {
   }
 
   return (
-    <div className="flex h-full bg-background overflow-hidden font-sans">
+    <div className="flex h-full bg-background font-sans">
       <ChatSidebar
         workspaceId={workspaceId}
         activeChannel={activeChannelId}
         onChannelSelect={handleChannelSelect}
         isAdmin={isAdmin}
+        className={showMobileSidebar ? 'flex' : 'hidden md:flex'}
       />
 
-      <div className="flex-1 min-w-0">
+      <div className={`${showMobileSidebar ? 'hidden md:block' : 'block'} flex-1 min-w-0`}>
         <ChatWindow
           workspaceId={workspaceId}
           channelId={chatType === 'workspace' ? activeChannelId : undefined}
@@ -159,6 +162,8 @@ export default function GroupChatPage() {
           type={chatType}
           title={chatType === 'workspace' ? `# ${chatTitle}` : chatTitle}
           isAdmin={isAdmin}
+          showMobileBackButton={!showMobileSidebar}
+          onMobileBack={() => setShowMobileSidebar(true)}
         />
       </div>
     </div>

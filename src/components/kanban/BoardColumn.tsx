@@ -36,7 +36,7 @@ export function BoardColumn({ id, title, tasks, color, onAddTask, handleDragStar
   const taskIds = tasks.map((task) => task._id);
 
   return (
-    <div className="flex flex-col w-80 flex-shrink-0">
+    <div className="flex w-[85vw] max-w-[320px] flex-shrink-0 flex-col md:w-auto md:max-w-none md:flex-1">
       {/* Column Header */}
       <div
         className={cn(
@@ -65,7 +65,7 @@ export function BoardColumn({ id, title, tasks, color, onAddTask, handleDragStar
       <div
         ref={setNodeRef}
         className={cn(
-          'flex-1 p-3 bg-slate-50 rounded-b-lg min-h-[200px] transition-colors',
+          'flex-1 p-3 bg-slate-50 rounded-b-lg min-h-[200px] transition-colors overflow-y-auto',
           isOver && 'bg-slate-100 ring-2 ring-blue-400 ring-inset'
         )}
       >

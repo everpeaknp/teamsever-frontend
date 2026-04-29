@@ -68,12 +68,12 @@ function DashboardSkeleton() {
       {/* Header Skeleton */}
       <header className="bg-card border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <Skeleton className="h-8 w-32 mb-2" />
               <Skeleton className="h-4 w-48" />
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-3">
               <Skeleton className="h-9 w-24 hidden sm:block" />
               <Skeleton className="h-9 w-9 rounded-lg" />
               <Skeleton className="h-9 w-9 rounded-lg" />
@@ -320,8 +320,8 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Teamsever</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, {userName}</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">Teamsever</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Welcome back, {userName}</p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Currency Switcher */}
@@ -375,11 +375,11 @@ export default function DashboardPage() {
               {/* Logout Button */}
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
+                className="flex items-center gap-2 px-2 sm:px-4 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors flex-shrink-0"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="text-sm font-medium hidden sm:inline">Logout</span>
+                <span className="text-sm font-medium hidden md:inline">Logout</span>
               </button>
             </div>
           </div>
@@ -398,8 +398,8 @@ export default function DashboardPage() {
         {isPaid && isActive && daysRemaining <= 7 && (
           <Alert variant={daysRemaining <= 3 ? "destructive" : "warning"} className="mb-8">
             <Clock className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <div>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <span className="font-medium">
                   {daysRemaining} day{daysRemaining === 1 ? '' : 's'} remaining
                 </span>
@@ -414,7 +414,7 @@ export default function DashboardPage() {
                     window.open(`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=Hi, I would like to renew my subscription for ${planName}`, '_blank');
                   }
                 }}
-                className="ml-4"
+                className="w-full sm:ml-4 sm:w-auto"
               >
                 <Zap className="w-3.5 h-3.5 mr-1.5" />
                 Renew
@@ -426,8 +426,8 @@ export default function DashboardPage() {
         {isExpired && (
           <Alert variant="destructive" className="mb-8">
             <Clock className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <div>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <span className="font-medium">Subscription Expired</span>
                 <span className="text-sm ml-2">
                   Your premium features have been disabled. Contact support to reactivate.
@@ -440,7 +440,7 @@ export default function DashboardPage() {
                     window.open(`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=Hi, I would like to reactivate my subscription`, '_blank');
                   }
                 }}
-                className="ml-4"
+                className="w-full sm:ml-4 sm:w-auto"
               >
                 <Zap className="w-3.5 h-3.5 mr-1.5" />
                 Reactivate
@@ -484,15 +484,15 @@ export default function DashboardPage() {
               )}
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
               {/* Workspaces */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Briefcase className="w-4 h-4" />
                   <span className="text-sm">Workspaces</span>
                 </div>
-                <div className="text-2xl font-semibold">
+                <div className="text-xl sm:text-2xl font-semibold">
                   {workspaces.length} / {maxWorkspaces === -1 ? '∞' : maxWorkspaces}
                 </div>
                 {maxWorkspaces !== -1 && (
@@ -506,7 +506,7 @@ export default function DashboardPage() {
                   <Layout className="w-4 h-4" />
                   <span className="text-sm">Spaces</span>
                 </div>
-                <div className="text-2xl font-semibold">
+                <div className="text-xl sm:text-2xl font-semibold">
                   {usage?.spaces || 0} / {maxSpaces === -1 ? '∞' : maxSpaces}
                 </div>
                 {maxSpaces !== -1 && (
@@ -520,7 +520,7 @@ export default function DashboardPage() {
                   <CheckSquare className="w-4 h-4" />
                   <span className="text-sm">Tasks</span>
                 </div>
-                <div className="text-2xl font-semibold">
+                <div className="text-xl sm:text-2xl font-semibold">
                   {usage?.tasks || 0} / {maxTasks === -1 ? '∞' : maxTasks}
                 </div>
                 {maxTasks !== -1 && (
@@ -534,7 +534,7 @@ export default function DashboardPage() {
                   <Users className="w-4 h-4" />
                   <span className="text-sm">Members</span>
                 </div>
-                <div className="text-2xl font-semibold">
+                <div className="text-xl sm:text-2xl font-semibold">
                   {maxMembers === -1 ? 'Unlimited' : `Up to ${maxMembers}`}
                 </div>
               </div>
@@ -543,9 +543,9 @@ export default function DashboardPage() {
         </Card>
 
         {/* Workspace Section Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-xl font-semibold">Your Workspaces</h3>
-          <Button onClick={() => setShowCreateModal(true)}>
+          <Button onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             New Workspace
           </Button>
@@ -615,7 +615,7 @@ export default function DashboardPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <MoreHorizontal className="h-4 w-4" />

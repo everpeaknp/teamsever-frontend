@@ -31,7 +31,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({
 
   return (
     <Select value={value} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="w-[180px]">
+      <SelectTrigger className="w-full sm:w-[180px]">
         <SelectValue>
           {customRoleTitle ? (
             <div className="flex items-center gap-2">

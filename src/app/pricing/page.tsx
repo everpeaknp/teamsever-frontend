@@ -190,15 +190,15 @@ export default function PricingPage() {
       {/* Dashboard-style Header */}
       <header className="bg-background border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold">TaskFlow</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, {userName}</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">Teamsever</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Welcome back, {userName}</p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-3">
               <Link
                 href="/dashboard"
-                className="text-sm font-medium hover:text-primary transition-colors"
+                className="text-sm font-medium hover:text-primary transition-colors hidden sm:block"
               >
                 Dashboard
               </Link>
@@ -232,11 +232,11 @@ export default function PricingPage() {
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
+                className="flex items-center gap-2 px-2 sm:px-4 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors flex-shrink-0"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
-                <span className="text-sm font-medium hidden sm:inline">Logout</span>
+                <span className="text-sm font-medium hidden md:inline">Logout</span>
               </button>
             </div>
           </div>

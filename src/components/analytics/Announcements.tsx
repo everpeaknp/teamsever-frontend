@@ -129,7 +129,7 @@ export function Announcements({ workspaceId, isAdmin }: AnnouncementsProps) {
                   {isAdmin && (
                     <button
                       onClick={() => handleDelete(announcement._id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
+                      className="p-1 rounded opacity-100 transition-opacity hover:bg-destructive/10 sm:opacity-0 sm:group-hover:opacity-100"
                       title="Delete announcement"
                     >
                       <Trash2 className="w-3.5 h-3.5 text-destructive" />

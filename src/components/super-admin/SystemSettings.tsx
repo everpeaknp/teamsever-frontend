@@ -171,7 +171,7 @@ export default function SystemSettings() {
                   }));
                 }}
               >
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <div className="flex items-center gap-2">
                     <Monitor className="w-4 h-4" />
                     <SelectValue placeholder="Theme Mode" />

@@ -295,7 +295,7 @@ export default function AccountSettingsPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0f0f0f]">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="mb-8 flex items-center gap-4">
+        <div className="mb-8 flex items-start gap-3 sm:items-center sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
@@ -305,7 +305,7 @@ export default function AccountSettingsPage() {
             <X className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Account Settings</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Account Settings</h1>
             <p className="text-slate-600 dark:text-slate-400 mt-2">
               Manage your account settings and preferences
             </p>
@@ -398,7 +398,7 @@ export default function AccountSettingsPage() {
                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                           JPG, GIF or PNG. Max size of 800KB
                         </p>
-                        <div className="mt-3 flex gap-2">
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                           <Button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
@@ -619,7 +619,7 @@ export default function AccountSettingsPage() {
                   <hr className="border-slate-100 dark:border-[#262626]" />
 
                   {/* Two Factor Auth */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex gap-4">
                       <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                         <Shield className="w-5 h-5" />
@@ -655,7 +655,7 @@ export default function AccountSettingsPage() {
 
             {/* Action Bar */}
             {(activeTab === 'profile' || activeTab === 'security') && (
-              <div className="flex items-center justify-end gap-3 pt-4 pb-10">
+              <div className="flex flex-col-reverse gap-3 pt-4 pb-10 sm:flex-row sm:items-center sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"

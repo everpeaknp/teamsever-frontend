@@ -473,7 +473,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({ tableId, space
                             setColumnToDelete({ id: col.id, number: colIndex + 1 });
                             setShowDeleteColumnModal(true);
                           }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
+                          className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
                           title={`Delete column ${getColumnLetter(colIndex)}`}
                         >
                           <Trash2 className="h-3.5 w-3.5 text-red-500" />
@@ -553,7 +553,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({ tableId, space
                         {canFullAccess && (
                           <button
                             onClick={() => handleDeleteRow(row.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
+                            className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
                             title={`Delete row ${rowIndex + 1}`}
                             aria-label={`Delete row ${rowIndex + 1}`}
                           >

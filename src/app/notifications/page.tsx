@@ -241,8 +241,8 @@ export default function NotificationsPage() {
       {/* Header */}
       <header className="bg-white dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-[#262626] sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 sm:items-center sm:gap-4">
               <button
                 onClick={() => router.back()}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-[#262626] rounded-lg transition-colors"
@@ -250,7 +250,7 @@ export default function NotificationsPage() {
                 <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-slate-400" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Notifications</h1>
                 <p className="text-sm text-gray-600 dark:text-slate-400">
                   {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
                 </p>
@@ -260,7 +260,7 @@ export default function NotificationsPage() {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-[#262626] rounded-lg transition-colors"
+                  className="flex w-full items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-[#262626] rounded-lg transition-colors sm:w-auto"
                 >
                   <CheckCheck className="w-4 h-4" />
                   Mark all read
@@ -270,7 +270,7 @@ export default function NotificationsPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-2 mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => setFilter('all')}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -374,7 +374,7 @@ export default function NotificationsPage() {
 
                     {/* Invitation Actions */}
                     {notification.type === 'INVITATION' && !notification.read && (
-                      <div className="flex gap-2 mt-3">
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                         <button
                           onClick={() => handleAcceptInvitation(notification)}
                           disabled={accepting === notification._id}
@@ -395,7 +395,7 @@ export default function NotificationsPage() {
                         <button
                           onClick={() => handleDeclineInvitation(notification)}
                           disabled={accepting === notification._id}
-                          className="px-4 py-2 border border-gray-300 dark:border-[#262626] text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-[#262626] transition-colors disabled:opacity-50 flex items-center gap-2"
+                          className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-[#262626] text-gray-700 dark:text-slate-300 text-sm font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-[#262626] transition-colors disabled:opacity-50"
                         >
                           <X className="w-4 h-4" />
                           Decline

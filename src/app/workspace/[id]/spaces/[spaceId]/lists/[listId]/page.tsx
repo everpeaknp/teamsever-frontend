@@ -475,7 +475,7 @@ export default function ListView() {
             <span className="text-foreground font-medium truncate">{list?.name || 'List'}</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex flex-col items-start justify-between gap-3 sm:gap-4 lg:flex-row lg:items-center">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <button
                 onClick={() => router.push(`/workspace/${workspaceId}/spaces/${spaceId}`)}
@@ -484,7 +484,7 @@ export default function ListView() {
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
                   <h1 className="text-lg sm:text-2xl font-bold truncate">{list?.name}</h1>
                   
                   {/* View Tabs - Next to Title */}
@@ -533,7 +533,7 @@ export default function ListView() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:gap-3 lg:w-auto lg:flex-nowrap">
               {/* View Tabs - Mobile Only */}
               <div className="flex md:hidden items-center gap-1 bg-muted p-1 rounded-lg flex-1">
                 <button
@@ -634,7 +634,7 @@ export default function ListView() {
                             rows={3}
                           />
                         </div>
-                        <div className="flex gap-3">
+                        <div className="flex flex-col gap-3 sm:flex-row">
                           <Button variant="outline" onClick={() => setShowSettingsSheet(false)} className="flex-1">
                             Cancel
                           </Button>
@@ -700,7 +700,7 @@ export default function ListView() {
                           rows={3}
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="priority">Priority</Label>
                           <Select
@@ -751,7 +751,7 @@ export default function ListView() {
                           className="w-full"
                         />
                       </div>
-                      <div className="flex gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row">
                         <Button
                           variant="outline"
                           onClick={() => setShowCreateModal(false)}
@@ -841,7 +841,7 @@ export default function ListView() {
 
       {/* Bulk Action Bar */}
       {selectedTasks.length > 0 && !isReadOnly && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg shadow-lg p-4 flex items-center gap-4">
+        <div className="fixed inset-x-4 bottom-4 z-20 mx-auto flex max-w-md flex-wrap items-center justify-center gap-3 rounded-lg border border-border bg-card p-4 shadow-lg sm:inset-x-auto sm:left-1/2 sm:bottom-6 sm:max-w-none sm:-translate-x-1/2 sm:flex-nowrap">
           <span className="text-sm font-medium">
             {selectedTasks.length} {selectedTasks.length === 1 ? 'task' : 'tasks'} selected
           </span>
@@ -1030,7 +1030,7 @@ function TaskRow({
     <div 
       id={task._id}
       onClick={() => openTask(task._id)}
-      className={`flex items-center gap-4 p-4 hover:bg-accent/50 transition-colors cursor-pointer ${isDone ? 'opacity-60' : ''} ${isHighlighted ? 'ring-2 ring-primary' : ''}`}
+      className={`flex flex-wrap items-center gap-3 p-4 hover:bg-accent/50 transition-colors cursor-pointer ${isDone ? 'opacity-60' : ''} ${isHighlighted ? 'ring-2 ring-primary' : ''}`}
     >
       {/* Checkbox */}
       {!isReadOnly && canEdit && (
@@ -1290,7 +1290,7 @@ function ActivityLogView({ activities, loading }: ActivityLogViewProps) {
       {/* Search and Filter Bar */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
@@ -1301,7 +1301,7 @@ function ActivityLogView({ activities, loading }: ActivityLogViewProps) {
               />
             </div>
             <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1453,7 +1453,7 @@ function ActivityItem({ activity }: ActivityItemProps) {
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
-        <div className="flex gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
           {/* Avatar */}
           <Avatar className="w-10 h-10 flex-shrink-0">
             <AvatarImage src={user.avatar} />

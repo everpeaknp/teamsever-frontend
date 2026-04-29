@@ -232,7 +232,7 @@ export function FolderMemberManagement({
                           }}
                           disabled={updating === member._id}
                         >
-                          <SelectTrigger className="w-[180px]">
+                          <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue>
                               {member.folderPermissionLevel ? (
                                 <div className="flex items-center gap-2">

@@ -57,8 +57,8 @@ export default function ActivityLogPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div className="w-full px-4 sm:px-6 py-8">
-          <div className="flex items-center gap-4">
+        <div className="w-full px-4 sm:px-6 py-6 sm:py-8">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-4">
             <Button
               variant="ghost"
               size="icon"
@@ -67,7 +67,7 @@ export default function ActivityLogPage() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
                 <Activity className="w-8 h-8" />
                 Activity Log
               </h1>
@@ -99,17 +99,17 @@ export default function ActivityLogPage() {
                 {activities.map((activity) => (
                   <div
                     key={activity._id}
-                    className="p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className="p-4 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
-                    <div className="flex items-start gap-4">
-                      <Avatar className="w-12 h-12">
+                    <div className="flex items-start gap-3 sm:gap-4">
+                      <Avatar className="w-10 h-10 sm:w-12 sm:h-12">
                         <AvatarImage src={activity.user.avatar} />
                         <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                           {getInitials(activity.user.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="text-base">
+                        <p className="text-sm sm:text-base">
                           <span className="font-semibold text-gray-900 dark:text-white">
                             {activity.user.name}
                           </span>

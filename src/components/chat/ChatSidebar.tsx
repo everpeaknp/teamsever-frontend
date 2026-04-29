@@ -46,9 +46,10 @@ interface ChatSidebarProps {
   activeChannel: string;
   onChannelSelect: (channelId: string, type: 'workspace' | 'direct', name: string, conversationId?: string, userId?: string) => void;
   isAdmin?: boolean;
+  className?: string;
 }
 
-export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdmin }: ChatSidebarProps) => {
+export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdmin, className }: ChatSidebarProps) => {
   const [channels, setChannels] = useState<ChatChannel[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -198,7 +199,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
   }, [channels]);
 
   return (
-    <div className="w-full md:w-64 lg:w-80 bg-card border-r border-border flex flex-col h-full overflow-hidden">
+    <div className={cn("w-full md:w-64 lg:w-80 bg-card border-r border-border flex min-h-dvh md:min-h-0 flex-col overflow-hidden", className)}>
       <div className="flex-1 overflow-y-auto custom-scrollbar p-3 md:p-4 space-y-6">
         
         {/* Public Channels */}

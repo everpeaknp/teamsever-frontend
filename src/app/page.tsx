@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, 
   Users, 
@@ -11,12 +11,15 @@ import {
   ArrowRight, 
   CheckCircle2, 
   Shield, 
-  Sparkles 
+  Sparkles,
+  Menu,
+  X
 } from 'lucide-react';
 import Image from 'next/image';
 
 export default function Home() {
   const router = useRouter();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
@@ -58,7 +61,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <Link 
               href="/login" 
-              className="px-5 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all decoration-transparent"
+              className="hidden sm:block px-5 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all decoration-transparent"
             >
               Sign in
             </Link>
@@ -68,8 +71,36 @@ export default function Home() {
             >
               Get Started
             </Link>
+            
+            {/* Mobile Menu Toggle */}
+            <button 
+              className="md:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="md:hidden mt-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl border border-white/80 dark:border-white/10 rounded-3xl overflow-hidden shadow-2xl"
+            >
+              <div className="flex flex-col p-6 gap-4">
+                <Link href="#features" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-slate-900 dark:text-white decoration-transparent hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Features</Link>
+                <Link href="#pricing" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-slate-900 dark:text-white decoration-transparent hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">Pricing</Link>
+                <Link href="#about" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-slate-900 dark:text-white decoration-transparent hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">About Us</Link>
+                <div className="h-px bg-slate-100 dark:bg-white/10 my-2" />
+                <Link href="/login" onClick={() => setIsMenuOpen(false)} className="text-lg font-bold text-indigo-600 dark:text-indigo-400 decoration-transparent">Sign in</Link>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* Hero Section */}
@@ -92,9 +123,9 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.05]"
+                className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1] sm:leading-[1.05]"
               >
-                Manage tasks with <br />
+                Manage tasks with <br className="hidden sm:block" />
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
                   unrivaled precision.
                 </span>
@@ -114,18 +145,18 @@ export default function Home() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
-                className="flex flex-wrap items-center gap-4 pt-4"
+                className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-4"
               >
                 <Link 
                   href="/register" 
-                  className="px-8 py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold rounded-2xl shadow-xl shadow-indigo-100/30 dark:shadow-none hover:opacity-90 active:scale-[0.98] transition-all flex items-center gap-2 decoration-transparent"
+                  className="px-8 py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold rounded-2xl shadow-xl shadow-indigo-100/30 dark:shadow-none hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 decoration-transparent"
                 >
                   <span>Start for free</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link 
                   href="#demo" 
-                  className="px-8 py-3.5 bg-white dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 font-bold rounded-2xl border border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/[0.05] transition-all decoration-transparent"
+                  className="px-8 py-3.5 bg-white dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 font-bold rounded-2xl border border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/[0.05] transition-all flex items-center justify-center decoration-transparent"
                 >
                   View demo
                 </Link>

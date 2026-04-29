@@ -84,8 +84,8 @@ export default function PermissionsSettings() {
     <div className="min-h-screen bg-[#0a0a0a]">
       {/* Header */}
       <header className="border-b border-gray-800 bg-[#111111]">
-        <div className="px-6 py-4">
-          <div className="flex items-center gap-4">
+        <div className="px-4 sm:px-6 py-4">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-4">
             <button
               onClick={() => router.push(`/workspace/${workspaceId}/settings/members`)}
               className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
@@ -103,11 +103,11 @@ export default function PermissionsSettings() {
       </header>
 
       {/* Content */}
-      <main className="p-6 max-w-5xl mx-auto">
+      <main className="p-4 sm:p-6 max-w-5xl mx-auto">
         {/* Current Tier Badge */}
         <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 sm:items-center">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                 <Shield className="w-5 h-5 text-white" />
               </div>
@@ -127,7 +127,7 @@ export default function PermissionsSettings() {
             {accessControlTier !== 'advanced' && (
               <button
                 onClick={() => handleUpgrade('Advanced Access Control')}
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-purple-700 hover:to-pink-700 sm:w-auto"
               >
                 <Sparkles className="w-4 h-4" />
                 Upgrade
@@ -153,8 +153,8 @@ export default function PermissionsSettings() {
 
               <div className="space-y-4">
                 {/* Full Access Permission */}
-                <div className="flex items-center justify-between p-4 bg-[#1a1a1a] border border-gray-700 rounded-lg">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-3 p-4 bg-[#1a1a1a] border border-gray-700 rounded-lg sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
                     <Crown className="w-5 h-5 text-purple-400" />
                     <div>
                       <h4 className="text-white font-medium">Full Access</h4>
@@ -167,8 +167,8 @@ export default function PermissionsSettings() {
                 </div>
 
                 {/* Can Edit Permission */}
-                <div className="flex items-center justify-between p-4 bg-[#1a1a1a] border border-gray-700 rounded-lg">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-3 p-4 bg-[#1a1a1a] border border-gray-700 rounded-lg sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
                     <Edit className="w-5 h-5 text-blue-400" />
                     <div>
                       <h4 className="text-white font-medium">Can Edit</h4>
@@ -181,8 +181,8 @@ export default function PermissionsSettings() {
                 </div>
 
                 {/* View Only Permission */}
-                <div className="flex items-center justify-between p-4 bg-[#1a1a1a] border border-gray-700 rounded-lg">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col gap-3 p-4 bg-[#1a1a1a] border border-gray-700 rounded-lg sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
                     <Eye className="w-5 h-5 text-gray-400" />
                     <div>
                       <h4 className="text-white font-medium">View Only</h4>

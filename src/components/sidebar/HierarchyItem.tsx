@@ -212,7 +212,7 @@ const getRoute = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-200 dark:hover:bg-slate-700"
+                  className="h-6 w-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-slate-200 dark:hover:bg-slate-700"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -229,7 +229,7 @@ const getRoute = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-200 dark:hover:bg-slate-700"
+                  className="h-6 w-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-slate-200 dark:hover:bg-slate-700"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -247,7 +247,7 @@ const getRoute = () => {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-200 dark:hover:bg-slate-700"
+                    className="h-6 w-6 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-slate-200 dark:hover:bg-slate-700"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();

@@ -24,7 +24,7 @@ function PlansSkeleton() {
       {/* Header Skeleton */}
       <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-start gap-3 sm:items-center sm:gap-4">
             <Skeleton className="h-10 w-10 rounded-lg" />
             <div>
               <Skeleton className="h-9 w-64 mb-2" />
@@ -220,7 +220,7 @@ export default function PlansPage() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Choose Your Plan</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">Choose Your Plan</h1>
               <p className="text-muted-foreground mt-1">
                 Select the plan that best fits your needs. You can upgrade or downgrade anytime.
               </p>
@@ -251,7 +251,7 @@ export default function PlansPage() {
               </p>
             </div>
             
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex items-center justify-center gap-3 sm:gap-4">
               <Button
                 variant="outline"
                 size="icon"

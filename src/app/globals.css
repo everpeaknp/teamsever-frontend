@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+  overflow-x: clip;
+  width: 100%;
+}
+
 @layer base {
   * {
     @apply border-border;
