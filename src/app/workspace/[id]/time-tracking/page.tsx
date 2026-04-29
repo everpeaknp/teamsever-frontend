@@ -263,8 +263,8 @@ export default function TimeTrackingPage() {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="w-full px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3 sm:gap-4">
               <button
                 onClick={() => router.push(`/workspace/${workspaceId}/analytics`)}
                 className="p-2 hover:bg-accent rounded-lg transition-colors"
@@ -272,14 +272,14 @@ export default function TimeTrackingPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold">Time Tracking Dashboard</h1>
+                <h1 className="text-xl sm:text-2xl font-bold">Time Tracking Dashboard</h1>
                 <p className="text-sm text-muted-foreground">
                   Monitor team productivity and time logs
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Button
                 variant="outline"
                 size="sm"
@@ -405,6 +405,71 @@ export default function TimeTrackingPage() {
                 </p>
               </div>
             ) : (
+              <>
+              <div className="space-y-3 md:hidden">
+                {activeTimers.map((timer) => (
+                  <div key={timer._id} className="rounded-lg border p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10">
+                        {timer.user.avatar && <AvatarImage src={timer.user.avatar} />}
+                        <AvatarFallback className="text-xs bg-blue-600 text-white">
+                          {getInitials(timer.user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{timer.user.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{timer.user.email}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Task</p>
+                        <p className="font-medium">{timer.task?.title || 'No task'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Project</p>
+                        <p className="font-medium">{timer.project?.name || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Duration</p>
+                        <p className="font-mono font-medium">{formatDuration(localDurations[timer._id] || timer.currentDuration)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Started</p>
+                        <p>{new Date(timer.startTime).toLocaleTimeString()}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser({ id: timer.user._id, name: timer.user.name });
+                          setShowStopAllDialog(true);
+                        }}
+                        disabled={stoppingAllUserTimers === timer.user._id}
+                        className="gap-2 text-orange-600 hover:text-orange-700"
+                      >
+                        <StopCircle className="w-4 h-4" />
+                        Stop All
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedTimer(timer);
+                          setShowStopDialog(true);
+                        }}
+                        className="gap-2 text-red-600 hover:text-red-700"
+                      >
+                        <StopCircle className="w-4 h-4" />
+                        Stop Timer
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -506,6 +571,8 @@ export default function TimeTrackingPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
+              </>
             )}
           </CardContent>
         </Card>

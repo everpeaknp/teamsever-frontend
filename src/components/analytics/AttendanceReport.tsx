@@ -176,9 +176,9 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardHeader className="flex flex-col gap-3 space-y-0 pb-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-xl font-bold">Attendance Report</CardTitle>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
               <Download className="w-4 h-4" />
               CSV
@@ -258,7 +258,57 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
             </div>
           </div>
 
-          <div className="rounded-md border">
+          <div className="space-y-4">
+            <div className="space-y-3 md:hidden">
+              {loading ? (
+                <div className="rounded-md border p-6 text-center text-muted-foreground">
+                  <div className="flex items-center justify-center gap-2">
+                    <Clock className="w-5 h-5 animate-spin" />
+                    Loading report data...
+                  </div>
+                </div>
+              ) : reportData.length === 0 ? (
+                <div className="rounded-md border p-6 text-center text-muted-foreground">
+                  No attendance records found for the selected period.
+                </div>
+              ) : (
+                reportData.map((entry) => (
+                  <div key={entry.id} className="rounded-lg border p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                        {entry.userName ? entry.userName.charAt(0) : '?'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{entry.userName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{entry.userEmail}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Date</p>
+                        <p className="font-medium">{entry.date}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Duration</p>
+                        <p className="font-mono">{entry.durationFormatted}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Clock In</p>
+                        <p className="text-emerald-600 dark:text-emerald-400 font-medium">{format(new Date(entry.clockIn), 'p')}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Clock Out</p>
+                        <p className={entry.clockOut.includes('Running') ? 'text-blue-500 font-bold' : 'text-rose-600 dark:text-rose-400 font-medium'}>
+                          {entry.clockOut.includes('Running') ? 'Running' : format(new Date(entry.clockOut), 'p')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="hidden rounded-md border md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -331,6 +381,7 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

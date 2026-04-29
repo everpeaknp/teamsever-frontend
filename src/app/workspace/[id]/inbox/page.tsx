@@ -151,7 +151,7 @@ export default function InboxPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex min-h-dvh bg-background overflow-hidden md:h-screen">
       {/* Members List Sidebar - Responsive */}
       <div className={cn(
         "border-r border-border flex flex-col bg-background",
@@ -223,27 +223,13 @@ export default function InboxPage() {
       )}>
         {selectedMember && conversationId ? (
           <div className="flex flex-col h-full">
-            {/* Mobile back button */}
-            <div className="md:hidden flex items-center gap-2 p-3 border-b border-border bg-background">
-              <button
-                onClick={() => setShowMembersList(true)}
-                className="p-2 hover:bg-accent rounded-lg transition-colors"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div className="flex items-center gap-2">
-                <UserAvatar user={selectedMember} className="h-8 w-8" />
-                <span className="font-semibold">{selectedMember.name}</span>
-              </div>
-            </div>
-            
             <ChatWindow
               conversationId={conversationId}
               userId={selectedMember._id}
               type="direct"
               title={selectedMember.name}
+              showMobileBackButton={true}
+              onMobileBack={() => setShowMembersList(true)}
             />
           </div>
         ) : (

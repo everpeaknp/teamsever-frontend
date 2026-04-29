@@ -15,7 +15,7 @@ const AppSidebar = dynamic(
   () => import('@/components/sidebar/AppSidebar').then(mod => mod.AppSidebar),
   {
     ssr: false,
-    loading: () => <div className="w-[300px] h-screen bg-background border-r border-border animate-pulse flex-shrink-0" />,
+    loading: () => <div className="w-[300px] min-h-dvh lg:h-screen bg-background border-r border-border animate-pulse flex-shrink-0" />,
   }
 );
 const Header = dynamic(
@@ -120,13 +120,13 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       {showShell && <GlobalTimer />}
 
       {showShell ? (
-        <div className="flex h-screen overflow-hidden bg-background">
+        <div className="flex min-h-dvh bg-background lg:h-screen lg:overflow-hidden">
           <div className="hidden lg:flex">
             <AppSidebar />
           </div>
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex min-h-dvh flex-1 flex-col lg:min-h-0 lg:overflow-hidden">
             <Header />
-            <main className="flex-1 overflow-auto bg-background">
+            <main className="flex-1 overflow-visible bg-background lg:overflow-auto">
               {children}
             </main>
           </div>

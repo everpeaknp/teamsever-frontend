@@ -126,15 +126,15 @@ export default function DocumentPage() {
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <button
                 onClick={() => router.back()}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex min-w-0 items-center gap-2 text-sm text-gray-600">
                 {saving ? (
                   <>
                     <Save className="w-4 h-4 animate-pulse" />
@@ -182,11 +182,11 @@ export default function DocumentPage() {
         )}
 
         {/* Title Section */}
-        <div className="px-8 pt-12 pb-4">
+        <div className="px-4 sm:px-6 md:px-8 pt-8 sm:pt-10 md:pt-12 pb-4">
           <div className="flex items-center gap-4 mb-4">
             <button
               onClick={handleIconChange}
-              className="text-6xl hover:bg-gray-100 rounded-lg p-2 transition-colors"
+              className="rounded-lg p-2 text-4xl sm:text-5xl md:text-6xl hover:bg-gray-100 transition-colors"
               title="Change icon"
             >
               {icon}
@@ -197,11 +197,11 @@ export default function DocumentPage() {
             type="text"
             value={title}
             onChange={(e) => handleTitleChange(e.target.value)}
-            className="text-5xl font-bold w-full border-none outline-none bg-transparent placeholder-gray-300"
+            className="w-full border-none bg-transparent text-3xl sm:text-4xl md:text-5xl font-bold outline-none placeholder-gray-300"
             placeholder="Untitled"
           />
 
-          <div className="flex items-center gap-4 mt-4 text-sm text-gray-500">
+          <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-4 text-sm text-gray-500">
             <span>By {document.owner.name}</span>
             <span>•</span>
             <span>Last edited {new Date(document.updatedAt).toLocaleDateString()}</span>

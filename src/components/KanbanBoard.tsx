@@ -153,8 +153,8 @@ export function KanbanBoard({ tasks, onStatusChange, canChangeStatus, canDelete 
 
   return (
     <>
-      <div className="h-[calc(100vh-220px)] w-full px-6 pb-6 overflow-hidden">
-        <div className="flex h-full w-full gap-3">
+      <div className="w-full overflow-x-auto px-0 pb-4 sm:px-2 md:px-4 lg:px-6">
+        <div className="flex min-h-[60vh] w-max min-w-full gap-3 md:min-h-[calc(100vh-260px)] md:w-full">
           {COLUMNS.map((column) => (
             <KanbanColumn
               key={column.id}

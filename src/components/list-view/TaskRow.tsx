@@ -122,7 +122,7 @@ export default function TaskRow({ task, isSelected, onSelect, onUpdate }: TaskRo
       {/* Actions */}
       <td className="px-4 py-3">
         <button
-          className="p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+          className="rounded p-1 opacity-100 transition-opacity hover:bg-gray-200 sm:opacity-0 sm:group-hover:opacity-100"
           onClick={(e) => {
             e.stopPropagation();
             // Add dropdown menu here

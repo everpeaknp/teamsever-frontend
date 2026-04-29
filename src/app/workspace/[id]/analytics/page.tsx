@@ -282,7 +282,7 @@ export default function AnalyticsPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <main className="max-w-[1440px] mx-auto px-6 py-8">
+            <main className="max-w-[1440px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
                 {/* Back Button */}
                 <button
                     onClick={() => router.push('/dashboard')}
@@ -293,18 +293,18 @@ export default function AnalyticsPage() {
                 </button>
 
                 {/* Header Actions */}
-                <div className="flex justify-end gap-3 mb-8">
+                <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
                     {isAdmin && (
                         <Button 
                             variant="outline" 
-                            className="gap-2"
+                            className="gap-2 w-full sm:w-auto"
                             onClick={() => window.location.href = `/workspace/${workspaceId}/time-tracking`}
                         >
                             <BarChart3 className="w-4 h-4" />
                             Time Tracking
                         </Button>
                     )}
-                    <Button variant="outline" className="gap-2">
+                    <Button variant="outline" className="gap-2 w-full sm:w-auto">
                         <Calendar className="w-4 h-4" />
                         Last {dateFilter} Days
                     </Button>
@@ -381,7 +381,7 @@ function MetricCard({ title, value, icon, color, badge, subtext }: any) {
                     <span className="text-muted-foreground font-medium text-sm">{title}</span>
                     <div className={`p-2 rounded-lg ${colors[color]}`}>{icon}</div>
                 </div>
-                <div className="flex items-baseline gap-2">
+                <div className="flex flex-wrap items-baseline gap-2">
                     <h3 className="text-2xl font-bold">{value}</h3>
                     {badge && <Badge className="bg-emerald-50 text-emerald-600">{badge}</Badge>}
                     {subtext && <span className="text-xs font-semibold text-emerald-500">{subtext}</span>}

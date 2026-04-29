@@ -213,7 +213,7 @@ const CellEditorComponent: React.FC<CellEditorProps> = ({
 
       {!readOnly && externalShowColorPicker && (
         <button
-          className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity flex-shrink-0 p-1 hover:bg-white/80 dark:hover:bg-gray-900/80 rounded z-20 shadow-sm"
+          className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity flex-shrink-0 p-1 hover:bg-white/80 dark:hover:bg-gray-900/80 rounded z-20 shadow-sm"
           onClick={(e) => {
             e.stopPropagation();
             setShowColorPicker(!showColorPicker);

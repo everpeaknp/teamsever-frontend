@@ -22,13 +22,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
@@ -36,11 +29,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
 
 interface User {
   _id: string;
@@ -190,8 +178,8 @@ export default function TimesheetsPage() {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="w-full px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3 sm:gap-4">
               <button
                 onClick={() => router.push(`/workspace/${workspaceId}/time-tracking`)}
                 className="p-2 hover:bg-accent rounded-lg transition-colors"
@@ -199,14 +187,14 @@ export default function TimesheetsPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold">Team Timesheets</h1>
+                <h1 className="text-xl sm:text-2xl font-bold">Team Timesheets</h1>
                 <p className="text-sm text-muted-foreground">
                   View detailed time tracking reports
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Button
                 variant="outline"
                 size="sm"
@@ -237,7 +225,7 @@ export default function TimesheetsPage() {
               {/* Date Range Presets */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Quick Select</label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <Button
                     variant="outline"
                     size="sm"
@@ -363,6 +351,39 @@ export default function TimesheetsPage() {
               <CardTitle>Time by Team Member</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="space-y-3 md:hidden">
+                {data.byUser.map((userSummary) => (
+                  <div key={userSummary.user._id} className="rounded-lg border p-4 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-10 h-10">
+                        {userSummary.user.avatar && <AvatarImage src={userSummary.user.avatar} />}
+                        <AvatarFallback className="text-xs bg-blue-600 text-white">
+                          {getInitials(userSummary.user.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{userSummary.user.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{userSummary.user.email}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Total Time</p>
+                        <p className="font-mono font-medium">{userSummary.totalDurationFormatted}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Entries</p>
+                        <p>{userSummary.entryCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Projects</p>
+                        <p>{userSummary.projectCount}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -398,6 +419,7 @@ export default function TimesheetsPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -409,6 +431,35 @@ export default function TimesheetsPage() {
               <CardTitle>Time by Project</CardTitle>
             </CardHeader>
             <CardContent>
+              <div className="space-y-3 md:hidden">
+                {data.byProject.map((projectSummary) => (
+                  <div key={projectSummary.project._id} className="rounded-lg border p-4 space-y-3">
+                    <Badge
+                      style={{
+                        backgroundColor: projectSummary.project.color + '20',
+                        color: projectSummary.project.color
+                      }}
+                    >
+                      {projectSummary.project.name}
+                    </Badge>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground">Total Time</p>
+                        <p className="font-mono font-medium">{projectSummary.totalDurationFormatted}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Entries</p>
+                        <p>{projectSummary.entryCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Contributors</p>
+                        <p>{projectSummary.userCount}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -440,6 +491,7 @@ export default function TimesheetsPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         )}

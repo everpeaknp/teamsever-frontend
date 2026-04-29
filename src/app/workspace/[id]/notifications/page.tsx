@@ -114,9 +114,9 @@ export default function NotificationsPage() {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Notifications</h1>
               <p className="text-sm text-muted-foreground">
                 {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
               </p>
@@ -125,7 +125,7 @@ export default function NotificationsPage() {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent rounded-lg transition-colors"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent sm:w-auto"
                 >
                   <CheckCheck className="w-4 h-4" />
                   Mark all read
@@ -135,7 +135,7 @@ export default function NotificationsPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-2 mt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => setFilter('all')}
               className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -176,7 +176,7 @@ export default function NotificationsPage() {
                 </p>
                 <button
                   onClick={handleEnableNotifications}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  className="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 sm:w-auto"
                 >
                   Enable Notifications
                 </button>
@@ -220,7 +220,7 @@ export default function NotificationsPage() {
                   }
                 }}
               >
-                <div className="p-4 flex items-start gap-4">
+                <div className="flex items-start gap-3 p-4 sm:gap-4">
                   {/* Icon */}
                   <div className="flex-shrink-0">
                     {getNotificationIcon(notification.type)}

@@ -173,17 +173,17 @@ export default function GeneralSettingsPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <div className="flex items-center gap-2 border-b border-border">
-          <button className="px-4 py-2 border-b-2 border-primary text-primary font-medium">General</button>
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-border">
+          <button className="whitespace-nowrap px-4 py-2 border-b-2 border-primary text-primary font-medium">General</button>
           <button 
             onClick={() => router.push(`/workspace/${workspaceId}/settings/members`)}
-            className="px-4 py-2 text-muted-foreground hover:text-foreground font-medium transition-colors"
+            className="whitespace-nowrap px-4 py-2 text-muted-foreground hover:text-foreground font-medium transition-colors"
           >
             Members
           </button>
           <button 
             onClick={() => router.push(`/workspace/${workspaceId}/settings/permissions`)}
-            className="px-4 py-2 text-muted-foreground hover:text-foreground font-medium transition-colors"
+            className="whitespace-nowrap px-4 py-2 text-muted-foreground hover:text-foreground font-medium transition-colors"
           >
             Permissions
           </button>

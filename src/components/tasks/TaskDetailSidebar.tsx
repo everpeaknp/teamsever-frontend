@@ -375,9 +375,9 @@ export function TaskDetailSidebar() {
               />
 
               {/* Status and Priority */}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Select value={status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className={`w-[140px] h-8 ${getStatusColor(status)}`}>
+                  <SelectTrigger className={`h-8 w-full sm:w-[140px] ${getStatusColor(status)}`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -388,7 +388,7 @@ export function TaskDetailSidebar() {
                 </Select>
 
                 <Select value={priority} onValueChange={handlePriorityChange}>
-                  <SelectTrigger className={`w-[120px] h-8 ${getPriorityColor(priority)}`}>
+                  <SelectTrigger className={`h-8 w-full sm:w-[120px] ${getPriorityColor(priority)}`}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

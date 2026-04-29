@@ -692,7 +692,7 @@ export default function SpaceHomePage() {
             
             {/* Right side - Admin actions */}
             {shouldShowAdminButtons && (
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex w-full flex-wrap items-center gap-2 flex-shrink-0 sm:w-auto">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -864,10 +864,10 @@ export default function SpaceHomePage() {
         </div>
 
         {/* Tabs Navigation */}
-        <div className="flex items-center gap-4 mb-6 border-b border-border">
+        <div className="mb-6 flex items-center gap-2 overflow-x-auto border-b border-border">
           <button
             onClick={() => setActiveTab('lists')}
-            className={`px-4 py-2 font-medium transition-colors ${
+            className={`whitespace-nowrap px-4 py-2 font-medium transition-colors ${
               activeTab === 'lists'
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -880,7 +880,7 @@ export default function SpaceHomePage() {
           </button>
           <button
             onClick={() => setActiveTab('tables')}
-            className={`px-4 py-2 font-medium transition-colors ${
+            className={`whitespace-nowrap px-4 py-2 font-medium transition-colors ${
               activeTab === 'tables'
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -1357,7 +1357,7 @@ export default function SpaceHomePage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
                           onClick={() => handleRemoveMember(memberId, user?.name || 'member')}
                         >
                           <Trash2 className="w-4 h-4 text-red-600" />

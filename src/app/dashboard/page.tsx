@@ -68,12 +68,12 @@ function DashboardSkeleton() {
       {/* Header Skeleton */}
       <header className="bg-card border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <Skeleton className="h-8 w-32 mb-2" />
               <Skeleton className="h-4 w-48" />
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end sm:gap-3">
               <Skeleton className="h-9 w-24 hidden sm:block" />
               <Skeleton className="h-9 w-9 rounded-lg" />
               <Skeleton className="h-9 w-9 rounded-lg" />
@@ -397,8 +397,8 @@ export default function DashboardPage() {
         {isPaid && isActive && daysRemaining <= 7 && (
           <Alert variant={daysRemaining <= 3 ? "destructive" : "warning"} className="mb-8">
             <Clock className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <div>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <span className="font-medium">
                   {daysRemaining} day{daysRemaining === 1 ? '' : 's'} remaining
                 </span>
@@ -413,7 +413,7 @@ export default function DashboardPage() {
                     window.open(`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=Hi, I would like to renew my subscription for ${planName}`, '_blank');
                   }
                 }}
-                className="ml-4"
+                className="w-full sm:ml-4 sm:w-auto"
               >
                 <Zap className="w-3.5 h-3.5 mr-1.5" />
                 Renew
@@ -425,8 +425,8 @@ export default function DashboardPage() {
         {isExpired && (
           <Alert variant="destructive" className="mb-8">
             <Clock className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between">
-              <div>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
                 <span className="font-medium">Subscription Expired</span>
                 <span className="text-sm ml-2">
                   Your premium features have been disabled. Contact support to reactivate.
@@ -439,7 +439,7 @@ export default function DashboardPage() {
                     window.open(`https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=Hi, I would like to reactivate my subscription`, '_blank');
                   }
                 }}
-                className="ml-4"
+                className="w-full sm:ml-4 sm:w-auto"
               >
                 <Zap className="w-3.5 h-3.5 mr-1.5" />
                 Reactivate
@@ -542,9 +542,9 @@ export default function DashboardPage() {
         </Card>
 
         {/* Workspace Section Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-xl font-semibold">Your Workspaces</h3>
-          <Button onClick={() => setShowCreateModal(true)}>
+          <Button onClick={() => setShowCreateModal(true)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             New Workspace
           </Button>
@@ -614,7 +614,7 @@ export default function DashboardPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <MoreHorizontal className="h-4 w-4" />

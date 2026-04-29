@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings } from 'lucide-react';
+import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
@@ -20,11 +20,13 @@ interface ChatWindowProps {
   type: 'workspace' | 'direct';
   title: string;
   isAdmin?: boolean;
+  showMobileBackButton?: boolean;
+  onMobileBack?: () => void;
 }
 
 import { EditChannelModal } from './EditChannelModal';
 
-export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, isAdmin }: ChatWindowProps) => {
+export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, isAdmin, showMobileBackButton = false, onMobileBack }: ChatWindowProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -374,11 +376,21 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
+    <div className="flex min-h-dvh flex-1 flex-col bg-background md:min-h-0 md:h-full overflow-hidden">
       {/* Header - Fixed */}
-      <div className="h-14 border-b border-border px-6 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+      <div className="h-14 border-b border-border px-3 sm:px-4 md:px-6 flex items-center justify-between flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          {showMobileBackButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden h-9 w-9 flex-shrink-0"
+              onClick={onMobileBack}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <h2 className="truncate text-base sm:text-lg font-semibold text-foreground">{title}</h2>
         </div>
         {type === 'workspace' && channelId && channelId !== 'general' && isAdmin && (
           <button 
@@ -408,7 +420,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar"
+        className="flex-1 overflow-y-auto px-3 py-4 sm:p-4 md:p-6 space-y-4 custom-scrollbar"
         style={{
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(155, 155, 155, 0.2) transparent'
@@ -561,13 +573,13 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
       {/* Typing Indicator */}
       {typingUsers.length > 0 && (
-        <div className="px-6 py-2 text-xs text-muted-foreground flex-shrink-0">
+        <div className="px-3 sm:px-4 md:px-6 py-2 text-xs text-muted-foreground flex-shrink-0">
           {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
         </div>
       )}
 
       {/* Input Area - Improved padding and layout */}
-      <div className="border-t border-border p-4 pb-4 md:pb-6 bg-background/95 backdrop-blur-sm sticky bottom-0 z-10 transition-all">
+      <div className="border-t border-border p-3 sm:p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-6 bg-background/95 backdrop-blur-sm sticky bottom-0 z-10 transition-all">
         <div className="max-w-4xl mx-auto flex gap-2 items-end">
           <div className="flex-1 relative">
             <Textarea

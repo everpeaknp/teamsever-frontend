@@ -332,14 +332,14 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
         </div>
         
         {/* Date Filter */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <CalendarIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="pl-9 pr-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-primary w-[140px]"
+              className="w-full min-w-[140px] pl-9 pr-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-primary sm:w-[140px]"
               placeholder="Start Date"
             />
           </div>
@@ -350,7 +350,7 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="pl-9 pr-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-primary w-[140px]"
+              className="w-full min-w-[140px] pl-9 pr-3 py-2 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-primary sm:w-[140px]"
               placeholder="End Date"
             />
           </div>

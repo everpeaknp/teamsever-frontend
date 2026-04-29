@@ -167,7 +167,7 @@ export default function InlineCreateTaskWithQuery({
           <Plus className="w-3 h-3" />
         </div>
         <span className="font-medium">New Task</span>
-        <span className="ml-auto text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+        <span className="ml-auto text-xs text-gray-400 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           Click or press N
         </span>
       </button>

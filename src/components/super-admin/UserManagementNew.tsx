@@ -420,7 +420,7 @@ export default function UserManagementNew() {
                       {selectedUser?._id === user._id && !user.subscription.isPaid ? (
                         <div className="flex items-center gap-2">
                            <Select value={selectedPlan} onValueChange={setSelectedPlan}>
-                            <SelectTrigger className="w-[180px]">
+                            <SelectTrigger className="w-full sm:w-[180px]">
                               <SelectValue placeholder="Select Plan" />
                             </SelectTrigger>
                             <SelectContent>

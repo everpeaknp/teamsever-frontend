@@ -52,7 +52,7 @@ export function TaskStatusBadge({
   if (asSelect && onStatusChange) {
     return (
       <Select value={status} onValueChange={onStatusChange} disabled={disabled}>
-        <SelectTrigger className="h-8 w-[140px]">
+        <SelectTrigger className="h-8 w-full sm:w-[140px]">
           <SelectValue>
             <div className="flex items-center gap-2">
               <Icon className="h-3.5 w-3.5" />

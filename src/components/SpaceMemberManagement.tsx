@@ -232,7 +232,7 @@ export function SpaceMemberManagement({
                           }}
                           disabled={updating === member._id}
                         >
-                          <SelectTrigger className="w-[180px]">
+                          <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue>
                               {member.spacePermissionLevel ? (
                                 <div className="flex items-center gap-2">
