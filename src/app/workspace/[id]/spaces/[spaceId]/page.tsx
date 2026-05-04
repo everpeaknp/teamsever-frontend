@@ -27,6 +27,7 @@ import {
   Power,
   Table as TableIcon,
   Lock,
+  Github,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { InviteMemberModal } from '@/components/InviteMemberModal';
 import { SpaceMemberManagement } from '@/components/SpaceMemberManagement';
 import { DeleteTableModal } from '@/components/modals/DeleteTableModal';
+import { useModalStore } from '@/store/useModalStore';
 import { useSpaceStore } from '@/store/useSpaceStore';
 import { useWorkspaceStore } from '@/store/useWorkspaceStore';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -731,6 +733,13 @@ export default function SpaceHomePage() {
                     <DropdownMenuItem onClick={() => setShowSettingsSheet(true)}>
                       <Settings className="w-4 h-4 mr-2" />
                       Space Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      const { openModal } = useModalStore.getState();
+                      openModal('githubWebhook', spaceId, 'space');
+                    }}>
+                      <Github className="w-4 h-4 mr-2" />
+                      GitHub Webhook
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

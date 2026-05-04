@@ -34,6 +34,10 @@ const TaskDetailSidebar = dynamic(
   () => import('@/components/tasks/TaskDetailSidebar').then(mod => mod.TaskDetailSidebar),
   { ssr: false }
 );
+const GitHubWebhookModal = dynamic(
+  () => import('@/components/modals/GitHubWebhookModal').then(mod => mod.GitHubWebhookModal),
+  { ssr: false }
+);
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -116,6 +120,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <NavigationLoader />
       <PageLoadingIndicator />
       <TaskDetailSidebar />
+      <GitHubWebhookModal />
       <Toaster position="top-right" richColors />
       {showShell && <GlobalTimer />}
 

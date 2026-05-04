@@ -10,6 +10,7 @@ import {
   MoreHorizontal,
   Star,
   Trash2,
+  Github,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/store/useUIStore';
@@ -343,7 +344,18 @@ const getRoute = () => {
                           </DropdownMenuItem>
                       )}
                       {item.type === 'space' && (
-                         <DropdownMenuItem
+                        <>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openModal('githubWebhook', item._id, 'space', item.name);
+                            }}
+                          >
+                            <Github className="h-4 w-4 mr-2" />
+                            GitHub Webhook
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={(e) => {
                               e.preventDefault();
@@ -354,6 +366,7 @@ const getRoute = () => {
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete space
                           </DropdownMenuItem>
+                        </>
                       )}
                     </>
                   )}

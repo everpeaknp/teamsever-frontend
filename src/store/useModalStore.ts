@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ModalType = 'space' | 'folder' | 'list' | 'editSpace' | 'editFolder' | 'editList' | 'deleteSpace' | 'deleteFolder' | 'deleteList';
+export type ModalType = 'space' | 'folder' | 'list' | 'editSpace' | 'editFolder' | 'editList' | 'deleteSpace' | 'deleteFolder' | 'deleteList' | 'githubWebhook';
 export type ParentType = 'workspace' | 'space' | 'folder';
 
 interface ModalState {
