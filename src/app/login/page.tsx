@@ -265,7 +265,7 @@ export default function LoginPage() {
             initial={{ opacity: 0, y: -20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed top-8 right-8 z-[100] py-3 px-5 bg-red-500/90 dark:bg-red-500/20 backdrop-blur-md border border-red-200 dark:border-red-500/30 text-white dark:text-red-400 rounded-2xl shadow-[0_20px_40px_rgba(239,68,68,0.2)] flex items-center gap-3 min-w-[300px]"
+            className="fixed top-4 left-4 right-4 sm:top-8 sm:left-auto sm:right-8 sm:w-auto z-[100] py-3 px-5 bg-red-500/90 dark:bg-red-500/20 backdrop-blur-md border border-red-200 dark:border-red-500/30 text-white dark:text-red-400 rounded-2xl shadow-[0_20px_40px_rgba(239,68,68,0.2)] flex items-center gap-3 sm:min-w-[300px]"
           >
             <div className="w-2 h-2 rounded-full bg-white dark:bg-red-500 animate-pulse" />
             <p className="text-sm font-bold tracking-tight">{error}</p>

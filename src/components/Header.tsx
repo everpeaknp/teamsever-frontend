@@ -90,7 +90,7 @@ export function Header() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626]"
+            className="hidden sm:flex h-9 w-9 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626]"
             onClick={() => setCustomizeOpen(true)}
             title="Customize Theme"
           >
@@ -100,7 +100,7 @@ export function Header() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626]"
+            className="hidden sm:flex h-9 w-9 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626]"
             onClick={handleHelpCenter}
             title="Help Center"
           >
