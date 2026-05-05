@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Zap, 
-  Users, 
-  Layout, 
-  ArrowRight, 
-  CheckCircle2, 
-  Shield, 
+import {
+  Zap,
+  Users,
+  Layout,
+  ArrowRight,
+  CheckCircle2,
+  Shield,
   Sparkles,
   Menu,
   X
@@ -40,18 +40,18 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-5">
         <div className="max-w-6xl mx-auto flex items-center justify-between bg-white/40 dark:bg-white/[0.02] backdrop-blur-xl border border-white/80 dark:border-white/10 rounded-[24px] px-6 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.02)] transition-all">
           <Link href="/" className="flex items-center gap-2 group decoration-transparent">
-            <Image 
-              src="/teamsever_logo.png" 
-              alt="Teamsever Logo" 
-              width={36} 
-              height={36} 
-              className="rounded-[10px] shadow-lg shadow-indigo-200/50 dark:shadow-none transition-transform group-hover:scale-105" 
+            <Image
+              src="/teamsever_logo.png"
+              alt="Teamsever Logo"
+              width={36}
+              height={36}
+              className="rounded-[10px] shadow-lg shadow-indigo-200/50 dark:shadow-none transition-transform group-hover:scale-105"
             />
             <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
               Teamsever
             </span>
           </Link>
-          
+
           <div className="hidden md:flex items-center gap-8">
             <Link href="#features" className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-colors decoration-transparent">Features</Link>
             <Link href="#pricing" className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-colors decoration-transparent">Pricing</Link>
@@ -59,21 +59,21 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link 
-              href="/login" 
+            <Link
+              href="/login"
               className="hidden sm:block px-5 py-2 text-sm font-bold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all decoration-transparent"
             >
               Sign in
             </Link>
-            <Link 
-              href="/register" 
+            <Link
+              href="/register"
               className="px-5 py-2 text-sm font-bold bg-slate-900 dark:bg-white text-white dark:text-slate-950 rounded-xl shadow-lg shadow-indigo-100 dark:shadow-none hover:opacity-90 active:scale-[0.98] transition-all decoration-transparent"
             >
               Get Started
             </Link>
-            
+
             {/* Mobile Menu Toggle */}
-            <button 
+            <button
               className="md:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
@@ -119,7 +119,7 @@ export default function Home() {
                 <span className="text-[11px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">Trusted by over 10,000 teams</span>
               </motion.div>
 
-              <motion.h1 
+              <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
@@ -131,31 +131,31 @@ export default function Home() {
                 </span>
               </motion.h1>
 
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
                 className="max-w-lg text-lg text-slate-600 dark:text-slate-400 leading-relaxed"
               >
-                Teamsever brings all your tasks, teammates, and tools together. 
+                Teamsever brings all your tasks, teammates, and tools together.
                 Refined, minimal, and built for modern high-performance teams.
               </motion.p>
 
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
                 className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-4"
               >
-                <Link 
-                  href="/register" 
+                <Link
+                  href="/register"
                   className="px-8 py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-bold rounded-2xl shadow-xl shadow-indigo-100/30 dark:shadow-none hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 decoration-transparent"
                 >
                   <span>Start for free</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link 
-                  href="#demo" 
+                <Link
+                  href="#demo"
                   className="px-8 py-3.5 bg-white dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 font-bold rounded-2xl border border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/[0.05] transition-all flex items-center justify-center decoration-transparent"
                 >
                   View demo
@@ -164,20 +164,20 @@ export default function Home() {
             </div>
 
             {/* Right Column: Product Showcase */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
               className="relative lg:scale-110 xl:scale-125 origin-left"
             >
               <div className="relative rounded-[32px] p-2 bg-white/40 dark:bg-white/[0.02] backdrop-blur-2xl border border-white/80 dark:border-white/10 shadow-[0_48px_100px_-20px_rgba(0,0,0,0.08)] dark:shadow-none transition-transform hover:scale-[1.02] duration-500">
-                <img 
-                  src="/product-showcase.png" 
-                  alt="Product Interface" 
+                <img
+                  src="/product-showcase.png"
+                  alt="Product Interface"
                   className="w-full h-auto rounded-[24px]"
                 />
               </div>
-              
+
               {/* Decorative background blur behind image */}
               <div className="absolute -z-10 inset-0 translate-y-10 bg-indigo-400/20 dark:bg-indigo-500/10 blur-[100px] rounded-full" />
             </motion.div>
@@ -236,7 +236,7 @@ export default function Home() {
                 color: 'bg-indigo-500'
               }
             ].map((feature, i) => (
-              <motion.div 
+              <motion.div
                 key={i}
                 whileHover={{ y: -5 }}
                 className="p-8 bg-white/40 dark:bg-white/[0.03] backdrop-blur-xl border border-white/80 dark:border-white/10 rounded-[32px] hover:shadow-2xl hover:shadow-indigo-100 transition-all dark:hover:shadow-none group"
@@ -261,12 +261,12 @@ export default function Home() {
           <div className="relative bg-slate-900 dark:bg-white overflow-hidden rounded-[48px] p-12 md:p-16 text-center shadow-2xl">
             {/* Decorative background for dark mode CTA */}
             <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4 w-96 h-96 bg-indigo-500/20 rounded-full blur-[80px] dark:bg-indigo-100/50" />
-            
+
             <div className="relative z-10 space-y-8">
               <h2 className="text-4xl md:text-5xl font-black text-white dark:text-slate-950 tracking-tight leading-[1.1]"> Ready to elevate your <br /> team management?</h2>
               <div className="flex flex-wrap items-center justify-center gap-4">
-                <Link 
-                  href="/register" 
+                <Link
+                  href="/register"
                   className="px-8 py-4 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-black rounded-2xl hover:scale-105 transition-transform flex items-center gap-2 decoration-transparent"
                 >
                   Join Teamsever Now
