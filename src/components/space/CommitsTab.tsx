@@ -34,16 +34,14 @@ export function CommitsTab({ spaceId, workspaceId, spaceColor }: CommitsTabProps
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/activities`, {
+      const response = await api.get(`/spaces/${spaceId}/commits`, {
         params: {
-          workspaceId,
-          spaceId,
-          type: 'github_commit',
           limit: 50,
         },
       });
       const data = response.data;
-      const activities = data.activities || data.data || data || [];
+      // Backend returns data in 'data' field
+      const activities = data.data || data.activities || data || [];
       setCommits(Array.isArray(activities) ? activities : []);
     } catch (err: any) {
       setError('Failed to load commits');
