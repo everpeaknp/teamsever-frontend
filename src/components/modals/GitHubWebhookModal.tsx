@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -46,6 +46,38 @@ export function GitHubWebhookModal() {
       githubRepoName: '',
     },
   });
+
+  // Fetch current repo name and webhook details if they exist
+  useEffect(() => {
+    const fetchWebhookDetails = async () => {
+      if (isOpen && type === 'githubWebhook' && parentId) {
+        try {
+          // Fetch existing webhook details
+          const response = await api.get(`/spaces/${parentId}/webhook`);
+          const data = response.data.data;
+          
+          if (data) {
+            form.setValue('githubRepoName', data.githubRepoName || '');
+            setWebhookData({
+              webhookUrl: data.webhookUrl,
+              secret: data.secret,
+            });
+          } else {
+            // No webhook yet, fetch space details just for the repo name if needed
+            const spaceResponse = await api.get(`/spaces/${parentId}`);
+            const space = spaceResponse.data.data;
+            if (space.githubRepoName) {
+              form.setValue('githubRepoName', space.githubRepoName);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch webhook details:', error);
+        }
+      }
+    };
+
+    fetchWebhookDetails();
+  }, [isOpen, type, parentId, form]);
 
   // Handle form submission
   const onSubmit = async (values: WebhookFormValues) => {
@@ -99,8 +131,8 @@ export function GitHubWebhookModal() {
           </div>
           <DialogDescription>
             {webhookData 
-              ? "Your webhook has been generated! Add these to your GitHub repository." 
-              : "Link a GitHub repository to this space to automatically track commits."}
+              ? "Your webhook has been generated! You can use this SAME URL and Secret in multiple repositories to track them all here." 
+              : "Link one or more GitHub repositories to this space. You can use the same webhook URL in multiple repos."}
           </DialogDescription>
         </DialogHeader>
 
@@ -145,7 +177,7 @@ export function GitHubWebhookModal() {
                       Generating...
                     </>
                   ) : (
-                    'Generate Webhook'
+                    form.getValues('githubRepoName') ? 'Update Connection' : 'Generate Webhook'
                   )}
                 </Button>
               </DialogFooter>
@@ -183,8 +215,11 @@ export function GitHubWebhookModal() {
               </div>
             </div>
 
-            <DialogFooter>
-              <Button type="button" onClick={handleClose} className="w-full">
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="ghost" onClick={() => setWebhookData(null)} className="w-full sm:w-auto text-muted-foreground text-xs">
+                Regenerate Credentials
+              </Button>
+              <Button type="button" onClick={handleClose} className="w-full sm:flex-1">
                 Done
               </Button>
             </DialogFooter>
