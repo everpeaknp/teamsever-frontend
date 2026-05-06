@@ -752,13 +752,6 @@ export default function SpaceHomePage() {
                       <Settings className="w-4 h-4 mr-2" />
                       Space Settings
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => {
-                      const { openModal } = useModalStore.getState();
-                      openModal('githubWebhook', spaceId, 'space');
-                    }}>
-                      <Github className="w-4 h-4 mr-2" />
-                      GitHub Webhook
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
                 
