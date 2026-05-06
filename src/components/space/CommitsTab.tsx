@@ -29,6 +29,10 @@ export function CommitsTab({ spaceId, workspaceId, spaceColor }: CommitsTabProps
   const [commits, setCommits] = useState<Commit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedRepo, setSelectedRepo] = useState<string>('all');
+
+  // Get unique repo names for filtering
+  const repoNames = Array.from(new Set(commits.map(c => c.metadata?.repoName).filter(Boolean))) as string[];
 
   const fetchCommits = async () => {
     try {
@@ -104,6 +108,10 @@ export function CommitsTab({ spaceId, workspaceId, spaceColor }: CommitsTabProps
     );
   }
 
+  const filteredCommits = selectedRepo === 'all' 
+    ? commits 
+    : commits.filter(c => c.metadata?.repoName === selectedRepo);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between mb-2">
@@ -111,7 +119,7 @@ export function CommitsTab({ spaceId, workspaceId, spaceColor }: CommitsTabProps
           <Github className="w-5 h-5" style={{ color: spaceColor }} />
           <h2 className="text-base font-semibold">GitHub Commits</h2>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-            {commits.length}
+            {filteredCommits.length}
           </span>
         </div>
         <Button variant="ghost" size="sm" onClick={fetchCommits}>
@@ -119,12 +127,41 @@ export function CommitsTab({ spaceId, workspaceId, spaceColor }: CommitsTabProps
         </Button>
       </div>
 
+      {/* Repo Filter Pills */}
+      {repoNames.length > 1 && (
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 no-scrollbar">
+          <button
+            onClick={() => setSelectedRepo('all')}
+            className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+              selectedRepo === 'all'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
+            }`}
+          >
+            All Repos
+          </button>
+          {repoNames.map(repo => (
+            <button
+              key={repo}
+              onClick={() => setSelectedRepo(repo)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${
+                selectedRepo === repo
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
+              }`}
+            >
+              {repo}
+            </button>
+          ))}
+        </div>
+      )}
+
       <div className="relative">
         {/* Timeline line */}
         <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
 
         <div className="flex flex-col gap-0">
-          {commits.map((commit, index) => {
+          {filteredCommits.map((commit, index) => {
             const meta = commit.metadata || {};
             return (
               <div key={commit._id} className="relative flex items-start gap-4 pb-5 pl-12">
