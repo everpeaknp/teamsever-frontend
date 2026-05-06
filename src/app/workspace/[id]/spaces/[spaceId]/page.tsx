@@ -718,6 +718,20 @@ export default function SpaceHomePage() {
             {/* Right side - Admin actions */}
             {shouldShowAdminButtons && (
               <div className="flex items-center gap-2 flex-shrink-0">
+                {/* GitHub Webhook - Standalone button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const { openModal } = useModalStore.getState();
+                    openModal('githubWebhook', spaceId, 'space');
+                  }}
+                  title="GitHub Webhook"
+                >
+                  <Github className="w-4 h-4" />
+                  <span className="ml-2 hidden sm:inline">Webhook</span>
+                </Button>
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm">
