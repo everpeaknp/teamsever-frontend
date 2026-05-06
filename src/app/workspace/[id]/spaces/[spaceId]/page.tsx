@@ -50,6 +50,7 @@ import { useWorkspaceStore } from '@/store/useWorkspaceStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePermission, SpacePermissionLevel } from '@/hooks/usePermission';
 import { toast } from 'sonner';
+import { CommitsTab } from '@/components/space/CommitsTab';
 
 // Lazy load heavy components
 const CustomTableView = dynamic(
@@ -133,15 +134,18 @@ export default function SpaceHomePage() {
   const [showAllMembersModal, setShowAllMembersModal] = useState(false);
 
   // Tables state
-  const [activeTab, setActiveTab] = useState<'lists' | 'tables'>(() => {
+  const [activeTab, setActiveTab] = useState<'lists' | 'tables' | 'commits'>(() => {
     // Initialize from URL parameter if present
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tab = urlParams.get('tab');
       if (tab === 'tables') return 'tables';
+      if (tab === 'commits') return 'commits';
     }
     return 'lists';
   });
+  const [commits, setCommits] = useState<any[]>([]);
+  const [commitsLoading, setCommitsLoading] = useState(false);
   const [tables, setTables] = useState<any[]>([]);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(() => {
     // Initialize from URL parameter if present
@@ -944,6 +948,19 @@ export default function SpaceHomePage() {
               )}
             </div>
           </button>
+          <button
+            onClick={() => setActiveTab('commits')}
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === 'commits'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Github className="w-4 h-4" />
+              <span>Commits</span>
+            </div>
+          </button>
         </div>
 
         {/* Lists & Folders Section */}
@@ -1319,6 +1336,11 @@ export default function SpaceHomePage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* GitHub Commits Section */}
+        {activeTab === 'commits' && (
+          <CommitsTab spaceId={spaceId} workspaceId={workspaceId} spaceColor={spaceColor} />
         )}
         
         {/* Create Table Modal */}
