@@ -121,6 +121,7 @@ export function AppSidebar() {
 
   // Extract workspaceId from URL
   let workspaceId = params?.id as string;
+  if (workspaceId === 'undefined') workspaceId = '';
 
   // Hydrate auth store from localStorage if user is not yet loaded (e.g. after page refresh)
   const { setUser } = useAuthStore();
@@ -136,10 +137,11 @@ export function AppSidebar() {
     }
   }, [user, setUser]);
 
-  if (!workspaceId && pathname) {
+  if (!workspaceId && pathname && pathname !== 'undefined') {
     const workspaceMatch = pathname.match(/\/workspace\/([^\/]+)/);
     if (workspaceMatch) {
       workspaceId = workspaceMatch[1];
+      if (workspaceId === 'undefined') workspaceId = '';
     }
   }
 
@@ -148,18 +150,31 @@ export function AppSidebar() {
     workspaceId ? (state.rooms[`workspace_${workspaceId}`]?.unreadCount || 0) : 0
   );
   
-  const inboxUnread = useChatStore(state => 
-    Object.values(state.rooms)
-      .filter(room => {
-        if (room.type !== 'direct') return false;
-        // If we have workspace members, only count rooms with those members
-        if (workspaceMembers.length > 0) {
-          return room.participants?.some(p => workspaceMembers.includes(p));
-        }
-        return false; // Don't show anything until members are loaded to avoid "global" leak
-      })
-      .reduce((total, room) => total + (room.unreadCount || 0), 0)
-  );
+  const inboxUnread = useChatStore(state => {
+    const directRooms = Object.values(state.rooms).filter(room => room.type === 'direct');
+    const filteredRooms = directRooms.filter(room => {
+      // If we have workspace members, only count rooms with those members
+      if (workspaceMembers.length > 0) {
+        const isMatch = room.participants?.some(p => workspaceMembers.includes(p));
+        return isMatch;
+      }
+      return false; // Don't show anything until members are loaded
+    });
+
+    const total = filteredRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
+    
+    // Safety Log: If there's a mismatch or unexpected number, log it (once)
+    if (total > 0 && typeof window !== 'undefined') {
+      // @ts-ignore
+      if (!window._loggedRooms) {
+        console.log('[AppSidebar] Current unread DM rooms:', filteredRooms.map(r => ({ id: r.roomId, count: r.unreadCount })));
+        // @ts-ignore
+        window._loggedRooms = true;
+      }
+    }
+    
+    return total;
+  });
 
   // Use system accent color if user hasn't set one or as base
   const themeColor = accentColors[accentColor as keyof typeof accentColors] || accentColors[systemAccentColor as keyof typeof accentColors] || accentColors.mint;
@@ -175,7 +190,7 @@ export function AppSidebar() {
   // Listen for workspace updates to refresh logo/name
   useEffect(() => {
     const handleWorkspaceUpdate = () => {
-      if (workspaceId) {
+      if (workspaceId && workspaceId !== 'undefined') {
         fetchHierarchy(workspaceId, true);
       }
     };
@@ -183,6 +198,27 @@ export function AppSidebar() {
     window.addEventListener('workspace-updated', handleWorkspaceUpdate);
     return () => window.removeEventListener('workspace-updated', handleWorkspaceUpdate);
   }, [workspaceId, fetchHierarchy]);
+  
+  // Clear stale DM unread counts when workspace changes
+  useEffect(() => {
+    if (workspaceId && isClient) {
+      const { rooms } = useChatStore.getState();
+      const roomsToUpdate = { ...rooms };
+      let hasChanges = false;
+
+      Object.keys(roomsToUpdate).forEach(roomId => {
+        if (roomsToUpdate[roomId].type === 'direct' && roomsToUpdate[roomId].unreadCount > 0) {
+          roomsToUpdate[roomId] = { ...roomsToUpdate[roomId], unreadCount: 0 };
+          hasChanges = true;
+        }
+      });
+
+      if (hasChanges) {
+        console.log('[AppSidebar] Resetting stale DM counts for workspace sync');
+        useChatStore.setState({ rooms: roomsToUpdate });
+      }
+    }
+  }, [workspaceId, isClient]);
 
   // Sync unread counts on mount
   useEffect(() => {
@@ -193,7 +229,7 @@ export function AppSidebar() {
         const { createRoom } = useChatStore.getState();
         
         // 0. Sync Workspace Members (for DM filtering)
-        if (workspaceId) {
+        if (workspaceId && workspaceId !== 'undefined') {
           try {
             const membersRes = await api.get(`/workspaces/${workspaceId}/members`);
             if (membersRes.data.success) {
@@ -207,7 +243,8 @@ export function AppSidebar() {
         
         // 1. Sync Inbox (DMs)
         try {
-          const response = await api.get(`/dm${workspaceId ? `?workspaceId=${workspaceId}` : ''}`);
+          const dmWorkspaceId = (workspaceId && workspaceId !== 'undefined') ? workspaceId : '';
+          const response = await api.get(`/dm${dmWorkspaceId ? `?workspaceId=${dmWorkspaceId}` : ''}`);
           const conversations = response.data.data || [];
           
           conversations.forEach((conv: any) => {

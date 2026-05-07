@@ -7,9 +7,11 @@ import { api } from '@/lib/axios';
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -344,6 +346,10 @@ export function TaskDetailSidebar() {
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && closeTask()}>
       <SheetContent side="right" className="w-full sm:w-[600px] sm:max-w-[40vw] p-0 flex flex-col">
+        <VisuallyHidden>
+          <SheetTitle>Task Details</SheetTitle>
+          <SheetDescription>View and edit details for task {task?.title || taskId}</SheetDescription>
+        </VisuallyHidden>
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-8 h-8 animate-spin text-purple-600" />

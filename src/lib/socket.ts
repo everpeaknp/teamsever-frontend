@@ -123,31 +123,31 @@ export const disconnectSocket = (): void => {
 };
 
 export const joinWorkspace = (workspaceId: string): void => {
-  if (!socket) return;
+  if (!socket || !workspaceId || workspaceId === 'undefined') return;
   socket.emit('join_workspace', { workspaceId });
 };
 
 export const joinSpace = (spaceId: string): void => {
-  if (!socket) return;
+  if (!socket || !spaceId || spaceId === 'undefined') return;
   socket.emit('join_space', { spaceId });
 };
 
 export const joinTask = (taskId: string): void => {
-  if (!socket) return;
+  if (!socket || !taskId || taskId === 'undefined') return;
   socket.emit('join_task', { taskId });
 };
 
 export const leaveTask = (taskId: string): void => {
-  if (!socket) return;
+  if (!socket || !taskId || taskId === 'undefined') return;
   socket.emit('leave_task', { taskId });
 };
 
 export const joinDM = (conversationId: string): void => {
-  if (!socket) return;
+  if (!socket || !conversationId || conversationId === 'undefined') return;
   socket.emit('join_dm', { conversationId });
 };
 
 export const leaveDM = (conversationId: string): void => {
-  if (!socket) return;
+  if (!socket || !conversationId || conversationId === 'undefined') return;
   socket.emit('leave_dm', { conversationId });
 };

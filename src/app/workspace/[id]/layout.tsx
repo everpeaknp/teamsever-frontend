@@ -28,7 +28,7 @@ export default function WorkspaceLayout({
       console.log('[Workspace Layout] Initializing socket for workspace:', workspaceId);
       const socket = initializeSocket(token);
       
-      if (workspaceId) {
+      if (workspaceId && workspaceId !== 'undefined') {
         joinWorkspace(workspaceId);
         console.log('[Workspace Layout] Joined workspace room:', workspaceId);
       }

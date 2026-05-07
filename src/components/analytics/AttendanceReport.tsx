@@ -48,6 +48,8 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
 
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (!workspaceId || workspaceId === 'undefined') return;
+      
       try {
         setLoading(true);
         // 1. Fetch Workspace to check roles and get members if admin
@@ -69,13 +71,13 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
       }
     };
 
-    if (workspaceId && user) {
+    if (workspaceId && workspaceId !== 'undefined' && user) {
       fetchInitialData();
     }
   }, [workspaceId, user]);
 
   useEffect(() => {
-    if (workspaceId && user) {
+    if (workspaceId && workspaceId !== 'undefined' && user) {
       fetchReport();
     }
   }, [workspaceId, user, filters.userId, filters.startDate, filters.endDate]);
@@ -108,6 +110,8 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
   };
 
   const fetchReport = async () => {
+    if (!workspaceId || workspaceId === 'undefined') return;
+
     try {
       setLoading(true);
       const queryParams = new URLSearchParams();
