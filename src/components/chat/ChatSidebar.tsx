@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Hash, User, Circle, Plus, Lock, Settings } from 'lucide-react';
+import { Hash, User, Circle, Plus, Lock, Settings, Github } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePresence } from '@/hooks/usePresence';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
@@ -230,7 +230,11 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                       : 'hover:bg-accent text-foreground'
                   )}
                 >
-                  <Hash className={cn("h-4 w-4 flex-shrink-0", activeChannel === channel._id ? "text-primary-foreground" : "text-muted-foreground")} />
+                  {channel.name === 'Commit Log' ? (
+                    <Github className={cn("h-4 w-4 flex-shrink-0", activeChannel === channel._id ? "text-primary-foreground" : "text-muted-foreground")} />
+                  ) : (
+                    <Hash className={cn("h-4 w-4 flex-shrink-0", activeChannel === channel._id ? "text-primary-foreground" : "text-muted-foreground")} />
+                  )}
                   <span className="flex-1 text-left truncate font-medium">{channel.name}</span>
                   {unread > 0 && activeChannel !== channel._id && (
                     <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />

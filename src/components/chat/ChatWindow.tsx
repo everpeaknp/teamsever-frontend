@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings } from 'lucide-react';
+import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, Filter, ExternalLink, GitBranch, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
@@ -10,7 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuthStore } from '@/store/useAuthStore';
-import { format, isToday, isYesterday } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { format, isToday, isYesterday, isWithinInterval, startOfDay, endOfDay, subDays, startOfWeek } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as UICalendar } from '@/components/ui/calendar';
 
 interface ChatWindowProps {
   workspaceId?: string;
@@ -20,12 +23,15 @@ interface ChatWindowProps {
   type: 'workspace' | 'direct';
   title: string;
   isAdmin?: boolean;
+  onMenuClick?: () => void;
 }
 
 import { EditChannelModal } from './EditChannelModal';
 
-export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, isAdmin }: ChatWindowProps) => {
+export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, isAdmin, onMenuClick }: ChatWindowProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | 'week' | 'custom'>('all');
+  const [customDate, setCustomDate] = useState<Date | undefined>(new Date());
   const [isNearBottom, setIsNearBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -139,8 +145,24 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     const merged = [...fetchedMessages, ...pendingOptimistic];
     merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     
-    setLocalMessages(merged);
-  }, [fetchedMessages, optimisticMessages]);
+    // Apply filters
+    const filtered = merged.filter(m => {
+      if (dateFilter === 'all') return true;
+      
+      const msgDate = new Date(m.createdAt);
+      const now = new Date();
+      
+      if (dateFilter === 'today') return isToday(msgDate);
+      if (dateFilter === 'yesterday') return isYesterday(msgDate);
+      if (dateFilter === '7days') return isWithinInterval(msgDate, { start: startOfDay(subDays(now, 7)), end: endOfDay(now) });
+      if (dateFilter === 'week') return isWithinInterval(msgDate, { start: startOfWeek(now), end: endOfDay(now) });
+      if (dateFilter === 'custom' && customDate) return isWithinInterval(msgDate, { start: startOfDay(customDate), end: endOfDay(customDate) });
+      
+      return true;
+    });
+    
+    setLocalMessages(filtered);
+  }, [fetchedMessages, optimisticMessages, dateFilter, customDate]);
 
   // Sync messages to store
   useEffect(() => {
@@ -376,19 +398,77 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   return (
     <div className="flex-1 flex flex-col bg-background h-full overflow-hidden">
       {/* Header - Fixed */}
-      <div className="h-14 border-b border-border px-6 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-        </div>
-        {type === 'workspace' && channelId && channelId !== 'general' && isAdmin && (
+      <div className="h-14 border-b border-border px-4 md:px-6 flex items-center justify-between flex-shrink-0 bg-background/80 backdrop-blur-md sticky top-0 z-20">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <button 
-            onClick={() => setIsEditModalOpen(true)}
-            className="p-2 hover:bg-muted rounded-full text-muted-foreground transition-colors"
-            title="Channel Settings"
+            className="md:hidden p-2 -ml-2 hover:bg-muted rounded-lg transition-colors"
+            onClick={onMenuClick}
           >
-            <Settings className="h-5 w-5" />
+            <Filter className="h-5 w-5 text-muted-foreground" />
           </button>
-        )}
+          <h2 className="text-base md:text-lg font-bold text-foreground truncate">{title}</h2>
+          
+          {title.includes('Commit Log') && (
+            <div className="flex items-center gap-1 ml-4 bg-muted/20 p-1 rounded-lg border border-border/30 overflow-x-auto no-scrollbar">
+              {(['all', 'today', 'yesterday', '7days', 'week'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setDateFilter(f)}
+                  className={cn(
+                    "px-2.5 py-1 text-[11px] font-medium rounded-md transition-all whitespace-nowrap",
+                    dateFilter === f 
+                      ? "bg-background text-primary shadow-sm" 
+                      : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+                  )}
+                >
+                  {f === 'all' && 'All'}
+                  {f === 'today' && 'Today'}
+                  {f === 'yesterday' && 'Yesterday'}
+                  {f === '7days' && '7d'}
+                  {f === 'week' && 'Week'}
+                </button>
+              ))}
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "px-2.5 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap",
+                      dateFilter === 'custom' 
+                        ? "bg-background text-primary shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+                    )}
+                  >
+                    <CalendarIcon className="w-3 h-3" />
+                    {dateFilter === 'custom' && customDate ? format(customDate, 'MMM d') : 'Date'}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <UICalendar
+                    mode="single"
+                    selected={customDate}
+                    onSelect={(date) => {
+                      setCustomDate(date);
+                      if (date) setDateFilter('custom');
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 ml-2">
+          {type === 'workspace' && channelId && !title.includes('General') && !title.includes('Commit Log') && isAdmin && (
+            <button 
+              onClick={() => setIsEditModalOpen(true)}
+              className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors"
+              title="Channel Settings"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {workspaceId && channelId && (
@@ -450,6 +530,96 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                 <div key={message._id} className="flex justify-center">
                   <div className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full">
                     {message.content}
+                  </div>
+                </div>
+              );
+            }
+
+            if (message.type === 'github_commit') {
+              return (
+                <div key={message._id} className="group relative pl-8 pr-4 py-4 border-l-2 border-border/30 hover:border-primary/30 transition-colors ml-6">
+                  {/* Timeline Dot with Avatar/Icon */}
+                  <div className="absolute -left-3 top-5 w-6 h-6 rounded-full bg-background border-2 border-border flex items-center justify-center group-hover:border-primary/50 transition-colors overflow-hidden">
+                    {message.sender && typeof message.sender === 'object' && (message.sender as any).profilePicture ? (
+                      <img 
+                        src={(message.sender as any).profilePicture} 
+                        alt="" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Github className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-sm font-bold text-foreground">
+                        {message.sender && typeof message.sender === 'object' && (message.sender as any).name 
+                          ? (message.sender as any).name 
+                          : (message.metadata?.pusher || (message.metadata?.commits && message.metadata.commits[0]?.author) || 'GitHub Bot')}
+                      </span>
+                      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                        <GitBranch className="h-3 w-3" />
+                        <span>{message.metadata?.repoName}</span>
+                        <span className="text-border">/</span>
+                        <span className="text-primary/70">{message.metadata?.branchName || 'main'}</span>
+                        {message.metadata?.spaceName && (
+                          <>
+                            <span className="mx-1 text-muted-foreground/30">•</span>
+                            <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground font-bold tracking-tight">
+                              {message.metadata.spaceName}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground/60 ml-auto">
+                        {formatMessageTime(message.createdAt)}
+                      </span>
+                    </div>
+
+                    <div className="space-y-4">
+                      <p className="text-sm font-medium text-foreground/80 leading-relaxed">
+                        {message.content}
+                      </p>
+
+                      {message.metadata?.commits && message.metadata.commits.length > 0 && (
+                        <div className="space-y-3 pl-4 border-l border-border/50">
+                          {message.metadata.commits.map((commit: any, i: number) => (
+                            <div key={i} className="space-y-1 group/commit">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[11px] font-bold text-foreground/70">
+                                  {commit.author}
+                                </span>
+                                {commit.url && commit.url !== '#' && (
+                                  <a 
+                                    href={commit.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-[9px] text-muted-foreground hover:text-primary transition-colors font-mono"
+                                  >
+                                    {commit.url.split('/').pop()?.substring(0, 7)}
+                                  </a>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground leading-snug">
+                                {commit.message}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {message.metadata?.compareUrl && (
+                        <a 
+                          href={message.metadata.compareUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-[10px] font-bold text-primary hover:underline"
+                        >
+                          View comparison <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -566,42 +736,44 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         </div>
       )}
 
-      {/* Input Area - Improved padding and layout */}
-      <div className="border-t border-border p-4 pb-4 md:pb-6 bg-background/95 backdrop-blur-sm sticky bottom-0 z-10 transition-all">
-        <div className="max-w-4xl mx-auto flex gap-2 items-end">
-          <div className="flex-1 relative">
-            <Textarea
-              ref={textareaRef}
-              value={inputValue}
-              onChange={(e) => handleInputChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Type a message..."
-              className="min-h-[44px] max-h-32 resize-none pr-10 rounded-xl bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary shadow-none"
-              rows={1}
-              autoFocus
-            />
-            <button
-              type="button"
-              className="absolute right-3 bottom-2.5 p-1 hover:bg-muted rounded-full transition-colors"
-              title="Add emoji"
+      {/* Input Area - Hidden for Commit Log */}
+      {!title.includes('Commit Log') && (
+        <div className="border-t border-border p-4 pb-4 md:pb-6 bg-background/95 backdrop-blur-sm sticky bottom-0 z-10 transition-all">
+          <div className="max-w-4xl mx-auto flex gap-2 items-end">
+            <div className="flex-1 relative">
+              <Textarea
+                ref={textareaRef}
+                value={inputValue}
+                onChange={(e) => handleInputChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Type a message..."
+                className="min-h-[44px] max-h-32 resize-none pr-10 rounded-xl bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary shadow-none"
+                rows={1}
+                autoFocus
+              />
+              <button
+                type="button"
+                className="absolute right-3 bottom-2.5 p-1 hover:bg-muted rounded-full transition-colors"
+                title="Add emoji"
+              >
+                <Smile className="h-5 w-5 text-muted-foreground/60" />
+              </button>
+            </div>
+            <Button
+              onClick={handleSend}
+              disabled={!inputValue.trim() || sending}
+              size="icon"
+              className="h-[44px] w-[44px] flex-shrink-0 rounded-xl shadow-md transition-all hover:scale-105 active:scale-95"
             >
-              <Smile className="h-5 w-5 text-muted-foreground/60" />
-            </button>
+              <Send className="h-5 w-5" />
+            </Button>
           </div>
-          <Button
-            onClick={handleSend}
-            disabled={!inputValue.trim() || sending}
-            size="icon"
-            className="h-[44px] w-[44px] flex-shrink-0 rounded-xl shadow-md transition-all hover:scale-105 active:scale-95"
-          >
-            <Send className="h-5 w-5" />
-          </Button>
+          <div className="max-w-4xl mx-auto flex items-center justify-between text-[10px] text-muted-foreground mt-2 px-1">
+            <span className="hidden sm:inline">Shift + Enter for new line • Enter to send</span>
+            <span className="sm:hidden">Press send to transmit</span>
+          </div>
         </div>
-        <div className="max-w-4xl mx-auto flex items-center justify-between text-[10px] text-muted-foreground mt-2 px-1">
-          <span className="hidden sm:inline">Shift + Enter for new line • Enter to send</span>
-          <span className="sm:hidden">Press send to transmit</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

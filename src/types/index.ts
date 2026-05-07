@@ -7,6 +7,18 @@ export interface User {
   email: string;
   avatar?: string;
   profilePicture?: string;
+  googleId?: string;
+  githubUsername?: string;
+  notificationPreferences?: {
+    githubCommits: boolean;
+    taskAssigned: boolean;
+    taskStatusChange: boolean;
+    taskUpdates: boolean;
+    messages: boolean;
+    mentions: boolean;
+    comments: boolean;
+    notices: boolean;
+  };
 }
 
 export interface Workspace {

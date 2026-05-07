@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatWindow, ChatSidebar } from '@/components/chat';
+import { cn } from '@/lib/utils';
 import { initializeSocket, joinWorkspace } from '@/lib/socket';
 import { useChatStore } from '@/store/useChatStore';
 import { Loader2, Hash, Lock, Crown, Sparkles, User, Send } from 'lucide-react';
@@ -30,6 +31,7 @@ export default function GroupChatPage() {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [dmUserId, setDmUserId] = useState<string | undefined>();
   const [chatTitle, setChatTitle] = useState('General');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const { setActiveRoom } = useChatStore();
 
@@ -141,16 +143,34 @@ export default function GroupChatPage() {
     );
   }
 
-  return (
-    <div className="flex h-full bg-background overflow-hidden font-sans">
-      <ChatSidebar
-        workspaceId={workspaceId}
-        activeChannel={activeChannelId}
-        onChannelSelect={handleChannelSelect}
-        isAdmin={isAdmin}
-      />
 
-      <div className="flex-1 min-w-0">
+
+  return (
+    <div className="flex h-full bg-background overflow-hidden font-sans relative">
+      {/* Mobile Sidebar Overlay */}
+      {mobileSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      <div className={cn(
+        "fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:z-0",
+        mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <ChatSidebar
+          workspaceId={workspaceId}
+          activeChannel={activeChannelId}
+          onChannelSelect={(...args) => {
+            handleChannelSelect(...args);
+            setMobileSidebarOpen(false); // Close sidebar on select on mobile
+          }}
+          isAdmin={isAdmin}
+        />
+      </div>
+
+      <div className="flex-1 min-w-0 h-full">
         <ChatWindow
           workspaceId={workspaceId}
           channelId={chatType === 'workspace' ? activeChannelId : undefined}
@@ -159,6 +179,7 @@ export default function GroupChatPage() {
           type={chatType}
           title={chatType === 'workspace' ? `# ${chatTitle}` : chatTitle}
           isAdmin={isAdmin}
+          onMenuClick={() => setMobileSidebarOpen(true)}
         />
       </div>
     </div>

@@ -18,7 +18,18 @@ export interface ChatMessage {
     profilePicture?: string;
   };
   content: string;
-  type?: 'text' | 'system';
+  type?: 'text' | 'system' | 'github_commit';
+  metadata?: {
+    repoName?: string;
+    branchName?: string;
+    commits?: Array<{
+      message: string;
+      url: string;
+      author: string;
+    }>;
+    compareUrl?: string;
+    [key: string]: any;
+  };
   mentions?: string[];
   readBy?: string[];
   createdAt: string;
