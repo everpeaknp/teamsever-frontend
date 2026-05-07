@@ -76,7 +76,11 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
                           (notification.data?.taskId && currentPath.includes(notification.data.taskId));
 
       if (isTabHidden || !isTargetPage) {
-        get().showBrowserNotification(notification.title, notification.body, notification.data);
+        get().showBrowserNotification(
+          notification.title, 
+          notification.body, 
+          { ...notification.data, _id: notification._id }
+        );
       }
     }
   },
@@ -172,7 +176,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
           body,
           icon: '/teamsever_logo.png', // Corrected path to logo
           badge: '/teamsever_logo.png',
-          tag: data?.resourceId || data?.conversationId || 'default',
+          tag: data?.notificationId || data?._id || data?.resourceId || data?.conversationId || 'default',
           renotify: true,
           vibrate: [200, 100, 200],
           data: data,
@@ -263,11 +267,24 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
           console.log('📨 Foreground message received:', payload);
           
           const notification = payload.notification;
+          const data = payload.data;
+          
           if (notification) {
+            // Check if we already have this notification in our store to prevent duplicates
+            const notificationId = data?.notificationId || data?._id;
+            if (notificationId) {
+              const { notifications } = get();
+              const isDuplicate = notifications.some(n => n._id === notificationId);
+              if (isDuplicate) {
+                console.log('🚫 Skipping duplicate FCM notification (already handled by socket)');
+                return;
+              }
+            }
+
             get().showBrowserNotification(
               notification.title || 'New Notification',
               notification.body || '',
-              payload.data
+              data
             );
           }
         });

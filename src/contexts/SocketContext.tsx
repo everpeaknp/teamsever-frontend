@@ -188,17 +188,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       const handleGlobalNotification = (data: { notification: any }) => {
         const { addNotification } = useNotificationStore.getState();
-        const { showBrowserNotification } = useNotificationStore.getState();
         
-        // Add to local notification store
+        // Add to local notification store - this already triggers showBrowserNotification internally
         addNotification(data.notification);
-
-        // Show browser notification
-        showBrowserNotification(
-          data.notification.title || 'New Notification',
-          data.notification.body || '',
-          { resourceId: data.notification.resourceId, resourceType: data.notification.resourceType }
-        );
       };
 
       socketInstance.on('connect', handleConnect);
