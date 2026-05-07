@@ -183,8 +183,7 @@ export default function InboxPage() {
         setConversationId(conversation._id);
         
         // Set active room in store
-        const roomId = currentUserId ? generateDMRoomId(currentUserId, member._id) : conversation._id;
-        setActiveRoom(roomId);
+        setActiveRoom(conversation._id);
         
         // Hide members list on mobile when a conversation is selected
         setShowMembersList(false);
@@ -221,14 +220,13 @@ export default function InboxPage() {
             <div className="p-2">
               {sortedMembers.map((member) => {
                 const online = isUserOnline(member._id);
-                const dmRoomId = currentUserId ? generateDMRoomId(currentUserId, member._id) : '';
-                const dmRoom = getRoom(dmRoomId);
-                const unreadCount = dmRoom?.unreadCount || 0;
-                const isSelected = selectedMember?._id === member._id;
-
                 const conversation = conversations.find((c: any) => 
                   c.participants.some((p: any) => p._id === member._id || p === member._id)
                 );
+                const dmRoomId = conversation?._id || '';
+                const dmRoom = getRoom(dmRoomId);
+                const unreadCount = dmRoom?.unreadCount || 0;
+                const isSelected = selectedMember?._id === member._id;
                 const lastMessageTime = conversation?.lastMessageAt;
 
                 return (

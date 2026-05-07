@@ -128,8 +128,9 @@ export const useChatStore = create<ChatStore>()(
         
         if (!room) {
           // Create room if it doesn't exist
-          const type = roomId.startsWith('dm_') ? 'direct' : 'workspace';
-          get().createRoom(roomId, type);
+          // DMs have conversation ID, workspace messages have workspace ID
+          const type = (message.conversation || roomId.startsWith('dm_')) ? 'direct' : 'workspace';
+          get().createRoom(roomId, type, message.workspace);
         }
 
         set({
