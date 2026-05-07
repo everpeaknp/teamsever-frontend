@@ -400,12 +400,10 @@ export function AppSidebar() {
   useEffect(() => {
     if (workspaceId === 'undefined') {
       router.push('/dashboard');
-      return;
-    }
-    if (workspaceId) {
+    } else if (workspaceId) {
       localStorage.setItem('lastWorkspaceId', workspaceId);
     }
-  }, [workspaceId, router]);
+  }, [workspaceId]);
 
   // If no workspaceId in URL, try to get from localStorage for certain global pages
   if (!workspaceId && (pathname === '/account' || pathname === '/notifications')) {
