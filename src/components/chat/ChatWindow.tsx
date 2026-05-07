@@ -49,12 +49,10 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const currentUserName = currentUser?.name || (typeof window !== 'undefined' ? localStorage.getItem('userName') : null);
   const currentUserEmail = currentUser?.email || (typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null);
 
-  // Generate room ID
+  // Generate room ID - prefer conversationId for DMs to match socket events
   const roomId = type === 'workspace' 
     ? (channelId ? `channel_${channelId}` : `workspace_${workspaceId}`) 
-    : userId && currentUserId 
-      ? generateDMRoomId(currentUserId, userId)
-      : conversationId || '';
+    : conversationId || (userId && currentUserId ? generateDMRoomId(currentUserId, userId) : '');
 
   // Zustand store
   const { 

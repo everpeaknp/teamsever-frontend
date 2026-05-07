@@ -160,7 +160,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           showBrowserNotification(
             `New message in ${data.message.workspaceName || 'Chat'}`,
             `${data.message.sender.name}: ${data.message.content}`,
-            { workspaceId: data.message.workspace }
+            { 
+              workspaceId: data.message.workspace,
+              tag: `chat_${roomId}`, // De-duplicate notifications for the same room
+              renotify: true
+            }
           );
         }
       };
@@ -181,7 +185,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           showBrowserNotification(
             `New DM from ${data.message.sender.name}`,
             data.message.content,
-            { conversationId: roomId }
+            { 
+              conversationId: roomId,
+              tag: `dm_${roomId}`, // De-duplicate notifications for the same room
+              renotify: true
+            }
           );
         }
       };

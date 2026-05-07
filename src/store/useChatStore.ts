@@ -144,8 +144,13 @@ export const useChatStore = create<ChatStore>()(
           },
         });
 
-        // Increment unread if not active room
-        if (get().activeRoomId !== roomId) {
+        // Only increment unread if:
+        // 1. It's not the active room
+        // 2. It's not sent by the current user
+        const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+        const isFromOthers = message.sender._id !== currentUserId && (typeof message.sender === 'string' ? message.sender !== currentUserId : true);
+        
+        if (get().activeRoomId !== roomId && isFromOthers) {
           get().incrementUnread(roomId);
         }
       },
