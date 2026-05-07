@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, Auth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, GithubAuthProvider, signInWithPopup, Auth, linkWithPopup } from 'firebase/auth';
 import { getMessaging, getToken, onMessage, Messaging, isSupported } from 'firebase/messaging';
 
 // Firebase configuration from your project
@@ -37,6 +37,10 @@ googleProvider.setCustomParameters({
   prompt: 'select_account',
 });
 
+// GitHub Auth Provider
+export const githubProvider = new GithubAuthProvider();
+githubProvider.addScope('read:user');
+
 // Sign in with Google
 export const signInWithGoogle = async () => {
   try {
@@ -44,6 +48,17 @@ export const signInWithGoogle = async () => {
     return result;
   } catch (error: any) {
     console.error('Google Sign-In Error:', error);
+    throw error;
+  }
+};
+
+// Sign in with GitHub
+export const signInWithGithub = async () => {
+  try {
+    const result = await signInWithPopup(auth, githubProvider);
+    return result;
+  } catch (error: any) {
+    console.error('GitHub Sign-In Error:', error);
     throw error;
   }
 };
@@ -133,51 +148,14 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
 async function getFCMTokenInternal(registration: ServiceWorkerRegistration): Promise<string | null> {
   const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
   if (!vapidKey) return null;
+
   const messagingInstance = await initializeMessaging();
   if (!messagingInstance) return null;
 
   try {
-    // NATIVE PUSH TEST (Bypassing Firebase to see raw error)
-    try {
-      console.log('🧪 Attempting native PushManager subscription...');
-      const sub = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: vapidKey.trim()
-      });
-      console.log('✅ Native subscription successful! Unsubscribing to let Firebase take over...', sub);
-      await sub.unsubscribe();
-    } catch (nativeErr: any) {
-      console.error('❌ NATIVE Push Error:', nativeErr);
-    }
-
     // Wait for service worker to be ready
     await navigator.serviceWorker.ready;
-    console.log('✅ Service Worker ready. Waiting 2s for stability...');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Ensure we are active
-    if (registration.installing) {
-      console.log('⏳ Waiting for SW installation...');
-      await new Promise<void>((resolve) => {
-        registration.installing!.addEventListener('statechange', (e: any) => {
-          if (e.target.state === 'activated') resolve();
-        });
-      });
-    }
-
-    // --- THE FIX: Unsubscribe from old conflicting subscriptions ---
-    try {
-      const existingSub = await registration.pushManager.getSubscription();
-      if (existingSub) {
-        console.log('🗑️ Found old subscription, clearing it...');
-        await existingSub.unsubscribe();
-        console.log('✅ Old subscription cleared');
-      }
-    } catch (subErr) {
-      console.warn('⚠️ Error clearing old subscription:', subErr);
-    }
-    
-    console.log('✅ Service Worker ready and active');
+    console.log('✅ Service Worker ready');
 
     // Pass the registration directly to getToken
     const token = await getToken(messagingInstance, { 
@@ -185,7 +163,6 @@ async function getFCMTokenInternal(registration: ServiceWorkerRegistration): Pro
       serviceWorkerRegistration: registration
     });
     
-    console.log('✅ FCM Token received:', token ? 'YES' : 'NO');
     return token;
   } catch (swError: any) {
     console.error('❌ Service Worker / FCM Error:', swError);

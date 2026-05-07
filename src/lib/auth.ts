@@ -209,6 +209,23 @@ export async function loginWithGoogle(idToken: string): Promise<void> {
 }
 
 /**
+ * Login with GitHub
+ */
+export async function loginWithGithub(idToken: string): Promise<void> {
+  try {
+    console.log('🔐 Attempting GitHub login...');
+    const response = await api.post('/auth/github', { idToken });
+    const authData = normalizeAuthResponse(response.data);
+    storeAuthData(authData);
+    console.log('✅ GitHub login success');
+  } catch (error: any) {
+    console.error('❌ GitHub login error:', error);
+    const backendMessage = error.response?.data?.message || 'GitHub login failed';
+    throw new Error(backendMessage);
+  }
+}
+
+/**
  * Request a password reset email for the given address.
  * The backend should respond with 200 regardless of whether the email exists.
  */

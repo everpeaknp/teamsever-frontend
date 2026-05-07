@@ -14,15 +14,18 @@ import {
   ChevronDown,
   Loader2,
   CheckCircle2,
-  AlertCircle,
   X,
+  Bell,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/axios';
+import { auth, githubProvider } from '@/lib/firebase';
+import { linkWithPopup, GithubAuthProvider, getAdditionalUserInfo, unlink } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Github, Link2, ExternalLink, ShieldCheck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
@@ -35,6 +38,7 @@ const profileSchema = z.object({
   jobTitle: z.string().optional(),
   department: z.string().optional(),
   bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
+  githubUsername: z.string().optional(),
 });
 
 const passwordSchema = z.object({
@@ -49,11 +53,12 @@ const passwordSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
-type TabType = 'profile' | 'security';
+type TabType = 'profile' | 'security' | 'notifications';
 
 const tabs = [
   { id: 'profile' as TabType, label: 'Profile', icon: User },
   { id: 'security' as TabType, label: 'Security', icon: Shield },
+  { id: 'notifications' as TabType, label: 'Notifications', icon: Bell },
 ];
 
 // Password strength calculator
@@ -90,6 +95,7 @@ export default function AccountSettingsPage() {
   const [language, setLanguage] = useState('en-US');
   const [timezone, setTimezone] = useState('America/Los_Angeles');
   const [passwordStrength, setPasswordStrength] = useState({ strength: 0, label: 'Weak', color: 'bg-red-500' });
+  const [isLinkingGithub, setIsLinkingGithub] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Profile form
@@ -103,6 +109,23 @@ export default function AccountSettingsPage() {
       bio: '',
     },
   });
+
+  // Notification preferences state
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    githubCommits: true,
+    taskAssigned: true,
+    taskStatusChange: true,
+    taskUpdates: true,
+    messages: true,
+    mentions: true,
+    comments: true,
+    notices: true,
+  });
+
+  // Check if GitHub is actually linked in Firebase
+  const isGithubVerified = auth.currentUser?.providerData.some(
+    (p) => p.providerId === 'github.com'
+  );
 
   // Password form
   const passwordForm = useForm<PasswordFormData>({
@@ -129,12 +152,17 @@ export default function AccountSettingsPage() {
           jobTitle: userData.jobTitle || '',
           department: userData.department || '',
           bio: userData.bio || '',
+          githubUsername: userData.githubUsername || '',
         });
         
         setAvatarPreview(userData.profilePicture || userData.avatar || null);
         setTwoFactorEnabled(userData.twoFactorEnabled || false);
         setLanguage(userData.language || 'en-US');
         setTimezone(userData.timezone || 'America/Los_Angeles');
+        
+        if (userData.notificationPreferences) {
+          setNotificationPrefs(userData.notificationPreferences);
+        }
         
       } catch (error) {
         console.error('Failed to fetch user data:', error);
@@ -191,6 +219,7 @@ export default function AccountSettingsPage() {
       formData.append('jobTitle', data.jobTitle || '');
       formData.append('department', data.department || '');
       formData.append('bio', data.bio || '');
+      formData.append('githubUsername', data.githubUsername || '');
       formData.append('language', language);
       formData.append('timezone', timezone);
       formData.append('twoFactorEnabled', String(twoFactorEnabled));
@@ -226,6 +255,27 @@ export default function AccountSettingsPage() {
     }
   };
 
+  // Save notification preferences
+  const onSaveNotifications = async () => {
+    setIsSaving(true);
+    try {
+      const response = await api.patch('/users/notification-preferences', notificationPrefs);
+      const updatedUser = response.data.data || response.data;
+      
+      // Update local user state
+      if (user) {
+        setUser({ ...user, notificationPreferences: notificationPrefs });
+      }
+      
+      toast.success('Notification preferences updated!');
+    } catch (error: any) {
+      console.error('Failed to update notification preferences:', error);
+      toast.error(error.response?.data?.message || 'Failed to update preferences');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Change password
   const onChangePassword = async (data: PasswordFormData) => {
     setIsSaving(true);
@@ -244,6 +294,77 @@ export default function AccountSettingsPage() {
       setIsSaving(false);
     }
   };
+  
+  // Link GitHub Account
+  const handleLinkGithub = async () => {
+    if (!auth.currentUser) {
+      toast.error('You must be logged in to link GitHub');
+      return;
+    }
+
+    setIsLinkingGithub(true);
+    try {
+      // 1. Authenticate with GitHub via Popup
+      const result = await linkWithPopup(auth.currentUser, githubProvider);
+      
+      // 2. Extract GitHub info
+      const additionalInfo = getAdditionalUserInfo(result);
+      const githubUsername = additionalInfo?.username;
+
+      if (!githubUsername) {
+        console.error('Additional Info:', additionalInfo);
+        throw new Error('Could not retrieve GitHub username from your profile');
+      }
+
+      // 3. Update backend with verified username
+      await api.patch('/users/profile', { githubUsername });
+      
+      // 4. Update local state
+      if (user) {
+        setUser({ ...user, githubUsername });
+      }
+      
+      profileForm.setValue('githubUsername', githubUsername);
+      
+      toast.success(`Successfully linked GitHub account: @${githubUsername}`);
+    } catch (error: any) {
+      console.error('GitHub Linking Error:', error);
+      if (error.code === 'auth/credential-already-in-use') {
+        toast.error('This GitHub account is already linked to another Teamsever user.');
+      } else {
+        toast.error(error.message || 'Failed to link GitHub account');
+      }
+    } finally {
+      setIsLinkingGithub(false);
+    }
+  };
+
+  // Unlink GitHub Account
+  const handleUnlinkGithub = async () => {
+    if (!auth.currentUser) return;
+
+    setIsLinkingGithub(true);
+    try {
+      // 1. Unlink in Firebase
+      await unlink(auth.currentUser, 'github.com');
+      
+      // 2. Clear in backend
+      await api.patch('/users/profile', { githubUsername: '' });
+      
+      // 3. Update local state
+      if (user) {
+        setUser({ ...user, githubUsername: '' });
+      }
+      profileForm.setValue('githubUsername', '');
+      
+      toast.success('GitHub account unlinked successfully');
+    } catch (error: any) {
+      console.error('GitHub Unlinking Error:', error);
+      toast.error('Failed to unlink GitHub account');
+    } finally {
+      setIsLinkingGithub(false);
+    }
+  };
 
   // Cancel changes
   const handleCancel = () => {
@@ -260,12 +381,18 @@ export default function AccountSettingsPage() {
       jobTitle: (currentUser as any).jobTitle || '',
       department: (currentUser as any).department || '',
       bio: (currentUser as any).bio || '',
+      githubUsername: (currentUser as any).githubUsername || '',
     });
     setAvatarPreview((currentUser as any).avatar || null);
     setAvatarFile(null);
     setTwoFactorEnabled((currentUser as any).twoFactorEnabled || false);
     setLanguage((currentUser as any).language || 'en-US');
     setTimezone((currentUser as any).timezone || 'America/Los_Angeles');
+    
+    if ((currentUser as any).notificationPreferences) {
+      setNotificationPrefs((currentUser as any).notificationPreferences);
+    }
+    
     toast.info('Changes cancelled');
   };
 
@@ -479,6 +606,50 @@ export default function AccountSettingsPage() {
                         </Select>
                       </div>
 
+                      <div className="space-y-2">
+                        <Label htmlFor="githubUsername">GitHub Identity</Label>
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              id="githubUsername"
+                              {...profileForm.register('githubUsername')}
+                              placeholder="Not linked"
+                              disabled
+                              className="w-full bg-slate-50 dark:bg-slate-900 pl-9"
+                            />
+                            <Github className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                          </div>
+                          
+                          {isGithubVerified ? (
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              className="border-green-500/50 text-green-600 dark:text-green-400 gap-1.5 group"
+                              onClick={handleUnlinkGithub}
+                              disabled={isLinkingGithub}
+                            >
+                              <ShieldCheck className="h-4 w-4 group-hover:hidden" />
+                              <span className="group-hover:hidden">Verified</span>
+                              <Trash2 className="h-4 w-4 hidden group-hover:block text-red-500" />
+                              <span className="hidden group-hover:block text-red-500">Unlink</span>
+                            </Button>
+                          ) : (
+                            <Button 
+                              type="button" 
+                              onClick={handleLinkGithub}
+                              disabled={isLinkingGithub}
+                              className="bg-[#24292f] hover:bg-[#24292f]/90 text-white gap-1.5"
+                            >
+                              {isLinkingGithub ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                              Link GitHub
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Linking your GitHub verifies your identity for the Commit Log.
+                        </p>
+                      </div>
+
                       <div className="md:col-span-2 space-y-2">
                         <Label htmlFor="bio">Bio</Label>
                         <Textarea
@@ -642,6 +813,104 @@ export default function AccountSettingsPage() {
               </section>
             )}
 
+            {/* Notifications Tab */}
+            {activeTab === 'notifications' && (
+              <section className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-sm border border-slate-200 dark:border-[#262626] overflow-hidden">
+                <div className="p-6 border-b border-slate-100 dark:border-[#262626]">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Notification Preferences
+                  </h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Choose how and when you want to be notified.
+                  </p>
+                </div>
+
+                <div className="p-6 space-y-8">
+                  {/* General Notifications */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+                      Work & Tasks
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      {[
+                        { id: 'taskAssigned', label: 'Task Assigned', description: 'When someone assigns a task to you' },
+                        { id: 'taskStatusChange', label: 'Status Changes', description: 'When a task you follow changes status' },
+                        { id: 'taskUpdates', label: 'Task Updates', description: 'When a task description or priority is updated' },
+                        { id: 'comments', label: 'Comments', description: 'When someone comments on a task you follow' },
+                        { id: 'mentions', label: 'Mentions', description: 'When someone @mentions you in a comment' },
+                      ].map((pref) => (
+                        <div key={pref.id} className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-slate-900 dark:text-white">{pref.label}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{pref.description}</p>
+                          </div>
+                          <Switch
+                            checked={(notificationPrefs as any)[pref.id]}
+                            onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, [pref.id]: checked }))}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <hr className="border-slate-100 dark:border-[#262626]" />
+
+                  {/* Integration Notifications */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+                      Integrations
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900 dark:text-white">GitHub Commits</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Notifications for code pushes to connected repositories</p>
+                        </div>
+                        <Switch
+                          checked={notificationPrefs.githubCommits}
+                          onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, githubCommits: checked }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr className="border-slate-100 dark:border-[#262626]" />
+
+                  {/* Communication Notifications */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
+                      Communication
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900 dark:text-white">Direct Messages</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">When you receive a new message</p>
+                        </div>
+                        <Switch
+                          checked={notificationPrefs.messages}
+                          onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, messages: checked }))}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900 dark:text-white">System Announcements</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Important updates from the workspace admin</p>
+                        </div>
+                        <Switch
+                          checked={notificationPrefs.notices}
+                          onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, notices: checked }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Other Tabs - Removed */}
             {activeTab !== 'profile' && activeTab !== 'security' && (
               <section className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-sm border border-slate-200 dark:border-[#262626] overflow-hidden">
@@ -654,7 +923,7 @@ export default function AccountSettingsPage() {
             )}
 
             {/* Action Bar */}
-            {(activeTab === 'profile' || activeTab === 'security') && (
+            {(activeTab === 'profile' || activeTab === 'security' || activeTab === 'notifications') && (
               <div className="flex items-center justify-end gap-3 pt-4 pb-10">
                 <Button
                   type="button"
@@ -666,7 +935,11 @@ export default function AccountSettingsPage() {
                 </Button>
                 <Button
                   type="button"
-                  onClick={profileForm.handleSubmit(onSaveProfile)}
+                  onClick={() => {
+                    if (activeTab === 'profile') profileForm.handleSubmit(onSaveProfile)();
+                    else if (activeTab === 'security') passwordForm.handleSubmit(onChangePassword)();
+                    else if (activeTab === 'notifications') onSaveNotifications();
+                  }}
                   disabled={isSaving}
                   className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
                 >

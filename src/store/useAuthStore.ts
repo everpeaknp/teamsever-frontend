@@ -25,6 +25,17 @@ interface User {
   language?: string;
   timezone?: string;
   twoFactorEnabled?: boolean;
+  githubUsername?: string;
+  notificationPreferences?: {
+    githubCommits: boolean;
+    taskAssigned: boolean;
+    taskStatusChange: boolean;
+    taskUpdates: boolean;
+    messages: boolean;
+    mentions: boolean;
+    comments: boolean;
+    notices: boolean;
+  };
 }
 
 /**

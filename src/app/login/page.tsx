@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { login, loginWithGoogle, getCurrentUser } from '@/lib/auth';
-import { signInWithGoogle } from '@/lib/firebase';
+import { login, loginWithGoogle, loginWithGithub, getCurrentUser } from '@/lib/auth';
+import { signInWithGoogle, signInWithGithub } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Eye, 
@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -90,6 +91,24 @@ export default function LoginPage() {
       }
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setError('');
+    setGithubLoading(true);
+    try {
+      const result = await signInWithGithub();
+      const idToken = await result.user.getIdToken();
+      await loginWithGithub(idToken);
+      const urlParams = new URLSearchParams(window.location.search);
+      router.push(urlParams.get('redirect') || '/dashboard');
+    } catch (err: any) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message || 'GitHub login failed');
+      }
+    } finally {
+      setGithubLoading(false);
     }
   };
 
@@ -227,8 +246,16 @@ export default function LoginPage() {
                 </svg>
               )}
             </button>
-            <button className="flex items-center justify-center gap-2 h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50">
-              <Github className="w-4 h-4 dark:text-white" />
+            <button 
+              onClick={handleGithubLogin}
+              disabled={githubLoading}
+              className="flex items-center justify-center gap-2 h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
+            >
+              {githubLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-slate-600 dark:text-white" />
+              ) : (
+                <Github className="w-4 h-4 dark:text-white" />
+              )}
             </button>
           </div>
         </div>
