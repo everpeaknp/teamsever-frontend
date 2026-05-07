@@ -17,7 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 
@@ -166,9 +166,9 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-2xl">Notifications</DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
+              <DialogDescription className="text-sm text-muted-foreground mt-1">
                 {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
-              </p>
+              </DialogDescription>
             </div>
             {unreadCount > 0 && (
               <Button

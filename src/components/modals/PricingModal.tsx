@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Check, Loader2, Zap, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { api } from '@/lib/axios';
 import { toast } from 'sonner';
@@ -130,6 +130,9 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       <DialogContent className="max-w-6xl max-h-[90vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="text-2xl">Pricing Plans</DialogTitle>
+          <DialogDescription>
+            Choose the best plan for your workspace and unlock more features
+          </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="h-[calc(90vh-120px)]">

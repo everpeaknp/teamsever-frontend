@@ -139,6 +139,10 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
 
     return await getFCMTokenInternal(swRegistration);
   } catch (error: any) {
+    if (error.name === 'AbortError') {
+      console.warn('⚠️ FCM Registration Aborted by browser (likely Incognito or Push Service blocked).');
+      return null;
+    }
     console.error('Failed to get FCM token:', error);
     throw error;
   }
@@ -165,6 +169,10 @@ async function getFCMTokenInternal(registration: ServiceWorkerRegistration): Pro
     
     return token;
   } catch (swError: any) {
+    if (swError.name === 'AbortError') {
+      // Re-throw so the caller can handle the specific error type
+      throw swError;
+    }
     console.error('❌ Service Worker / FCM Error:', swError);
     throw swError;
   }

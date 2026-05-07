@@ -7,6 +7,7 @@ import { useTheme } from 'next-themes';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -50,9 +51,9 @@ export function CustomizeModal({ open, onOpenChange }: CustomizeModalProps) {
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-xl font-semibold dark:text-white">Customize</DialogTitle>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              <DialogDescription className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                 Personalize and organize your Workspace interface
-              </p>
+              </DialogDescription>
             </div>
             <Button
               variant="ghost"

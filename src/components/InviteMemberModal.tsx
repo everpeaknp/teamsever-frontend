@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +64,9 @@ export function InviteMemberModal({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add Workspace Members to Space</DialogTitle>
+          <DialogDescription>
+            Select members from your workspace to give them access to this space.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
