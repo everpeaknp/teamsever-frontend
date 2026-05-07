@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, Filter, ExternalLink, GitBranch, Calendar as CalendarIcon } from 'lucide-react';
+import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, Filter, ExternalLink, GitBranch, Calendar as CalendarIcon, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuthStore } from '@/store/useAuthStore';
+import { api } from '@/lib/axios';
 import { Badge } from '@/components/ui/badge';
 import { format, isToday, isYesterday, isWithinInterval, startOfDay, endOfDay, subDays, startOfWeek } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -32,6 +33,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | 'week' | 'custom'>('all');
   const [customDate, setCustomDate] = useState<Date | undefined>(new Date());
+  const [filterUserId, setFilterUserId] = useState<string>('all');
+  const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -90,6 +93,23 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const draft = getDraft(roomId);
   const [inputValue, setInputValue] = useState(draft);
 
+  // Fetch workspace members for filtering
+  useEffect(() => {
+    if (workspaceId && title.includes('Commit Log')) {
+      const fetchMembers = async () => {
+        try {
+          const response = await api.get(`/workspaces/${workspaceId}`);
+          if (response.data.success) {
+            setWorkspaceMembers(response.data.data.members || []);
+          }
+        } catch (err) {
+          console.error('Failed to fetch workspace members for filtering:', err);
+        }
+      };
+      fetchMembers();
+    }
+  }, [workspaceId, title]);
+
   // Sync draft to store
   useEffect(() => {
     if (roomId && inputValue !== draft) {
@@ -120,10 +140,11 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     loadMore
   } = useChat({ 
     workspaceId, 
-    channelId, // NEW
+    channelId,
     conversationId, 
     userId, 
     type,
+    filterUserId: filterUserId === 'all' ? undefined : filterUserId,
     onInitialLoad: handleInitialLoad
   });
 
@@ -430,19 +451,6 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
               ))}
               
               <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    className={cn(
-                      "px-2.5 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap",
-                      dateFilter === 'custom' 
-                        ? "bg-background text-primary shadow-sm" 
-                        : "text-muted-foreground hover:text-foreground hover:bg-background/40"
-                    )}
-                  >
-                    <CalendarIcon className="w-3 h-3" />
-                    {dateFilter === 'custom' && customDate ? format(customDate, 'MMM d') : 'Date'}
-                  </button>
-                </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="end">
                   <UICalendar
                     mode="single"
@@ -453,6 +461,57 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                     }}
                     initialFocus
                   />
+                </PopoverContent>
+              </Popover>
+
+              <div className="w-[1px] h-4 bg-border/40 mx-1 hidden sm:block" />
+
+              {/* User Filter Dropdown */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "px-2.5 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap",
+                      filterUserId !== 'all' 
+                        ? "bg-background text-primary shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+                    )}
+                  >
+                    <User className="w-3 h-3" />
+                    {filterUserId === 'all' ? 'Users' : workspaceMembers.find(m => (m.user?._id || m.user) === filterUserId)?.user?.name || 'User'}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-1" align="end">
+                  <div className="max-h-60 overflow-y-auto">
+                    <button
+                      onClick={() => setFilterUserId('all')}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-[11px] font-medium rounded-md transition-colors",
+                        filterUserId === 'all' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                      )}
+                    >
+                      All Contributors
+                    </button>
+                    {workspaceMembers.map((member) => {
+                      const mId = member.user?._id || member.user;
+                      return (
+                        <button
+                          key={mId}
+                          onClick={() => setFilterUserId(mId)}
+                          className={cn(
+                            "w-full text-left px-3 py-2 text-[11px] font-medium rounded-md transition-colors flex items-center gap-2",
+                            filterUserId === mId ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                          )}
+                        >
+                          <Avatar className="h-4 w-4">
+                            <AvatarImage src={member.user?.profilePicture} />
+                            <AvatarFallback className="text-[8px]">{getInitials(member.user?.name || 'U')}</AvatarFallback>
+                          </Avatar>
+                          <span className="truncate">{member.user?.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>
