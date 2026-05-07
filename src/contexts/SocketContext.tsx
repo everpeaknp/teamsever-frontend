@@ -150,53 +150,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       };
 
       const handleGlobalChatMessage = (data: { message: any }) => {
-        const { addMessage, activeRoomId } = useChatStore.getState();
-        const { showBrowserNotification, permission } = useNotificationStore.getState();
+        const { addMessage } = useChatStore.getState();
         
         const roomId = `workspace_${data.message.workspace}`;
         addMessage(roomId, data.message);
-
-        // Browser notification if applicable
-        const storedUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
-        const isFromOthers = data.message.sender._id !== storedUserId;
-        const isDifferentRoom = activeRoomId !== roomId;
-
-        if (isFromOthers && isDifferentRoom) {
-          showBrowserNotification(
-            `New message in ${data.message.workspaceName || 'Chat'}`,
-            `${data.message.sender.name}: ${data.message.content}`,
-            { 
-              workspaceId: data.message.workspace,
-              tag: `chat_${roomId}`, // De-duplicate notifications for the same room
-              renotify: true
-            }
-          );
-        }
       };
 
       const handleGlobalDM = (data: { message: any; conversation: any }) => {
-        const { addMessage, activeRoomId } = useChatStore.getState();
-        const { showBrowserNotification, permission } = useNotificationStore.getState();
+        const { addMessage } = useChatStore.getState();
         
         const roomId = data.message.conversation;
         addMessage(roomId, data.message);
-
-        // Browser notification if applicable
-        const storedUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
-        const isFromOthers = data.message.sender._id !== storedUserId;
-        const isDifferentRoom = activeRoomId !== roomId;
-
-        if (isFromOthers && isDifferentRoom) {
-          showBrowserNotification(
-            `New DM from ${data.message.sender.name}`,
-            data.message.content,
-            { 
-              conversationId: roomId,
-              tag: `dm_${roomId}`, // De-duplicate notifications for the same room
-              renotify: true
-            }
-          );
-        }
       };
 
       const handleGlobalNotification = (data: { notification: any }) => {

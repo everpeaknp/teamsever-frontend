@@ -66,31 +66,9 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     
     set({ notifications: newNotifications, unreadCount });
 
-    // Show browser notification if:
-    // 1. Permission is granted
-    // 2. Notification is unread
-    // 3. Document is hidden OR user is not on the target page
-    // 4. Not already processed
-    if (get().permission === 'granted' && !notification.read) {
-      const isTabHidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
-      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-      
-      const isTargetPage = (notification.data?.conversationId && currentPath.includes(notification.data.conversationId)) ||
-                          (notification.data?.taskId && currentPath.includes(notification.data.taskId));
-
-      const isProcessed = get().processedNotificationIds.has(notification._id);
-
-      if ((isTabHidden || !isTargetPage) && !isProcessed) {
-        // Mark as processed immediately
-        get().processedNotificationIds.add(notification._id);
-        
-        get().showBrowserNotification(
-          notification.title, 
-          notification.body, 
-          { ...notification.data, _id: notification._id }
-        );
-      }
-    }
+    // ONLY update UI state here (unread counts, lists). 
+    // Do NOT show browser notifications from socket events to avoid "double shouting" with FCM.
+    // FCM (onMessageListener) will handle all OS-level popups.
   },
 
   markAsRead: (notificationId) => {
