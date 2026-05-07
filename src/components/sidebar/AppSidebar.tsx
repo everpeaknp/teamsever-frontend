@@ -156,7 +156,7 @@ export function AppSidebar() {
         if (workspaceMembers.length > 0) {
           return room.participants?.some(p => workspaceMembers.includes(p));
         }
-        return true; // Fallback to all if members not loaded
+        return false; // Don't show anything until members are loaded to avoid "global" leak
       })
       .reduce((total, room) => total + (room.unreadCount || 0), 0)
   );
@@ -207,7 +207,7 @@ export function AppSidebar() {
         
         // 1. Sync Inbox (DMs)
         try {
-          const response = await api.get('/dm');
+          const response = await api.get(`/dm${workspaceId ? `?workspaceId=${workspaceId}` : ''}`);
           const conversations = response.data.data || [];
           
           conversations.forEach((conv: any) => {

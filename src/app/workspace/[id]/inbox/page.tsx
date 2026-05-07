@@ -88,7 +88,7 @@ export default function InboxPage() {
       try {
         const [membersRes, conversationsRes] = await Promise.all([
           api.get(`/workspaces/${workspaceId}/members`),
-          api.get('/dm')
+          api.get(`/dm${workspaceId ? `?workspaceId=${workspaceId}` : ''}`)
         ]);
 
         if (membersRes.data.success) {
