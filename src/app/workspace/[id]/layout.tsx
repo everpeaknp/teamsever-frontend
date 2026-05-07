@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { initializeSocket, joinWorkspace } from '@/lib/socket';
 import "react-day-picker/dist/style.css";
 
@@ -14,6 +14,14 @@ export default function WorkspaceLayout({
 }) {
   const params = useParams();
   const workspaceId = params.id as string;
+  const router = useRouter();
+
+  useEffect(() => {
+    if (workspaceId === 'undefined') {
+      router.push('/dashboard');
+      return;
+    }
+  }, [workspaceId, router]);
 
   useEffect(() => {
     // Initialize socket connection for the workspace
