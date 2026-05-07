@@ -20,7 +20,7 @@ export default function WorkspaceLayout({
     if (workspaceId === 'undefined') {
       router.push('/dashboard');
     }
-  }, [workspaceId]);
+  }, [workspaceId, router]);
 
   useEffect(() => {
     // Initialize socket connection for the workspace

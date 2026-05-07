@@ -403,7 +403,7 @@ export function AppSidebar() {
     } else if (workspaceId) {
       localStorage.setItem('lastWorkspaceId', workspaceId);
     }
-  }, [workspaceId]);
+  }, [workspaceId, router]);
 
   // If no workspaceId in URL, try to get from localStorage for certain global pages
   if (!workspaceId && (pathname === '/account' || pathname === '/notifications')) {
