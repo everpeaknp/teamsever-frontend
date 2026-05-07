@@ -281,10 +281,17 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
               }
             }
 
+            // Generate a tag for de-duplication (matches SocketContext)
+            const tag = data?.conversationId 
+              ? `dm_${data.conversationId}` 
+              : data?.workspaceId 
+                ? `chat_${data.workspaceId}` 
+                : undefined;
+
             get().showBrowserNotification(
               notification.title || 'New Notification',
               notification.body || '',
-              data
+              { ...data, tag }
             );
           }
         });
