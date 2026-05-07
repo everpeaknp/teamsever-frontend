@@ -104,16 +104,18 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof Notification !== 'undefined') {
       // Sync the permission state in the store
-      syncPermission();
+      const { syncPermission: sync, initializeFCM: initFCM } = useNotificationStore.getState();
+      sync();
 
-      // If already granted, ensure FCM is initialized and token is sent to backend
+      // If already granted, initialize FCM ONCE on mount only
       if (Notification.permission === 'granted') {
-        initializeFCM().catch(err => {
-          console.error('Failed to auto-initialize FCM:', err);
+        initFCM().catch(() => {
+          // Silently fail - socket notifications will still work
         });
       }
     }
-  }, [initializeFCM, syncPermission]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps = run ONCE on mount only. DO NOT add initializeFCM/syncPermission here.
 
   return (
     <SearchProvider>

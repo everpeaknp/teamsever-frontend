@@ -277,47 +277,18 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
         console.warn('⚠️ Failed to get FCM token');
       }
     } catch (error: any) {
+      const errorMsg = error.message || 'Unknown error';
+      
+      // If it's the annoying AbortError or push service error, log it once and STOP. 
+      // Do not throw, do not retry indefinitely, and do not break the UI.
+      if (errorMsg.includes('push service error') || errorMsg.includes('AbortError')) {
+        console.warn('⚠️ Browser Push Service is unavailable. Falling back to Socket-only notifications.');
+        set({ fcmToken: null, isLoading: false });
+        return;
+      }
+
       console.error('❌ Failed to initialize FCM:', error);
-      
-      let errorMsg = error.message || 'Unknown error';
-      if (!window.isSecureContext) {
-        errorMsg = 'Push notifications require a SECURE CONTEXT (HTTPS or localhost). If you are accessing via IP (e.g. 192.168.x.x), FCM will fail.';
-      } else if (errorMsg.includes('no active Service Worker')) {
-        errorMsg = 'No active Service Worker! If you using BRAVE, please TURN OFF "Shields" for this site and try again.';
-      } else if (errorMsg.includes('messaging/registration-token-not-registered')) {
-        errorMsg = 'FCM Registration failed. Please check your Firebase Project Settings and VAPID key.';
-      } else if (errorMsg.includes('sender id mismatch')) {
-        errorMsg = 'Project Sender ID mismatch. Ensure your .env.local matches your Firebase Console.';
-      } else if (errorMsg.includes('permission-blocked') || errorMsg.includes('Notifications are blocked')) {
-        errorMsg = 'Notification permission is blocked by your browser. Please allow it in the address bar.';
-      } else if (errorMsg.includes('token-subscribe-failed')) {
-        errorMsg = 'FCM Subscription failed (Internal Error). This usually means a VAPID key mismatch or a corrupted browser push service. Try clearing site data.';
-      }
-
-      set({ fcmToken: null });
-      
-      // Auto-retry once by unregistering service workers
-      // Expand retry to include token-subscribe-failed (common VAPID/subscription issue)
-      if (!isRetry && (errorMsg.includes('push service error') || errorMsg.includes('token-subscribe-failed'))) {
-        console.warn('🔄 FCM subscription error detected. Attempting to unregister service workers and retry...');
-        if ('serviceWorker' in navigator) {
-          try {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (let registration of registrations) {
-              await registration.unregister();
-            }
-            console.log('🧹 All service workers unregistered. Retrying initialization...');
-            return get().initializeFCM(true);
-          } catch (retryErr) {
-            console.error('❌ Failed to unregister SW during retry:', retryErr);
-          }
-        }
-      }
-
-      // DO NOT throw error here as it crashes the UI. Just log and show toast if needed.
-      console.error('❌ FCM Initialization failed:', errorMsg);
-      // We don't show toast here to avoid annoying the user on Every page load if it fails,
-      // but we log it clearly for debugging.
+      set({ fcmToken: null, isLoading: false });
     }
   },
 

@@ -19,6 +19,7 @@ import {
   Building2,
   LogIn,
   LogOut,
+  Github,
   Calendar as CalendarIcon
 } from 'lucide-react';
 import { api } from '@/lib/axios';
@@ -161,6 +162,7 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
       list_member_removed: <Users className="w-4 h-4 text-pink-500" />,
       clock_in: <LogIn className="w-4 h-4 text-emerald-500" />,
       clock_out: <LogOut className="w-4 h-4 text-orange-500" />,
+      github_commit: <Github className="w-4 h-4 text-slate-900 dark:text-slate-100" />,
     };
     
     if (iconMap[activity.type]) {
@@ -183,7 +185,17 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
   };
 
   const getActivityDescription = (activity: any) => {
-    const user = activity.user || { name: 'Unknown User' };
+    let user = activity.user;
+    
+    // Fallback for GitHub commits where the user might not be a platform member
+    if (!user && activity.type === 'github_commit' && activity.metadata?.author) {
+      user = { name: activity.metadata.author, avatar: null };
+    }
+    
+    if (!user) {
+      user = { name: 'Unknown User', avatar: null };
+    }
+    
     const targetUser = activity.targetUser || null;
     
     // Workspace-level activities (have description field)
@@ -390,7 +402,13 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
                   {/* Activities for this date */}
                   <div className="space-y-3 pl-4 border-l-2 border-border">
                     {dateActivities.map((activity: any) => {
-                      const user = activity.user || { name: 'Unknown User', avatar: null };
+                      let user = activity.user;
+                      if (!user && activity.type === 'github_commit' && activity.metadata?.author) {
+                        user = { name: activity.metadata.author, avatar: null };
+                      }
+                      if (!user) {
+                        user = { name: 'Unknown User', avatar: null };
+                      }
                       
                       return (
                         <div key={activity._id} className="flex gap-3 group">
