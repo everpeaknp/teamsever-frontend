@@ -338,8 +338,23 @@ export function AppSidebar() {
     }
   };
 
+  // Save last workspace ID to localStorage for global pages like /account
+  useEffect(() => {
+    if (workspaceId) {
+      localStorage.setItem('lastWorkspaceId', workspaceId);
+    }
+  }, [workspaceId]);
+
+  // If no workspaceId in URL, try to get from localStorage for certain global pages
+  if (!workspaceId && pathname === '/account') {
+    const savedId = typeof window !== 'undefined' ? localStorage.getItem('lastWorkspaceId') : null;
+    if (savedId) {
+      workspaceId = savedId;
+    }
+  }
+
   // Don't render if not in workspace or on dashboard
-  if (!workspaceId || pathname === '/dashboard') {
+  if ((!workspaceId && pathname !== '/account') || pathname === '/dashboard') {
     return null;
   }
 

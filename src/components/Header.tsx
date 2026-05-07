@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Settings, HelpCircle, Palette, User, LogOut, Building2, Keyboard, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -68,10 +69,10 @@ export function Header() {
             <Menu className="h-5 w-5" />
           </Button>
           
-          <div className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <Image src="/teamsever_logo.png" alt="Teamsever Logo" width={24} height={24} className="rounded-md" />
             <h1 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">Teamsever</h1>
-          </div>
+          </Link>
         </div>
 
         {/* Center Section - Search (Hidden on small mobile) */}
