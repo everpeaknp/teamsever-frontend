@@ -15,6 +15,8 @@ import {
   Calendar,
   Mail,
   X,
+  Github,
+  Megaphone,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -150,6 +152,10 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
         return <MessageSquare className="w-5 h-5 text-purple-500" />;
       case 'DUE_DATE_REMINDER':
         return <Calendar className="w-5 h-5 text-orange-500" />;
+      case 'GITHUB_COMMIT':
+        return <Github className="w-5 h-5 text-slate-900 dark:text-white" />;
+      case 'ANNOUNCEMENT_NEW':
+        return <Megaphone className="w-5 h-5 text-blue-500" />;
       default:
         return <Bell className="w-5 h-5 text-gray-500" />;
     }
