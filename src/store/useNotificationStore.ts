@@ -28,6 +28,7 @@ interface NotificationStore {
   permission: NotificationPermission;
   isLoading: boolean;
   fcmToken: string | null;
+  processedNotificationIds: Set<string>;
   
   setNotifications: (notifications: Notification[]) => void;
   addNotification: (notification: Notification) => void;
@@ -51,6 +52,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   permission: (typeof window !== 'undefined' && typeof Notification !== 'undefined') ? Notification.permission : 'default',
   isLoading: false,
   fcmToken: null,
+  processedNotificationIds: new Set(),
 
   setNotifications: (notifications) => {
     const unreadCount = notifications.filter((n) => !n.read).length;
@@ -68,6 +70,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     // 1. Permission is granted
     // 2. Notification is unread
     // 3. Document is hidden OR user is not on the target page
+    // 4. Not already processed
     if (get().permission === 'granted' && !notification.read) {
       const isTabHidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
       const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
@@ -75,7 +78,12 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       const isTargetPage = (notification.data?.conversationId && currentPath.includes(notification.data.conversationId)) ||
                           (notification.data?.taskId && currentPath.includes(notification.data.taskId));
 
-      if (isTabHidden || !isTargetPage) {
+      const isProcessed = get().processedNotificationIds.has(notification._id);
+
+      if ((isTabHidden || !isTargetPage) && !isProcessed) {
+        // Mark as processed immediately
+        get().processedNotificationIds.add(notification._id);
+        
         get().showBrowserNotification(
           notification.title, 
           notification.body, 
@@ -273,12 +281,13 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
             // Check if we already have this notification in our store to prevent duplicates
             const notificationId = data?.notificationId || data?._id;
             if (notificationId) {
-              const { notifications } = get();
-              const isDuplicate = notifications.some(n => n._id === notificationId);
-              if (isDuplicate) {
+              const isProcessed = get().processedNotificationIds.has(notificationId);
+              if (isProcessed) {
                 console.log('🚫 Skipping duplicate FCM notification (already handled by socket)');
                 return;
               }
+              // Mark as processed
+              get().processedNotificationIds.add(notificationId);
             }
 
             // Generate a tag for de-duplication (matches SocketContext)
