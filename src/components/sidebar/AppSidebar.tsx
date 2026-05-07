@@ -116,6 +116,7 @@ export function AppSidebar() {
   const [isClient, setIsClient] = useState(false);
   const [showWorkspaceSwitcher, setShowWorkspaceSwitcher] = useState(false);
   const [allWorkspaces, setAllWorkspaces] = useState<any[]>([]);
+  const [workspaceMembers, setWorkspaceMembers] = useState<string[]>([]);
   const [isResizingState, setIsResizingState] = useState(false);
 
   // Extract workspaceId from URL
@@ -149,7 +150,14 @@ export function AppSidebar() {
   
   const inboxUnread = useChatStore(state => 
     Object.values(state.rooms)
-      .filter(room => room.type === 'direct')
+      .filter(room => {
+        if (room.type !== 'direct') return false;
+        // If we have workspace members, only count rooms with those members
+        if (workspaceMembers.length > 0) {
+          return room.participants?.some(p => workspaceMembers.includes(p));
+        }
+        return true; // Fallback to all if members not loaded
+      })
       .reduce((total, room) => total + (room.unreadCount || 0), 0)
   );
 
@@ -183,6 +191,19 @@ export function AppSidebar() {
       
       try {
         const { createRoom } = useChatStore.getState();
+        
+        // 0. Sync Workspace Members (for DM filtering)
+        if (workspaceId) {
+          try {
+            const membersRes = await api.get(`/workspaces/${workspaceId}/members`);
+            if (membersRes.data.success) {
+              const members = (membersRes.data.data || []).map((m: any) => m._id);
+              setWorkspaceMembers(members);
+            }
+          } catch (error) {
+            console.error('[AppSidebar] Failed to fetch workspace members:', error);
+          }
+        }
         
         // 1. Sync Inbox (DMs)
         try {
