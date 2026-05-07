@@ -72,6 +72,7 @@ interface ChatStore {
   // Presence management
   setUserOnline: (userId: string) => void;
   setUserOffline: (userId: string) => void;
+  setOnlineUsers: (userIds: string[]) => void;
   isUserOnline: (userId: string) => boolean;
   
   // Utility
@@ -288,6 +289,10 @@ export const useChatStore = create<ChatStore>()(
         const onlineUsers = new Set(get().onlineUsers);
         onlineUsers.delete(userId);
         set({ onlineUsers });
+      },
+      
+      setOnlineUsers: (userIds: string[]) => {
+        set({ onlineUsers: new Set(userIds) });
       },
 
       isUserOnline: (userId: string) => {

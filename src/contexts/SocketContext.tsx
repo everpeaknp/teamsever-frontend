@@ -142,6 +142,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       const handlePresenceUpdate = (data: { workspaceId: string; onlineUsers: string[] }) => {
         setOnlineUsers(data.onlineUsers);
+        // Also sync with Chat Store for global access (online dots)
+        const { setOnlineUsers: setStoreOnlineUsers } = useChatStore.getState();
+        if (typeof setStoreOnlineUsers === 'function') {
+          setStoreOnlineUsers(data.onlineUsers);
+        }
       };
 
       const handleGlobalChatMessage = (data: { message: any }) => {
