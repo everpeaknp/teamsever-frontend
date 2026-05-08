@@ -96,6 +96,30 @@ export function EditChannelModal({ isOpen, onClose, workspaceId, channelId, onSu
     }
   };
 
+  const isPermanentChannel = isDefault || name.toLowerCase() === 'general' || name.toLowerCase() === 'commit log';
+
+  const handleDeleteChannel = async () => {
+    if (isPermanentChannel) {
+      toast.error('General and Commit Log channels are permanent and cannot be deleted');
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete #${name}? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    setLoading(true);
+    try {
+      await api.delete(`/workspaces/${workspaceId}/chat/channels/${channelId}`);
+      toast.success('Channel deleted successfully');
+      onSuccess();
+      handleClose();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to delete channel');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleMember = useCallback((memberId: string) => {
     setSelectedMembers(prev => 
       prev.includes(memberId) 
@@ -230,28 +254,43 @@ export function EditChannelModal({ isOpen, onClose, workspaceId, channelId, onSu
               </div>
 
               <DialogFooter className="pt-4 border-t border-border flex flex-row justify-between items-center bg-muted/30 -mx-6 -mb-6 p-6">
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  onClick={handleClose}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={loading || !name.trim()}
-                  className="px-8 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all font-semibold"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
+                <div>
+                  {!isPermanentChannel && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleDeleteChannel}
+                      disabled={loading}
+                    >
+                      Delete Channel
+                    </Button>
                   )}
-                </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    onClick={handleClose}
+                    className="text-muted-foreground hover:text-foreground"
+                    disabled={loading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={loading || !name.trim()}
+                    className="px-8 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all font-semibold"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </Button>
+                </div>
               </DialogFooter>
             </form>
           )}
