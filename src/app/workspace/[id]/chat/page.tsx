@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatWindow, ChatSidebar } from '@/components/chat';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,13 @@ export default function GroupChatPage() {
   const [dmUserId, setDmUserId] = useState<string | undefined>();
   const [chatTitle, setChatTitle] = useState('General');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [channelSidebarWidth, setChannelSidebarWidth] = useState(320);
+  const [isResizingChannels, setIsResizingChannels] = useState(false);
+  const isResizingRef = useRef(false);
+
+  const MIN_CHANNEL_SIDEBAR_WIDTH = 260;
+  const MAX_CHANNEL_SIDEBAR_WIDTH = 520;
+  const DEFAULT_CHANNEL_SIDEBAR_WIDTH = 320;
 
   const { setActiveRoom } = useChatStore();
 
@@ -100,6 +107,62 @@ export default function GroupChatPage() {
     setChatTitle(name);
   }, []);
 
+  useEffect(() => {
+    if (!workspaceId || typeof window === 'undefined') return;
+    const saved = localStorage.getItem(`chat_sidebar_width_${workspaceId}`);
+    if (!saved) return;
+    const parsed = Number(saved);
+    if (!Number.isNaN(parsed)) {
+      setChannelSidebarWidth(
+        Math.max(MIN_CHANNEL_SIDEBAR_WIDTH, Math.min(MAX_CHANNEL_SIDEBAR_WIDTH, parsed))
+      );
+    }
+  }, [workspaceId]);
+
+  const startChannelResizing = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    isResizingRef.current = true;
+    setIsResizingChannels(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  const stopChannelResizing = useCallback(() => {
+    if (!isResizingRef.current) return;
+    isResizingRef.current = false;
+    setIsResizingChannels(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    if (workspaceId && typeof window !== 'undefined') {
+      localStorage.setItem(`chat_sidebar_width_${workspaceId}`, String(channelSidebarWidth));
+    }
+  }, [workspaceId, channelSidebarWidth]);
+
+  const resizeChannelSidebar = useCallback((e: MouseEvent) => {
+    if (!isResizingRef.current) return;
+    const nextWidth = Math.max(
+      MIN_CHANNEL_SIDEBAR_WIDTH,
+      Math.min(MAX_CHANNEL_SIDEBAR_WIDTH, e.clientX)
+    );
+    setChannelSidebarWidth(nextWidth);
+  }, []);
+
+  const resetChannelSidebarWidth = useCallback(() => {
+    setChannelSidebarWidth(DEFAULT_CHANNEL_SIDEBAR_WIDTH);
+    if (workspaceId && typeof window !== 'undefined') {
+      localStorage.setItem(`chat_sidebar_width_${workspaceId}`, String(DEFAULT_CHANNEL_SIDEBAR_WIDTH));
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resizeChannelSidebar);
+    window.addEventListener('mouseup', stopChannelResizing);
+    return () => {
+      window.removeEventListener('mousemove', resizeChannelSidebar);
+      window.removeEventListener('mouseup', stopChannelResizing);
+    };
+  }, [resizeChannelSidebar, stopChannelResizing]);
+
   if (isLoading || checkingAccess) {
     return <ChatSkeleton />;
   }
@@ -156,9 +219,23 @@ export default function GroupChatPage() {
       )}
 
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 md:w-64 lg:w-80 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:z-20 md:shrink-0",
+        "fixed inset-y-0 left-0 z-50 w-72 md:w-[var(--channel-sidebar-width)] md:relative md:translate-x-0 md:z-20 md:shrink-0 transform transition-transform duration-300 ease-in-out",
+        !isResizingChannels && "md:transition-[width]",
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      )}
+      style={{ ['--channel-sidebar-width' as any]: `${channelSidebarWidth}px` }}
+      >
+        <div
+          className={cn(
+            "hidden md:block absolute top-0 right-0 h-full w-1 cursor-col-resize z-30 group/resize",
+            isResizingChannels ? "bg-slate-300/40 dark:bg-slate-600/30" : "hover:bg-slate-300/20 dark:hover:bg-slate-600/20"
+          )}
+          onMouseDown={startChannelResizing}
+          onDoubleClick={resetChannelSidebarWidth}
+          title="Drag to resize"
+        >
+          <div className="absolute right-0 top-0 h-full w-px bg-slate-300/80 dark:bg-slate-700/80 opacity-0 group-hover/resize:opacity-100 transition-opacity" />
+        </div>
         <ChatSidebar
           workspaceId={workspaceId}
           activeChannel={activeChannelId}
