@@ -148,12 +148,12 @@
   /* Chat-specific minimalist scrollbar */
   .chat-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
+    scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
   }
 
   .chat-scrollbar::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 10px;
+    height: 10px;
   }
 
   .chat-scrollbar::-webkit-scrollbar-track {
@@ -161,12 +161,15 @@
   }
 
   .chat-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.3);
+    background: rgba(148, 163, 184, 0.45);
     border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
 
   .chat-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(100, 116, 139, 0.45);
+    background: rgba(100, 116, 139, 0.62);
+    background-clip: content-box;
   }
   
   /* Screen reader only - visually hidden but accessible to screen readers */
