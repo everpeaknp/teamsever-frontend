@@ -129,7 +129,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [workspaceId, channelId, conversationId, type]);
+  }, [workspaceId, channelId, conversationId, type, filterUserId]);
 
   // Send message
   const sendMessage = useCallback(async (content: string, mentions: string[] = []) => {
