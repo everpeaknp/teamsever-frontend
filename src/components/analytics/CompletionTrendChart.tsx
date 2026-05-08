@@ -11,31 +11,39 @@ interface CompletionTrendChartProps {
 
 export function CompletionTrendChart({ tasks }: CompletionTrendChartProps) {
   const chartData = useMemo(() => {
-    // Get last 4 weeks of data
+    // Build last 4 full 7-day buckets ending today.
+    // "created" is based on createdAt, "completed" is based on completedAt.
     const weeks = [];
     const now = new Date();
-    
+    now.setHours(23, 59, 59, 999);
+
     for (let i = 3; i >= 0; i--) {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - (i * 7 + 7));
       const weekEnd = new Date(now);
-      weekEnd.setDate(now.getDate() - (i * 7));
-      
-      const weekTasks = tasks.filter(t => {
+      weekEnd.setDate(now.getDate() - i * 7);
+
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekEnd.getDate() - 6);
+      weekStart.setHours(0, 0, 0, 0);
+
+      const created = tasks.filter((t) => {
         if (!t.createdAt) return false;
         const createdAt = new Date(t.createdAt);
         return createdAt >= weekStart && createdAt <= weekEnd;
-      });
-      
-      const completed = weekTasks.filter(t => t.status === 'done').length;
-      
+      }).length;
+
+      const completed = tasks.filter((t) => {
+        if (!t.completedAt) return false;
+        const completedAt = new Date(t.completedAt);
+        return completedAt >= weekStart && completedAt <= weekEnd;
+      }).length;
+
       weeks.push({
-        name: `Week ${4 - i}`,
-        created: weekTasks.length,
-        completed: completed,
+        name: `W${4 - i}`,
+        created,
+        completed,
       });
     }
-    
+
     return weeks;
   }, [tasks]);
 
