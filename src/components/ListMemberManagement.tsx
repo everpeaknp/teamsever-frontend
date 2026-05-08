@@ -124,10 +124,11 @@ export function ListMemberManagement({
       try {
         await api.post('/notifications', {
           recipientId: userId,
-          type: 'list_assignment',
+          type: 'SYSTEM',
           title: 'Assigned to List',
           message: `You've been assigned to "${listName}"`,
           link: `/workspace/${workspaceId}/spaces/${spaceId}/lists/${listId}`,
+          data: { resourceType: 'list' },
         });
       } catch (notifError) {
         console.error('Failed to send notification:', notifError);

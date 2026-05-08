@@ -495,10 +495,11 @@ export default function SpaceHomePage() {
           selectedMembers.map(memberId =>
             api.post('/notifications', {
               recipientId: memberId,
-              type: 'space_assignment',
+              type: 'SPACE_INVITATION',
               title: 'Assigned to Space',
               message: `You've been assigned to "${currentSpace?.name}"`,
               link: `/workspace/${workspaceId}/spaces/${spaceId}`,
+              data: { resourceType: 'space' },
             })
           )
         );

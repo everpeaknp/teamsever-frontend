@@ -111,10 +111,11 @@ export function TableMemberManagement({
       try {
         await api.post('/notifications', {
           recipientId: userId,
-          type: 'table_assignment',
+          type: 'SYSTEM',
           title: 'Assigned to Table',
           message: `You've been assigned to table "${tableName}"`,
           link: `/workspace/${workspaceId}/spaces/${spaceId}`,
+          data: { resourceType: 'table' },
         });
       } catch (notifError) {
         console.error('Failed to send notification:', notifError);
