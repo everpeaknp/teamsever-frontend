@@ -170,7 +170,7 @@ export default function GroupChatPage() {
         />
       </div>
 
-      <div className="flex-1 min-w-0 h-full relative z-0 border-l border-border/70">
+      <div className="flex-1 min-w-0 h-full relative z-0">
         <ChatWindow
           workspaceId={workspaceId}
           channelId={chatType === 'workspace' ? activeChannelId : undefined}
