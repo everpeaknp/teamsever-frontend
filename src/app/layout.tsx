@@ -16,6 +16,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Teamsever',
   description: 'Manage tasks with unrivaled precision.',
+  icons: {
+    icon: '/teamsever_logo.png',
+    shortcut: '/teamsever_logo.png',
+    apple: '/teamsever_logo.png',
+  },
 }
 
 export default function RootLayout({
