@@ -131,7 +131,6 @@ export default function SpaceHomePage() {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [memberPermissions, setMemberPermissions] = useState<Record<string, SpacePermissionLevel>>({});
   const [searchMemberQuery, setSearchMemberQuery] = useState('');
-  const [showAllMembersModal, setShowAllMembersModal] = useState(false);
 
   // Determine if management actions should show
   const shouldShowAdminButtons =
@@ -897,7 +896,7 @@ export default function SpaceHomePage() {
                   {currentSpace.members?.slice(0, 3).map((member: any, idx: number) => {
                     const user = typeof member.user === 'object' ? member.user : null;
                     return (
-                      <Avatar key={idx} className="w-8 h-8 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110" onClick={() => setShowAllMembersModal(true)}>
+                      <Avatar key={idx} className="w-8 h-8 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110" onClick={() => setShowSpaceMemberManagement(true)}>
                         <AvatarImage src={user?.avatar} />
                         <AvatarFallback className="text-xs" style={{ backgroundColor: spaceColor, color: 'white' }}>
                           {user ? getInitials(user.name) : '?'}
@@ -906,7 +905,7 @@ export default function SpaceHomePage() {
                     );
                   })}
                   {currentSpace.members && currentSpace.members.length > 3 && (
-                    <Avatar className="w-8 h-8 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110 bg-muted" onClick={() => setShowAllMembersModal(true)}>
+                    <Avatar className="w-8 h-8 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110 bg-muted" onClick={() => setShowSpaceMemberManagement(true)}>
                       <AvatarFallback className="text-xs font-semibold">
                         +{currentSpace.members.length - 3}
                       </AvatarFallback>
@@ -1409,48 +1408,14 @@ export default function SpaceHomePage() {
           onConfirm={handleDeleteTable}
         />
         
-        {/* All Members Modal */}
-        <Dialog open={showAllMembersModal} onOpenChange={setShowAllMembersModal}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-            <DialogHeader>
-              <DialogTitle>Team Members ({currentSpace.members?.length || 0})</DialogTitle>
-            </DialogHeader>
-            <div className="divide-y overflow-y-auto flex-1">
-              {currentSpace.members?.map((member: any, idx: number) => {
-                const user = typeof member.user === 'object' ? member.user : null;
-                const memberId = typeof member.user === 'string' ? member.user : member.user?._id;
-                const canRemove = isOwner && memberId !== userId;
-                return (
-                  <div key={idx} className="p-4 hover:bg-accent/50 transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10 flex-shrink-0">
-                        <AvatarImage src={user?.avatar} />
-                        <AvatarFallback style={{ backgroundColor: spaceColor, color: 'white' }}>
-                          {user ? getInitials(user.name) : '?'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{user?.name || 'Unknown'}</p>
-                        <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
-                      </div>
-                      <Badge variant="outline" className="capitalize flex-shrink-0">{member.role}</Badge>
-                      {canRemove && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                          onClick={() => handleRemoveMember(memberId, user?.name || 'member')}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Space Member Permission Management */}
+        <SpaceMemberManagement
+          open={showSpaceMemberManagement}
+          onOpenChange={setShowSpaceMemberManagement}
+          spaceId={spaceId}
+          spaceName={currentSpace?.name || 'Space'}
+          spaceColor={spaceColor}
+        />
 
         {/* Delete Folder Modal */}
         <Dialog open={showDeleteFolderModal} onOpenChange={setShowDeleteFolderModal}>
