@@ -156,7 +156,7 @@ export default function GroupChatPage() {
       )}
 
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:z-0",
+        "fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:z-20 md:shrink-0",
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <ChatSidebar
@@ -170,7 +170,7 @@ export default function GroupChatPage() {
         />
       </div>
 
-      <div className="flex-1 min-w-0 h-full">
+      <div className="flex-1 min-w-0 h-full relative z-0 border-l border-border/70">
         <ChatWindow
           workspaceId={workspaceId}
           channelId={chatType === 'workspace' ? activeChannelId : undefined}
