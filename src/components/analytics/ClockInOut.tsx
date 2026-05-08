@@ -11,13 +11,22 @@ interface ClockInOutProps {
   workspaceId: string;
   currentStatus: 'active' | 'inactive';
   runningTimer: any;
-  onStatusChange: (force?: boolean) => void;
+  onStatusChange: (force?: boolean) => void | Promise<void>;
 }
 
 export function ClockInOut({ workspaceId, currentStatus, runningTimer, onStatusChange }: ClockInOutProps) {
   const [loading, setLoading] = useState(false);
+  const [optimisticStatus, setOptimisticStatus] = useState<'active' | 'inactive'>(currentStatus);
+
+  useEffect(() => {
+    if (!loading) {
+      setOptimisticStatus(currentStatus);
+    }
+  }, [currentStatus, loading]);
 
   const handleClockToggle = async () => {
+    if (loading) return;
+
     if (!workspaceId) {
       toast.error("Workspace ID is missing");
       return;
@@ -26,6 +35,7 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, onStatusC
     try {
       setLoading(true);
       const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      setOptimisticStatus(newStatus);
       
       console.log('[ClockInOut] Toggling clock:', { 
         from: currentStatus, 
@@ -41,7 +51,7 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, onStatusC
 
       if (response.data.success) {
         // Refresh parent data to get updated status from server (force refresh to clear cache)
-        onStatusChange(true);
+        await Promise.resolve(onStatusChange(true));
 
         const message = newStatus === 'active' ? 'Clocked in successfully!' : 'Clocked out successfully!';
         console.log('[ClockInOut] Success:', message);
@@ -50,6 +60,7 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, onStatusC
         throw new Error('Toggle failed');
       }
     } catch (error: any) {
+      setOptimisticStatus(currentStatus);
       console.error('[ClockInOut] Failed to toggle clock status:', error);
       console.error('[ClockInOut] Error details:', {
         message: error.message,
@@ -62,7 +73,7 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, onStatusC
     }
   };
 
-  const clockedIn = currentStatus === 'active';
+  const clockedIn = optimisticStatus === 'active';
 
   return (
     <Card>
