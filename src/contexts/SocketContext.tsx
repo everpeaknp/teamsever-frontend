@@ -184,7 +184,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       };
 
       const handleGlobalNotification = (data: { notification: any }) => {
-        const { addNotification, showBrowserNotification, processedNotificationIds } = useNotificationStore.getState();
+        const { addNotification, processedNotificationIds } = useNotificationStore.getState();
         const notification = data?.notification;
         if (!notification?._id) return;
 
@@ -193,13 +193,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         processedNotificationIds.add(notification._id);
 
         addNotification(notification);
-
-        // Ensure browser popup still works even when FCM foreground path is unavailable.
-        showBrowserNotification(
-          notification.title || 'New Notification',
-          notification.body || '',
-          { ...notification.data, notificationId: notification._id, _id: notification._id }
-        );
       };
 
       socketInstance.on('connect', handleConnect);

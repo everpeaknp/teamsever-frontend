@@ -146,24 +146,22 @@ export function AppSidebar() {
   // Chat unread counts - Optimized selectors
   const groupChatUnread = useChatStore(state => {
     if (!workspaceId) return 0;
-
-    // Aggregate unread across all workspace chat rooms for this workspace.
-    // This includes the synthetic workspace room and per-channel rooms.
-    return Object.values(state.rooms)
-      .filter((room) => {
-        if (room.type !== 'workspace') return false;
-        if (room.workspaceId === workspaceId) return true;
-        return room.roomId === `workspace_${workspaceId}`;
-      })
-      .reduce((sum, room) => sum + (room.unreadCount || 0), 0);
+    // Use the authoritative workspace-level unread room only.
+    // Channel-level rooms can cause double-count in sidebar badge.
+    const workspaceRoom = state.rooms[`workspace_${workspaceId}`];
+    return Number(workspaceRoom?.unreadCount || 0);
   });
   
   const inboxUnread = useChatStore(state => {
     const isConversationId = (roomId: string) => /^[a-fA-F0-9]{24}$/.test(roomId);
-    const directRooms = Object.values(state.rooms).filter(room =>
-      room.type === 'direct' || isConversationId(room.roomId)
-    );
-    const filteredRooms = directRooms.filter(room => {
+    const directRooms = Object.values(state.rooms).filter(room => room.type === 'direct' || isConversationId(room.roomId));
+
+    // Prefer canonical conversation-id rooms to avoid counting both
+    // `dm_userA_userB` and `<conversationId>` versions of same DM thread.
+    const canonicalDirectRooms = directRooms.filter(room => isConversationId(room.roomId));
+    const roomsToCount = canonicalDirectRooms.length > 0 ? canonicalDirectRooms : directRooms;
+
+    const filteredRooms = roomsToCount.filter(room => {
       // If we have workspace members, only count rooms with those members
       if (workspaceMembers.length > 0) {
         // Socket-created rooms may not have participants yet; include them so realtime badges still work.
