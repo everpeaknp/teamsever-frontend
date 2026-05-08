@@ -94,6 +94,8 @@ export default function ListView() {
   const [isSpaceMember, setIsSpaceMember] = useState(false);
   const [isListMember, setIsListMember] = useState(false);
   const [listPermissionLevel, setListPermissionLevel] = useState<string | null>(null);
+  const [spacePermissionLevel, setSpacePermissionLevel] = useState<string | null>(null);
+  const [folderPermissionLevel, setFolderPermissionLevel] = useState<string | null>(null);
   const [listMembers, setListMembers] = useState<any[]>([]);
   const [showSettingsSheet, setShowSettingsSheet] = useState(false);
   const [showListMemberManagement, setShowListMemberManagement] = useState(false);
@@ -212,22 +214,57 @@ export default function ListView() {
         setListMembers([]);
       }
 
-      // Determine read-only status and permissions based on role and list membership
-      // Owner/Admin: Full access to everything
-      // List member with FULL: Can create, edit, delete tasks
-      // List member with EDIT: Can create and edit tasks, change status (no delete)
-      // List member with COMMENT: Can only comment (read-only for tasks)
-      // List member with VIEW: Can only view (read-only)
-      // Not a list member: Read-only
-      
+      // Determine scoped permission overrides
+      let resolvedSpacePermissionLevel: string | null = null;
+      try {
+        const spaceMembersRes = await api.get(`/spaces/${spaceId}/space-members`);
+        const currentSpaceMember = (spaceMembersRes.data.data || []).find((m: any) => m?._id === userId);
+        resolvedSpacePermissionLevel = currentSpaceMember?.spacePermissionLevel || null;
+        setSpacePermissionLevel(resolvedSpacePermissionLevel);
+      } catch (error) {
+        resolvedSpacePermissionLevel = null;
+        setSpacePermissionLevel(null);
+      }
+
+      let resolvedFolderPermissionLevel: string | null = null;
+      try {
+        if (listData?.folderId) {
+          const folderMembersRes = await api.get(`/folders/${listData.folderId}/folder-members`);
+          const currentFolderMember = (folderMembersRes.data.data || []).find((m: any) => m?._id === userId);
+          resolvedFolderPermissionLevel = currentFolderMember?.folderPermissionLevel || null;
+          setFolderPermissionLevel(resolvedFolderPermissionLevel);
+        } else {
+          resolvedFolderPermissionLevel = null;
+          setFolderPermissionLevel(null);
+        }
+      } catch (error) {
+        resolvedFolderPermissionLevel = null;
+        setFolderPermissionLevel(null);
+      }
+
+      const resolvedListPermissionLevel = userListMember?.hasOverride
+        ? userListMember.listPermissionLevel
+        : null;
+
+      // Determine read-only status and permissions based on role and scoped access
       if (isOwner || isAdmin) {
+        setIsReadOnly(false);
+      } else if (
+        resolvedSpacePermissionLevel === 'FULL' ||
+        resolvedFolderPermissionLevel === 'FULL' ||
+        resolvedListPermissionLevel === 'FULL'
+      ) {
+        setIsReadOnly(false);
+      } else if (
+        resolvedSpacePermissionLevel === 'EDIT' ||
+        resolvedFolderPermissionLevel === 'EDIT' ||
+        resolvedListPermissionLevel === 'EDIT'
+      ) {
         setIsReadOnly(false);
       } else if (userListMember && userListMember.hasOverride) {
         const permLevel = userListMember.listPermissionLevel;
-        // FULL and EDIT can create/edit tasks, COMMENT and VIEW are read-only
         setIsReadOnly(permLevel === 'VIEW' || permLevel === 'COMMENT');
       } else {
-        // Not a list member - read-only
         setIsReadOnly(true);
       }
       
@@ -433,7 +470,9 @@ export default function ListView() {
     // Owner/Admin: Full access
     if (userRole === 'owner' || userRole === 'admin') return true;
     
-    // List member with EDIT or FULL permission
+    // Scoped FULL/EDIT permissions
+    if (spacePermissionLevel === 'FULL' || spacePermissionLevel === 'EDIT') return true;
+    if (folderPermissionLevel === 'FULL' || folderPermissionLevel === 'EDIT') return true;
     if (isListMember && (listPermissionLevel === 'EDIT' || listPermissionLevel === 'FULL')) return true;
     
     // Task assignee can edit their own tasks
@@ -445,7 +484,9 @@ export default function ListView() {
     // Owner/Admin: Full access
     if (userRole === 'owner' || userRole === 'admin') return true;
     
-    // List member with FULL permission can delete
+    // Scoped FULL permissions
+    if (spacePermissionLevel === 'FULL') return true;
+    if (folderPermissionLevel === 'FULL') return true;
     if (isListMember && listPermissionLevel === 'FULL') return true;
     
     return false;
@@ -455,8 +496,10 @@ export default function ListView() {
     // Owner/Admin: Full access
     if (userRole === 'owner' || userRole === 'admin') return true;
     
-    // Only list members with FULL permission can create tasks
-    if (isListMember && listPermissionLevel === 'FULL') return true;
+    // Space/FOLDER/LIST FULL or EDIT can create tasks
+    if (spacePermissionLevel === 'FULL' || spacePermissionLevel === 'EDIT') return true;
+    if (folderPermissionLevel === 'FULL' || folderPermissionLevel === 'EDIT') return true;
+    if (isListMember && (listPermissionLevel === 'FULL' || listPermissionLevel === 'EDIT')) return true;
     
     return false;
   };
@@ -617,8 +660,8 @@ export default function ListView() {
                 </div>
               </div>
 
-              {/* Invite and Settings in Actions dropdown for admin/owner only */}
-              {(userRole === 'owner' || userRole === 'admin') && !isReadOnly && (
+              {/* Invite and Settings in Actions dropdown */}
+              {(userRole === 'owner' || userRole === 'admin' || spacePermissionLevel === 'FULL' || listPermissionLevel === 'FULL') && !isReadOnly && (
                 <>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -849,8 +892,22 @@ export default function ListView() {
           <KanbanBoard
             tasks={filteredTasks}
             onStatusChange={handleStatusChange}
-            canChangeStatus={!isReadOnly && (userRole === 'owner' || userRole === 'admin' || (isListMember && (listPermissionLevel === 'FULL' || listPermissionLevel === 'EDIT')))}
-            canDelete={!isReadOnly && (userRole === 'owner' || userRole === 'admin' || (isListMember && listPermissionLevel === 'FULL'))}
+            canChangeStatus={!isReadOnly && (
+              userRole === 'owner' ||
+              userRole === 'admin' ||
+              spacePermissionLevel === 'FULL' ||
+              spacePermissionLevel === 'EDIT' ||
+              folderPermissionLevel === 'FULL' ||
+              folderPermissionLevel === 'EDIT' ||
+              (isListMember && (listPermissionLevel === 'FULL' || listPermissionLevel === 'EDIT'))
+            )}
+            canDelete={!isReadOnly && (
+              userRole === 'owner' ||
+              userRole === 'admin' ||
+              spacePermissionLevel === 'FULL' ||
+              folderPermissionLevel === 'FULL' ||
+              (isListMember && listPermissionLevel === 'FULL')
+            )}
             spaceMembers={space?.members || []}
           />
         )}

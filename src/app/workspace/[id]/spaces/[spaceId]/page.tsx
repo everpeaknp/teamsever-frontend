@@ -110,9 +110,6 @@ export default function SpaceHomePage() {
   // Use permission hook with space permission level
   const { can, isAdmin, isOwner } = usePermission(spacePermissionLevel);
   
-  // Determine if buttons should show - use isAdmin/isOwner from permission hook
-  const shouldShowAdminButtons = isAdmin || isOwner;
-
   const { currentSpace, lists, folders, loading, fetchSpace, fetchLists, fetchFolders, createList, createFolder, updateSpace, deleteList, addMemberToSpace, removeMemberFromSpace, addListOptimistic } = useSpaceStore();
   
   // Also use global workspace store for sidebar updates
@@ -135,6 +132,11 @@ export default function SpaceHomePage() {
   const [memberPermissions, setMemberPermissions] = useState<Record<string, SpacePermissionLevel>>({});
   const [searchMemberQuery, setSearchMemberQuery] = useState('');
   const [showAllMembersModal, setShowAllMembersModal] = useState(false);
+
+  // Determine if management actions should show
+  const shouldShowAdminButtons =
+    !isReadOnly &&
+    (isAdmin || isOwner || can('UPDATE_SPACE') || can('MANAGE_SPACE_PERMISSIONS'));
 
   // Tables state
   const [activeTab, setActiveTab] = useState<'lists' | 'tables' | 'commits'>(() => {
@@ -256,13 +258,17 @@ export default function SpaceHomePage() {
           
           const currentUserMember = spaceMembersRes.data.data.find(
             (m: any) => {
-              const memberId = typeof m.user === 'string' ? m.user : m.user?._id;
+              const memberId = typeof m._id === 'string' ? m._id : m._id?.toString?.();
               return memberId === userId;
             }
           );
-          
+
           if (currentUserMember?.spacePermissionLevel) {
-            setSpacePermissionLevel(currentUserMember.spacePermissionLevel);
+            const level = currentUserMember.spacePermissionLevel as SpacePermissionLevel;
+            setSpacePermissionLevel(level);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(`spacePermission:${spaceId}`, level);
+            }
           }
         } catch (error) {
           console.error('[SpacePage] Failed to fetch space permission level:', error);
@@ -691,8 +697,8 @@ export default function SpaceHomePage() {
   const spaceMemberIds = currentSpace?.members?.map((m: any) => typeof m.user === 'string' ? m.user : m.user?._id) || [];
   const isSpaceMember = spaceMemberIds.includes(userId);
   
-  // Only owners and admins can create content (not regular members or space members)
-  const canCreateContent = (isAdmin || isOwner) && !isReadOnly;
+  // Space FULL users can create folder/list content even if not admin/owner
+  const canCreateContent = !isReadOnly && (can('CREATE_FOLDER') || can('CREATE_LIST'));
   
   const availableMembers = workspace?.members.filter((m: any) => {
     const userId = typeof m.user === 'string' ? m.user : m.user?._id;

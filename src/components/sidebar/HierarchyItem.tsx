@@ -54,6 +54,7 @@ export const HierarchyItemComponent = React.memo(function HierarchyItemComponent
   
   const [isHovered, setIsHovered] = useState(false);
   const [canCreateContent, setCanCreateContent] = useState(false);
+  const [canManageItem, setCanManageItem] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
   // Check if user is admin or owner
@@ -67,15 +68,25 @@ export const HierarchyItemComponent = React.memo(function HierarchyItemComponent
     }
   }, []);
 
-  // Check if user can create content
+  const getSpacePermissionLevelForItem = () => {
+    if (typeof window === 'undefined') return null;
+    const targetSpaceId = item.type === 'space' ? item._id : parentSpaceId;
+    if (!targetSpaceId) return null;
+    return localStorage.getItem(`spacePermission:${targetSpaceId}`);
+  };
+
+  // Check if user can create/manage content
   useEffect(() => {
     if (userId) {
-      setCanCreateContent(isAdminOrOwner);
+      const level = getSpacePermissionLevelForItem();
+      const hasFullSpaceAccess = level === 'FULL';
+      setCanCreateContent(isAdminOrOwner || hasFullSpaceAccess);
+      setCanManageItem(isAdminOrOwner || hasFullSpaceAccess);
     }
-  }, [userId, isAdminOrOwner]);
+  }, [userId, isAdminOrOwner, item._id, item.type, parentSpaceId]);
 
-  // Admins and owners can rename spaces/folders/lists
-  const canEdit = isAdminOrOwner;
+  // Admins/owners/full-space can rename spaces/folders/lists
+  const canEdit = canManageItem;
 
   const isExpanded = expandedIds.includes(item._id);
   const isFavorite = favoriteIds.includes(item._id);
@@ -230,7 +241,7 @@ const getRoute = () => {
           )}
 
           {/* Hover Actions */}
-          {isHovered && isAdminOrOwner && (
+          {isHovered && canManageItem && (
             <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
               {/* Add Button - For spaces: create folder */}
               {item.type === 'space' && canCreateContent && (
