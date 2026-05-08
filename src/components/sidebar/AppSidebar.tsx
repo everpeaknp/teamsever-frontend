@@ -13,11 +13,10 @@ import {
   Loader2,
   User,
   Users,
+  UserPlus,
   BarChart3,
   FileText,
-  MoreHorizontal,
   MessageSquare,
-  Palette,
   FolderOpen,
   Clock,
 } from 'lucide-react';
@@ -46,7 +45,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { api } from '@/lib/axios';
 import UpgradeButton from '@/components/subscription/UpgradeButton';
@@ -419,6 +417,10 @@ export function AppSidebar() {
     return null;
   }
 
+  const isMembersPage = pathname === `/workspace/${workspaceId}/settings/members`;
+  const isSettingsPage =
+    pathname.startsWith(`/workspace/${workspaceId}/settings`) && !isMembersPage;
+
   return (
     <>
       <CreateItemModal />
@@ -524,13 +526,51 @@ export function AppSidebar() {
               )}
             </div>
 
+            {/* ADD MEMBERS */}
+            <div className="relative group">
+              <Link
+                href={`/workspace/${workspaceId}/settings/members`}
+                className={cn(
+                  'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
+                  isMembersPage
+                    ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
+                    : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
+                )}
+                title="Add Members"
+              >
+                <div className="relative">
+                  <UserPlus className="w-5 h-5 relative z-10" />
+                  {isMembersPage && (
+                    <motion.div
+                      layoutId="active-glow"
+                      className="absolute inset-0 blur-md opacity-40 z-0"
+                      style={{ backgroundColor: themeColor }}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] font-semibold tracking-wide">
+                  Members
+                </span>
+              </Link>
+
+              {/* Smooth Indicator Pill */}
+              {isMembersPage && (
+                <motion.div
+                  layoutId="sidebar-indicator"
+                  className="absolute -left-1 top-2 bottom-2 w-1 rounded-r-full z-20 shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                  style={{ backgroundColor: themeColor }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                />
+              )}
+            </div>
+
             {/* SETTINGS */}
             <div className="relative group">
               <Link
                 href={`/workspace/${workspaceId}/settings`}
                 className={cn(
                   'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
-                  pathname.startsWith(`/workspace/${workspaceId}/settings`)
+                  isSettingsPage
                     ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
                     : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
                 )}
@@ -538,7 +578,7 @@ export function AppSidebar() {
               >
                 <div className="relative">
                   <SettingsIcon className="w-5 h-5 relative z-10" />
-                  {pathname.startsWith(`/workspace/${workspaceId}/settings`) && (
+                  {isSettingsPage && (
                     <motion.div
                       layoutId="active-glow"
                       className="absolute inset-0 blur-md opacity-40 z-0"
@@ -552,7 +592,7 @@ export function AppSidebar() {
               </Link>
 
               {/* Smooth Indicator Pill */}
-              {pathname.startsWith(`/workspace/${workspaceId}/settings`) && (
+              {isSettingsPage && (
                 <motion.div
                   layoutId="sidebar-indicator"
                   className="absolute -left-1 top-2 bottom-2 w-1 rounded-r-full z-20 shadow-[0_0_10px_rgba(255,255,255,0.3)]"
@@ -562,46 +602,6 @@ export function AppSidebar() {
               )}
             </div>
 
-            {/* MORE */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <motion.button
-                  whileHover={{ backgroundColor: themeMode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300",
-                    themeMode === 'dark' ? "text-white/50 hover:text-white/90" : "text-slate-500 hover:text-slate-900"
-                  )}
-                  title="More"
-                >
-                  <MoreHorizontal className="w-5 h-5" />
-                  <span className="text-[10px] font-semibold tracking-wide">
-                    More
-                  </span>
-                </motion.button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="right" align="start" className={cn(
-                "w-52 ml-2 backdrop-blur-xl border-white/10",
-                themeMode === 'dark' ? "bg-[#1a1a1a]/95 text-white" : "bg-white/95 text-slate-900"
-              )}>
-                <DropdownMenuItem className={cn(
-                  "cursor-pointer py-2.5",
-                  themeMode === 'dark' ? "focus:bg-white/10 focus:text-white" : "focus:bg-slate-100 focus:text-slate-900"
-                )}>
-                  <Palette className="h-4 w-4 mr-3 text-indigo-400" />
-                  Customize Theme
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className={cn(
-                    "cursor-pointer py-2.5",
-                    themeMode === 'dark' ? "focus:bg-white/10 focus:text-white" : "focus:bg-slate-100 focus:text-slate-900"
-                  )}
-                  onClick={() => router.push(`/workspace/${workspaceId}/settings`)}
-                >
-                  <SettingsIcon className="h-4 w-4 mr-3 text-slate-400" />
-                  Workspace Settings
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 

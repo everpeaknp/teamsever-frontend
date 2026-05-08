@@ -129,6 +129,11 @@ export default function AnalyticsPage() {
                             setIsAdmin(parsed.isAdmin || false);
                             setStickyNote(parsed.stickyNote || null);
                             setLoading(false);
+                            // Keep UI fast from cache, but immediately refresh in background
+                            // so admin clock-in/out changes are reflected quickly.
+                            setTimeout(() => {
+                                fetchAnalyticsData(true);
+                            }, 0);
                             return;
                         }
                     } catch (e) {
