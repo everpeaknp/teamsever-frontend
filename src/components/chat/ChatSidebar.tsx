@@ -8,7 +8,6 @@ import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { Button } from '@/components/ui/button';
 import { CreateChannelModal } from './CreateChannelModal';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import axios from 'axios';
 import { getSocket } from '@/lib/socket';
 
@@ -199,8 +198,8 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
   }, [channels]);
 
   return (
-    <div className="w-full md:w-64 lg:w-80 bg-card border-r border-border flex flex-col h-full min-w-0 overflow-hidden">
-      <ScrollArea className="flex-1 px-3 md:px-4">
+    <div className="w-full bg-card border-r border-border flex flex-col h-full min-w-0 overflow-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden chat-scrollbar px-3 md:px-4">
       <div className="space-y-6 py-3 md:py-4">
         
         {/* Public Channels */}
@@ -348,7 +347,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
           </div>
         </div>
       </div>
-      </ScrollArea>
+      </div>
       
       <CreateChannelModal
         isOpen={isModalOpen}

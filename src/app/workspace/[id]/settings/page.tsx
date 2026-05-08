@@ -156,7 +156,7 @@ export default function GeneralSettingsPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-card border-b border-border sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => router.back()}
@@ -172,7 +172,7 @@ export default function GeneralSettingsPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="flex items-center gap-2 border-b border-border">
           <button className="px-4 py-2 border-b-2 border-primary text-primary font-medium">General</button>
           <button 

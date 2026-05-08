@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { initializeSocket, joinWorkspace, getSocket } from '@/lib/socket';
@@ -35,6 +35,14 @@ export default function InboxPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showMembersList, setShowMembersList] = useState(true); // For mobile toggle
+  const [dmSidebarWidth, setDmSidebarWidth] = useState(380);
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const isResizingRef = useRef(false);
+  const dmSidebarRef = useRef<HTMLDivElement>(null);
+
+  const MIN_DM_SIDEBAR_WIDTH = 300;
+  const MAX_DM_SIDEBAR_WIDTH = 560;
+  const DEFAULT_DM_SIDEBAR_WIDTH = 380;
 
   const { setActiveRoom, getRoom } = useChatStore();
   const { isUserOnline } = usePresence(workspaceId);
@@ -193,6 +201,63 @@ export default function InboxPage() {
     }
   };
 
+  const startSidebarResizing = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    isResizingRef.current = true;
+    setIsResizingSidebar(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  const stopSidebarResizing = useCallback(() => {
+    if (!isResizingRef.current) return;
+    isResizingRef.current = false;
+    setIsResizingSidebar(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    if (workspaceId && typeof window !== 'undefined') {
+      localStorage.setItem(`inbox_sidebar_width_${workspaceId}`, String(dmSidebarWidth));
+    }
+  }, [workspaceId, dmSidebarWidth]);
+
+  const resizeSidebar = useCallback((e: MouseEvent) => {
+    if (!isResizingRef.current) return;
+    const containerLeft = dmSidebarRef.current?.getBoundingClientRect().left ?? 0;
+    const nextWidth = Math.max(
+      MIN_DM_SIDEBAR_WIDTH,
+      Math.min(MAX_DM_SIDEBAR_WIDTH, e.clientX - containerLeft)
+    );
+    setDmSidebarWidth(nextWidth);
+  }, []);
+
+  const resetSidebarWidth = useCallback(() => {
+    setDmSidebarWidth(DEFAULT_DM_SIDEBAR_WIDTH);
+    if (workspaceId && typeof window !== 'undefined') {
+      localStorage.setItem(`inbox_sidebar_width_${workspaceId}`, String(DEFAULT_DM_SIDEBAR_WIDTH));
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (!workspaceId || typeof window === 'undefined') return;
+    const saved = localStorage.getItem(`inbox_sidebar_width_${workspaceId}`);
+    if (!saved) return;
+    const parsed = Number(saved);
+    if (!Number.isNaN(parsed)) {
+      setDmSidebarWidth(
+        Math.max(MIN_DM_SIDEBAR_WIDTH, Math.min(MAX_DM_SIDEBAR_WIDTH, parsed))
+      );
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resizeSidebar);
+    window.addEventListener('mouseup', stopSidebarResizing);
+    return () => {
+      window.removeEventListener('mousemove', resizeSidebar);
+      window.removeEventListener('mouseup', stopSidebarResizing);
+    };
+  }, [resizeSidebar, stopSidebarResizing]);
+
   if (isLoading || !currentUserId) {
     return <ChatSkeleton />;
   }
@@ -202,16 +267,25 @@ export default function InboxPage() {
       {/* Members List Sidebar - Responsive */}
       <div className={cn(
         "border-r border-border flex flex-col bg-background",
-        "w-full md:w-80 lg:w-96",
+        "w-full md:w-[var(--dm-sidebar-width)] md:shrink-0 relative",
+        !isResizingSidebar && "md:transition-[width]",
         // Hide on mobile when chat is open
         !showMembersList && selectedMember && "hidden md:flex"
-      )}>
+      )}
+      style={{ ['--dm-sidebar-width' as any]: `${dmSidebarWidth}px` }}
+      ref={dmSidebarRef}
+      >
+        <div
+          className="hidden md:block absolute top-0 -right-1 h-full w-2 cursor-col-resize z-30"
+          onMouseDown={startSidebarResizing}
+          onDoubleClick={resetSidebarWidth}
+        />
         <div className="p-4 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-semibold text-foreground">Direct Messages</h2>
           <p className="text-sm text-muted-foreground">Chat with workspace members</p>
         </div>
         
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden chat-scrollbar">
           {sortedMembers.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground">
               No members available

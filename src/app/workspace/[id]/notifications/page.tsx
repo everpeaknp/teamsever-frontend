@@ -113,7 +113,7 @@ export default function NotificationsPage() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
@@ -161,7 +161,7 @@ export default function NotificationsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Browser Notification Permission */}
         {permission !== 'granted' && (
           <div className="mb-6 bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">

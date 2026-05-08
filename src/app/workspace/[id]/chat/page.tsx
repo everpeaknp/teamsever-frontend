@@ -230,8 +230,7 @@ export default function GroupChatPage() {
       >
         <div
           className={cn(
-            "hidden md:block absolute top-0 right-0 h-full w-1 cursor-col-resize z-30 group/resize",
-            isResizingChannels ? "bg-slate-300/40 dark:bg-slate-600/30" : "hover:bg-slate-300/20 dark:hover:bg-slate-600/20"
+            "hidden md:block absolute top-0 -right-1 h-full w-2 cursor-col-resize z-30"
           )}
           onMouseDown={startChannelResizing}
           onDoubleClick={resetChannelSidebarWidth}
