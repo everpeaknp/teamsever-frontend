@@ -1,14 +1,19 @@
 'use client';
 
+import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface TeamAvailabilityProps {
   members: any[];
 }
 
 export function TeamAvailability({ members }: TeamAvailabilityProps) {
+  const [expanded, setExpanded] = useState(false);
+  const COLLAPSED_COUNT = 6;
+
   const getInitials = (name: string) => {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
   };
@@ -24,11 +29,19 @@ export function TeamAvailability({ members }: TeamAvailabilityProps) {
     }
   };
 
-  const displayMembers = [...members].sort((a: any, b: any) => {
-    const aStatus = a?.status === 'active' ? 1 : 0;
-    const bStatus = b?.status === 'active' ? 1 : 0;
-    return bStatus - aStatus;
-  });
+  const sortedMembers = useMemo(
+    () =>
+      [...members].sort((a: any, b: any) => {
+        const aStatus = a?.status === 'active' ? 1 : 0;
+        const bStatus = b?.status === 'active' ? 1 : 0;
+        return bStatus - aStatus;
+      }),
+    [members]
+  );
+
+  const displayMembers = expanded
+    ? sortedMembers
+    : sortedMembers.slice(0, COLLAPSED_COUNT);
 
   return (
     <Card className="flex flex-col">
@@ -68,6 +81,21 @@ export function TeamAvailability({ members }: TeamAvailabilityProps) {
               </div>
             );
           })
+        )}
+
+        {sortedMembers.length > COLLAPSED_COUNT && (
+          <div className="pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => setExpanded((prev) => !prev)}
+            >
+              {expanded
+                ? `Show Less`
+                : `Show All (${sortedMembers.length})`}
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
