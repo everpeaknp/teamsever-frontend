@@ -35,6 +35,7 @@ export default function GroupChatPage() {
   const [channelSidebarWidth, setChannelSidebarWidth] = useState(320);
   const [isResizingChannels, setIsResizingChannels] = useState(false);
   const isResizingRef = useRef(false);
+  const channelSidebarRef = useRef<HTMLDivElement>(null);
 
   const MIN_CHANNEL_SIDEBAR_WIDTH = 260;
   const MAX_CHANNEL_SIDEBAR_WIDTH = 520;
@@ -140,9 +141,10 @@ export default function GroupChatPage() {
 
   const resizeChannelSidebar = useCallback((e: MouseEvent) => {
     if (!isResizingRef.current) return;
+    const containerLeft = channelSidebarRef.current?.getBoundingClientRect().left ?? 0;
     const nextWidth = Math.max(
       MIN_CHANNEL_SIDEBAR_WIDTH,
-      Math.min(MAX_CHANNEL_SIDEBAR_WIDTH, e.clientX)
+      Math.min(MAX_CHANNEL_SIDEBAR_WIDTH, e.clientX - containerLeft)
     );
     setChannelSidebarWidth(nextWidth);
   }, []);
@@ -224,6 +226,7 @@ export default function GroupChatPage() {
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}
       style={{ ['--channel-sidebar-width' as any]: `${channelSidebarWidth}px` }}
+      ref={channelSidebarRef}
       >
         <div
           className={cn(
@@ -232,9 +235,7 @@ export default function GroupChatPage() {
           )}
           onMouseDown={startChannelResizing}
           onDoubleClick={resetChannelSidebarWidth}
-          title="Drag to resize"
         >
-          <div className="absolute right-0 top-0 h-full w-px bg-slate-300/80 dark:bg-slate-700/80 opacity-0 group-hover/resize:opacity-100 transition-opacity" />
         </div>
         <ChatSidebar
           workspaceId={workspaceId}
