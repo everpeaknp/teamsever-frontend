@@ -33,7 +33,18 @@ export default function SuperAdminLoginPage() {
       const response = await api.post('/auth/login', { email, password });
       
       if (response.data.success) {
-        const { token, user } = response.data;
+        // Backend login payload shape:
+        // { success, message, data: { token, user } }
+        // Keep backward compatibility with older direct shape as fallback.
+        const payload = response.data?.data || response.data || {};
+        const token = payload.token;
+        const user = payload.user;
+
+        if (!token || !user) {
+          setError('Login response is invalid. Please try again.');
+          setLoading(false);
+          return;
+        }
         
         if (!user.isSuperUser) {
           setError('Access denied. Super administrators only.');
