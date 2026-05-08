@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/axios';
 import { List, Workspace } from '@/types';
 import dynamic from 'next/dynamic';
@@ -70,6 +70,7 @@ const CustomTableView = dynamic(
 export default function SpaceHomePage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const workspaceId = params.id as string;
   const spaceId = params.spaceId as string;
   const { setWorkspaceContext, currentWorkspaceId, currentWorkspaceRole } = useAuthStore();
@@ -81,25 +82,27 @@ export default function SpaceHomePage() {
   const [highlightedFolderId, setHighlightedFolderId] = useState<string | null>(null);
   
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const folderId = urlParams.get('folder');
-      if (folderId) {
-        setHighlightedFolderId(folderId);
-        // Auto-expand the folder
-        setExpandedFolders(prev => ({ ...prev, [folderId]: true }));
-        // Remove highlight after 3 seconds
-        setTimeout(() => setHighlightedFolderId(null), 3000);
-        // Scroll to folder
-        setTimeout(() => {
-          const folderElement = document.getElementById(`folder-${folderId}`);
-          if (folderElement) {
-            folderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 100);
+    const folderId = searchParams.get('folder');
+    if (!folderId) return;
+
+    setHighlightedFolderId(folderId);
+    // Auto-expand the folder
+    setExpandedFolders(prev => ({ ...prev, [folderId]: true }));
+    // Remove highlight after 3 seconds
+    const highlightTimer = setTimeout(() => setHighlightedFolderId(null), 3000);
+    // Scroll to folder
+    const scrollTimer = setTimeout(() => {
+      const folderElement = document.getElementById(`folder-${folderId}`);
+      if (folderElement) {
+        folderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
-    }
-  }, []);
+    }, 100);
+
+    return () => {
+      clearTimeout(highlightTimer);
+      clearTimeout(scrollTimer);
+    };
+  }, [searchParams]);
   
   // State for space permission level
   const [spacePermissionLevel, setSpacePermissionLevel] = useState<SpacePermissionLevel | null>(null);
@@ -858,13 +861,13 @@ export default function SpaceHomePage() {
           
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Lists</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Folders</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-3xl font-bold">{accessibleLists.length}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{accessibleFolders.length} folders</p>
+                  <div className="text-3xl font-bold">{accessibleFolders.length}</div>
+                  <p className="text-xs text-muted-foreground mt-1">{accessibleLists.length} lists in this space</p>
                 </div>
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${spaceColor}20` }}>
                   <FileText className="w-6 h-6" style={{ color: spaceColor }} />
@@ -1076,15 +1079,22 @@ export default function SpaceHomePage() {
                 >
                   <CardContent className="p-0">
                     <div className={`flex items-center justify-between p-4 border-b transition-colors duration-300 ${highlightedFolderId === folder._id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                      <button 
-                        onClick={() => toggleFolder(folder._id)} 
-                        className="flex items-center gap-3 flex-1 hover:opacity-80 transition-opacity min-w-0"
-                      >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <button
+                          onClick={() => toggleFolder(folder._id)}
+                          className="flex items-center hover:opacity-80 transition-opacity"
+                          aria-label={expandedFolders[folder._id] ? 'Collapse folder' : 'Expand folder'}
+                        >
                         {expandedFolders[folder._id] ? (
                           <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                         ) : (
                           <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
                         )}
+                        </button>
+                        <button
+                          onClick={() => router.push(`/workspace/${workspaceId}/spaces/${spaceId}/folders/${folder._id}`)}
+                          className="flex items-center gap-3 min-w-0 flex-1 text-left hover:opacity-80 transition-opacity"
+                        >
                         <div 
                           className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" 
                           style={{ backgroundColor: `${folder.color || spaceColor}20` }}
@@ -1095,7 +1105,8 @@ export default function SpaceHomePage() {
                           <h3 className="font-semibold truncate">{folder.name}</h3>
                           <p className="text-sm text-muted-foreground">{folder.lists?.length || 0} lists</p>
                         </div>
-                      </button>
+                        </button>
+                      </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         {canCreateContent && (
                           <Button

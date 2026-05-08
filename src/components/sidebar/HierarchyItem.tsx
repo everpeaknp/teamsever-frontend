@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ChevronRight,
   Folder,
@@ -40,6 +40,8 @@ const TREE_CONNECTOR_X_OFFSET = -10;
 
 export const HierarchyItemComponent = React.memo(function HierarchyItemComponent({ item, level, workspaceId, parentSpaceId }: HierarchyItemProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   
   // Optimized selectors
   const expandedIds = useUIStore(state => state.expandedIds);
@@ -106,7 +108,7 @@ const getRoute = () => {
 
     case 'folder':
       if (!parentSpaceId) return '#';
-      return `/workspace/${workspaceId}/spaces/${parentSpaceId}?folder=${item._id}`;
+      return `/workspace/${workspaceId}/spaces/${parentSpaceId}/folders/${item._id}`;
 
     case 'list':
       if (!parentSpaceId) return '#';
@@ -118,7 +120,13 @@ const getRoute = () => {
 };
 
   const route = getRoute();
-  const isActive = pathname === route;
+  const activeFolderId = searchParams.get('folder');
+  const isActive = item.type === 'folder'
+    ? (
+      pathname === `/workspace/${workspaceId}/spaces/${parentSpaceId}/folders/${item._id}` ||
+      (pathname === `/workspace/${workspaceId}/spaces/${parentSpaceId}` && activeFolderId === item._id)
+    )
+    : pathname === route;
 
   // Handle click on chevron
   const handleToggle = (e: React.MouseEvent) => {
@@ -152,6 +160,11 @@ const getRoute = () => {
     toggleFavorite(item._id);
   };
 
+  const handleRowClick = () => {
+    if (route === '#') return;
+    router.push(route);
+  };
+
   return (
     <div>
       {/* Main Item Row */}
@@ -164,7 +177,17 @@ const getRoute = () => {
         <div className={cn(
           "flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-all duration-200 glass-hover",
           isActive ? "bg-primary/10 dark:bg-primary/20" : ""
-        )}>
+        )}
+          onClick={handleRowClick}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleRowClick();
+            }
+          }}
+        >
           {/* Chevron - Only show if has children */}
           <button
             onClick={handleToggle}
@@ -188,7 +211,7 @@ const getRoute = () => {
           {/* Icon */}
           <div className="flex-shrink-0 opacity-90">{getIcon()}</div>
 
-          {/* Name - Clickable Link */}
+          {/* Name */}
           <Link
             href={route}
             className={cn(
@@ -196,6 +219,7 @@ const getRoute = () => {
               isActive && 'text-slate-900 dark:text-white font-semibold',
               !isActive && 'text-slate-500 dark:text-slate-400 font-medium'
             )}
+            onClick={(e) => e.stopPropagation()}
           >
             {item.name}
           </Link>

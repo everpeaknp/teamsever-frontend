@@ -22,6 +22,7 @@ import {
   Settings,
   UserPlus,
   Users,
+  Clock3,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,6 +76,7 @@ export default function ListView() {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [space, setSpace] = useState<Space | null>(null);
   const [list, setList] = useState<List | null>(null);
+  const [folderContext, setFolderContext] = useState<{ id: string; name: string } | null>(null);
   const [view, setView] = useState<'list' | 'board' | 'calendar' | 'activity'>('board');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
@@ -140,6 +142,18 @@ export default function ListView() {
       setWorkspace(workspaceData);
       setSpace(spaceData);
       setList(listData);
+
+      // Resolve folder context for breadcrumb/back navigation.
+      if (listData?.folderId && Array.isArray((spaceData as any)?.folders)) {
+        const parentFolder = (spaceData as any).folders.find((f: any) => f._id === listData.folderId);
+        if (parentFolder) {
+          setFolderContext({ id: parentFolder._id, name: parentFolder.name });
+        } else {
+          setFolderContext(null);
+        }
+      } else {
+        setFolderContext(null);
+      }
 
       // Check if space is inactive
       const spaceStatus = spaceData.status || 'active';
@@ -466,11 +480,22 @@ export default function ListView() {
             </button>
             <span>/</span>
             <button
-              onClick={() => router.push(`/workspace/${workspaceId}`)}
+              onClick={() => router.push(`/workspace/${workspaceId}/spaces/${spaceId}`)}
               className="hover:text-foreground transition-colors truncate"
             >
               {space?.name || 'Space'}
             </button>
+            {folderContext && (
+              <>
+                <span>/</span>
+                <button
+                  onClick={() => router.push(`/workspace/${workspaceId}/spaces/${spaceId}?folder=${folderContext.id}`)}
+                  className="hover:text-foreground transition-colors truncate"
+                >
+                  {folderContext.name}
+                </button>
+              </>
+            )}
             <span>/</span>
             <span className="text-foreground font-medium truncate">{list?.name || 'List'}</span>
           </div>
@@ -478,7 +503,13 @@ export default function ListView() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <button
-                onClick={() => router.push(`/workspace/${workspaceId}/spaces/${spaceId}`)}
+                onClick={() =>
+                  router.push(
+                    folderContext
+                      ? `/workspace/${workspaceId}/spaces/${spaceId}?folder=${folderContext.id}`
+                      : `/workspace/${workspaceId}/spaces/${spaceId}`
+                  )
+                }
                 className="p-1.5 sm:p-2 hover:bg-accent rounded-lg transition-colors flex-shrink-0"
               >
                 <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1451,67 +1482,61 @@ function ActivityItem({ activity }: ActivityItemProps) {
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex gap-3">
-          {/* Avatar */}
-          <Avatar className="w-10 h-10 flex-shrink-0">
-            <AvatarImage src={user.avatar} />
-            <AvatarFallback className="bg-blue-600 text-white text-sm">
-              {getInitials(user.name)}
-            </AvatarFallback>
-          </Avatar>
+    <div className="py-3">
+      <div className="flex gap-3">
+        <Avatar className="w-10 h-10 flex-shrink-0">
+          <AvatarImage src={user.avatar} />
+          <AvatarFallback className="bg-blue-600 text-white text-sm">
+            {getInitials(user.name)}
+          </AvatarFallback>
+        </Avatar>
 
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="text-sm text-foreground mb-1">
-              {getActivityDescription()}
+        <div className="flex-1 min-w-0">
+          <div className="text-sm text-foreground leading-7">
+            {getActivityDescription()}
+          </div>
+
+          {activity.type === 'comment' && activity.content && (
+            <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
+              {activity.content}
+            </p>
+          )}
+
+          {activity.type === 'update' && activity.fieldChanged !== 'title' && (
+            <div className="mt-2 flex items-center gap-2 text-sm">
+              {activity.fieldChanged === 'status' && (
+                <>
+                  {getStatusBadge(activity.oldValue)}
+                  <span className="text-muted-foreground">→</span>
+                  {getStatusBadge(activity.newValue)}
+                </>
+              )}
+              {activity.fieldChanged === 'priority' && (
+                <>
+                  {getPriorityBadge(activity.oldValue)}
+                  <span className="text-muted-foreground">→</span>
+                  {getPriorityBadge(activity.newValue)}
+                </>
+              )}
+              {activity.fieldChanged === 'assignee' && (
+                <span className="text-muted-foreground">
+                  {activity.oldValue?.name || 'Unassigned'} → {activity.newValue?.name || 'Unassigned'}
+                </span>
+              )}
+              {!['status', 'priority', 'assignee'].includes(activity.fieldChanged) && (
+                <span className="text-muted-foreground">
+                  {String(activity.oldValue || 'None')} → {String(activity.newValue || 'None')}
+                </span>
+              )}
             </div>
-            
-            {/* Comment Content */}
-            {activity.type === 'comment' && activity.content && (
-              <div className="mt-2 p-3 bg-muted/50 rounded-lg border border-border">
-                <p className="text-sm text-foreground">{activity.content}</p>
-              </div>
-            )}
-            
-            {/* Update Details */}
-            {activity.type === 'update' && activity.fieldChanged !== 'title' && (
-              <div className="mt-2 flex items-center gap-2 text-sm">
-                {activity.fieldChanged === 'status' && (
-                  <>
-                    {getStatusBadge(activity.oldValue)}
-                    <span className="text-muted-foreground">→</span>
-                    {getStatusBadge(activity.newValue)}
-                  </>
-                )}
-                {activity.fieldChanged === 'priority' && (
-                  <>
-                    {getPriorityBadge(activity.oldValue)}
-                    <span className="text-muted-foreground">→</span>
-                    {getPriorityBadge(activity.newValue)}
-                  </>
-                )}
-                {activity.fieldChanged === 'assignee' && (
-                  <span className="text-muted-foreground">
-                    {activity.oldValue?.name || 'Unassigned'} → {activity.newValue?.name || 'Unassigned'}
-                  </span>
-                )}
-                {!['status', 'priority', 'assignee'].includes(activity.fieldChanged) && (
-                  <span className="text-muted-foreground">
-                    {String(activity.oldValue || 'None')} → {String(activity.newValue || 'None')}
-                  </span>
-                )}
-              </div>
-            )}
-            
-            {/* Timestamp */}
-            <div className="mt-2 text-xs text-muted-foreground">
-              {formatTime(activity.createdAt)}
-            </div>
+          )}
+
+          <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+            <Clock3 className="w-4 h-4" />
+            <span>{formatTime(activity.createdAt)}</span>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
