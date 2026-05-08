@@ -43,7 +43,7 @@ export default function NotificationsPage() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await api.get('/notifications');
+      const response = await api.get(`/notifications?workspaceId=${workspaceId}`);
       setNotifications(response.data.data || []);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -63,7 +63,7 @@ export default function NotificationsPage() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await api.post('/notifications/read-all');
+      await api.patch(`/notifications/read-all?workspaceId=${workspaceId}`);
       markAllAsRead();
     } catch (error) {
       console.error('Failed to mark all as read:', error);

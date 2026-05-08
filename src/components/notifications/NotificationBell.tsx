@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { api } from '@/lib/axios';
 import { useNotificationStore, Notification } from '@/store/useNotificationStore';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 export function NotificationBell() {
   const router = useRouter();
+  const pathname = usePathname();
   const {
     notifications,
     unreadCount,
@@ -32,6 +33,8 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const workspaceMatch = pathname?.match(/\/workspace\/([^/]+)/);
+  const scopedWorkspaceId = workspaceMatch?.[1];
 
   // Fetch notifications on mount
   useEffect(() => {
@@ -46,7 +49,7 @@ export function NotificationBell() {
     
     fetchNotifications();
     fetchUnreadCount();
-  }, []);
+  }, [scopedWorkspaceId]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -77,7 +80,7 @@ export function NotificationBell() {
       
       setLoading(true);
       // Only fetch unread notifications for the bell dropdown
-      const response = await api.get('/notifications?limit=20&unreadOnly=true');
+      const response = await api.get(`/notifications?limit=20&unreadOnly=true${scopedWorkspaceId ? `&workspaceId=${scopedWorkspaceId}` : ''}`);
       setNotifications(response.data.data || []);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -96,7 +99,7 @@ export function NotificationBell() {
         }
       }
       
-      const response = await api.get('/notifications/unread-count');
+      const response = await api.get(`/notifications/unread-count${scopedWorkspaceId ? `?workspaceId=${scopedWorkspaceId}` : ''}`);
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {
       console.error('Failed to fetch unread count:', error);
@@ -201,7 +204,7 @@ export function NotificationBell() {
                 onClick={async () => {
                   try {
                     // Call backend API to mark all as read
-                    await api.patch('/notifications/read-all');
+                    await api.patch(`/notifications/read-all${scopedWorkspaceId ? `?workspaceId=${scopedWorkspaceId}` : ''}`);
                     
                     // Clear all notifications from the bell dropdown
                     const { clearNotifications } = useNotificationStore.getState();
