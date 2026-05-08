@@ -198,8 +198,8 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
   }, [channels]);
 
   return (
-    <div className="w-full md:w-64 lg:w-80 bg-card border-r border-border flex flex-col h-full overflow-hidden">
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-3 md:p-4 space-y-6">
+    <div className="w-full md:w-64 lg:w-80 bg-card border-r border-border flex flex-col h-full min-w-0 overflow-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar p-3 md:p-4 space-y-6">
         
         {/* Public Channels */}
         <div>
