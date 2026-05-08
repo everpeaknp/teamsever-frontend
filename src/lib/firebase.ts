@@ -1,5 +1,13 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, GithubAuthProvider, signInWithPopup, Auth, linkWithPopup } from 'firebase/auth';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  signInWithPopup,
+  Auth,
+  fetchSignInMethodsForEmail,
+  linkWithCredential,
+} from 'firebase/auth';
 import { getMessaging, getToken, onMessage, Messaging, isSupported } from 'firebase/messaging';
 
 // Firebase configuration from your project
@@ -40,6 +48,7 @@ googleProvider.setCustomParameters({
 // GitHub Auth Provider
 export const githubProvider = new GithubAuthProvider();
 githubProvider.addScope('read:user');
+githubProvider.addScope('user:email');
 
 // Sign in with Google
 export const signInWithGoogle = async () => {
@@ -58,6 +67,40 @@ export const signInWithGithub = async () => {
     const result = await signInWithPopup(auth, githubProvider);
     return result;
   } catch (error: any) {
+    // Handle "account exists with different credential" by linking GitHub
+    // to the existing Firebase account when possible.
+    if (error?.code === 'auth/account-exists-with-different-credential') {
+      const pendingCredential = GithubAuthProvider.credentialFromError(error);
+      const email = error?.customData?.email;
+
+      if (!pendingCredential || !email) {
+        throw new Error('GitHub sign-in failed. Please try again.');
+      }
+
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+
+      // Auto-resolve most common case: existing Google account.
+      if (methods.includes('google.com')) {
+        const googleResult = await signInWithPopup(auth, googleProvider);
+        if (!googleResult.user) {
+          throw new Error('Could not sign in with Google to link your GitHub account.');
+        }
+        await linkWithCredential(googleResult.user, pendingCredential);
+        return googleResult;
+      }
+
+      // Email/password account case: ask user to login with password first.
+      if (methods.includes('password')) {
+        throw new Error(
+          'This email already uses password login. Login with email/password first, then link GitHub from Account settings.'
+        );
+      }
+
+      throw new Error(
+        `This email already exists with: ${methods.join(', ')}. Login with that method first, then link GitHub in Account settings.`
+      );
+    }
+
     console.error('GitHub Sign-In Error:', error);
     throw error;
   }
