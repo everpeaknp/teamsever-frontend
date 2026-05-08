@@ -124,6 +124,8 @@ export const useChatStore = create<ChatStore>()(
       },
 
       addMessage: (roomId: string, message: ChatMessage) => {
+        let wasInserted = false;
+
         set((state) => {
           const existingRoom = state.rooms[roomId];
           const inferredType: 'workspace' | 'direct' =
@@ -139,6 +141,14 @@ export const useChatStore = create<ChatStore>()(
             participants: undefined,
           };
 
+          // Prevent duplicate inserts when the same socket event is handled
+          // by multiple listeners (global + page-level).
+          if ((baseRoom.messages || []).some((m) => m._id === message._id)) {
+            return state;
+          }
+
+          wasInserted = true;
+
           return {
             rooms: {
               ...state.rooms,
@@ -151,6 +161,8 @@ export const useChatStore = create<ChatStore>()(
             },
           };
         });
+
+        if (!wasInserted) return;
 
         const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
         
