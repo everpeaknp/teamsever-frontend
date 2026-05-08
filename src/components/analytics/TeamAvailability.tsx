@@ -24,7 +24,11 @@ export function TeamAvailability({ members }: TeamAvailabilityProps) {
     }
   };
 
-  const displayMembers = members.slice(0, 5);
+  const displayMembers = [...members].sort((a: any, b: any) => {
+    const aStatus = a?.status === 'active' ? 1 : 0;
+    const bStatus = b?.status === 'active' ? 1 : 0;
+    return bStatus - aStatus;
+  });
 
   return (
     <Card className="flex flex-col">
@@ -38,13 +42,13 @@ export function TeamAvailability({ members }: TeamAvailabilityProps) {
             <p className="text-sm">No team members</p>
           </div>
         ) : (
-          displayMembers.map((member: any) => {
+          displayMembers.map((member: any, index: number) => {
             const user = typeof member.user === 'object' ? member.user : member;
             const userName = user?.name || 'Unknown';
             const userAvatar = user?.avatar;
             
             return (
-              <div key={member._id || member.user} className="flex items-center justify-between">
+              <div key={member._id || user?._id || `${userName}-${index}`} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <Avatar className="w-10 h-10">
