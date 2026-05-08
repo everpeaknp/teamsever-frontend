@@ -86,10 +86,12 @@ interface Comment {
 
 interface Activity {
   _id: string;
-  type: string;
+  type: 'comment' | 'update' | string;
+  content?: string;
   field?: string;
-  oldValue?: string;
-  newValue?: string;
+  fieldChanged?: string;
+  oldValue?: any;
+  newValue?: any;
   user: {
     _id: string;
     name: string;
@@ -307,6 +309,32 @@ export function TaskDetailSidebar() {
   };
 
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  const formatActivityField = (field?: string) => {
+    if (!field) return 'task';
+    const labels: Record<string, string> = {
+      status: 'status',
+      assignee: 'assignee',
+      priority: 'priority',
+      dueDate: 'due date',
+      startDate: 'start date',
+      deadline: 'deadline',
+      title: 'title',
+      description: 'description',
+      list: 'list',
+    };
+    return labels[field] || field;
+  };
+
+  const formatActivityValue = (value: any) => {
+    if (value === null || value === undefined || value === '') return 'none';
+    if (typeof value === 'object') {
+      if (value.name) return value.name;
+      if (value.email) return value.email;
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
 
   // Auto-resize description textarea based on content
   useEffect(() => {
@@ -558,14 +586,28 @@ export function TaskDetailSidebar() {
                           />
                             <div className="flex-1">
                               <p className="text-gray-700">
-                                <span className="font-medium">{activity.user.name}</span>{' '}
-                                {activity.field && (
+                                <span className="font-medium">{activity.user.name}</span>
+                                {activity.type === 'comment' ? (
                                   <>
-                                    changed <span className="font-medium">{activity.field}</span>
-                                    {activity.oldValue && activity.newValue && (
+                                    {' '}commented
+                                    {activity.content ? (
                                       <>
-                                        {' '}from <span className="font-medium">{activity.oldValue}</span> to{' '}
-                                        <span className="font-medium">{activity.newValue}</span>
+                                        : <span className="text-gray-800">{activity.content}</span>
+                                      </>
+                                    ) : null}
+                                  </>
+                                ) : (
+                                  <>
+                                    {' '}changed{' '}
+                                    <span className="font-medium">
+                                      {formatActivityField(activity.fieldChanged || activity.field)}
+                                    </span>
+                                    {(activity.oldValue !== undefined || activity.newValue !== undefined) && (
+                                      <>
+                                        {' '}from{' '}
+                                        <span className="font-medium">{formatActivityValue(activity.oldValue)}</span>
+                                        {' '}to{' '}
+                                        <span className="font-medium">{formatActivityValue(activity.newValue)}</span>
                                       </>
                                     )}
                                   </>
