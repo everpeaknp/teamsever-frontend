@@ -156,7 +156,7 @@ export default function GroupChatPage() {
       )}
 
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:z-20 md:shrink-0",
+        "fixed inset-y-0 left-0 z-50 w-72 md:w-64 lg:w-80 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:z-20 md:shrink-0",
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <ChatSidebar

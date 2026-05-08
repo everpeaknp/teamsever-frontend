@@ -545,7 +545,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 custom-scrollbar"
+        className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 chat-scrollbar"
         style={{
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(148, 163, 184, 0.45) transparent'
