@@ -55,12 +55,19 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   processedNotificationIds: new Set(),
 
   setNotifications: (notifications) => {
-    const unreadCount = notifications.filter((n) => !n.read).length;
-    set({ notifications, unreadCount });
+    const deduped = notifications.filter(
+      (n, idx, arr) => arr.findIndex((x) => x._id === n._id) === idx
+    );
+    const unreadCount = deduped.filter((n) => !n.read).length;
+    set({ notifications: deduped, unreadCount });
   },
 
   addNotification: (notification) => {
     const { notifications } = get();
+    // Prevent duplicate inserts when same event arrives via multiple paths.
+    if (notifications.some((n) => n._id === notification._id)) {
+      return;
+    }
     const newNotifications = [notification, ...notifications];
     const unreadCount = newNotifications.filter((n) => !n.read).length;
     

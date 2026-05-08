@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/axios';
-import { useSocket } from '@/contexts/SocketContext';
 import { useNotificationStore, Notification } from '@/store/useNotificationStore';
 import { toast } from 'sonner';
 import {
@@ -21,13 +20,10 @@ import { formatDistanceToNow } from 'date-fns';
 
 export function NotificationBell() {
   const router = useRouter();
-  const { socket } = useSocket();
   const {
     notifications,
     unreadCount,
     setNotifications,
-    addNotification,
-    markAsRead,
     removeNotification,
     setUnreadCount,
     setLoading,
@@ -51,25 +47,6 @@ export function NotificationBell() {
     fetchNotifications();
     fetchUnreadCount();
   }, []);
-
-  // Socket listener for real-time notifications
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleNewNotification = (data: { notification: Notification }) => {
-      console.log('[NotificationBell] New notification received:', data);
-      addNotification(data.notification);
-      
-      // Play notification sound (optional)
-      // playNotificationSound();
-    };
-
-    socket.on('notification:new', handleNewNotification);
-
-    return () => {
-      socket.off('notification:new', handleNewNotification);
-    };
-  }, [socket, addNotification]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

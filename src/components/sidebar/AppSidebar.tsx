@@ -151,14 +151,20 @@ export function AppSidebar() {
   );
   
   const inboxUnread = useChatStore(state => {
-    const directRooms = Object.values(state.rooms).filter(room => room.type === 'direct');
+    const isConversationId = (roomId: string) => /^[a-fA-F0-9]{24}$/.test(roomId);
+    const directRooms = Object.values(state.rooms).filter(room =>
+      room.type === 'direct' || isConversationId(room.roomId)
+    );
     const filteredRooms = directRooms.filter(room => {
       // If we have workspace members, only count rooms with those members
       if (workspaceMembers.length > 0) {
+        // Socket-created rooms may not have participants yet; include them so realtime badges still work.
+        if (!room.participants || room.participants.length === 0) return true;
         const isMatch = room.participants?.some(p => workspaceMembers.includes(p));
         return isMatch;
       }
-      return false; // Don't show anything until members are loaded
+      // Fallback: still show realtime unread if member list isn't loaded yet.
+      return true;
     });
 
     const total = filteredRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
@@ -199,27 +205,6 @@ export function AppSidebar() {
     return () => window.removeEventListener('workspace-updated', handleWorkspaceUpdate);
   }, [workspaceId, fetchHierarchy]);
   
-  // Clear stale DM unread counts when workspace changes
-  useEffect(() => {
-    if (workspaceId && isClient) {
-      const { rooms } = useChatStore.getState();
-      const roomsToUpdate = { ...rooms };
-      let hasChanges = false;
-
-      Object.keys(roomsToUpdate).forEach(roomId => {
-        if (roomsToUpdate[roomId].type === 'direct' && roomsToUpdate[roomId].unreadCount > 0) {
-          roomsToUpdate[roomId] = { ...roomsToUpdate[roomId], unreadCount: 0 };
-          hasChanges = true;
-        }
-      });
-
-      if (hasChanges) {
-        console.log('[AppSidebar] Resetting stale DM counts for workspace sync');
-        useChatStore.setState({ rooms: roomsToUpdate });
-      }
-    }
-  }, [workspaceId, isClient]);
-
   // Sync unread counts on mount
   useEffect(() => {
     const syncUnreadCounts = async () => {
@@ -248,22 +233,26 @@ export function AppSidebar() {
           const conversations = response.data.data || [];
           
           conversations.forEach((conv: any) => {
-            if (conv.unreadCount > 0) {
-              // Ensure room exists
-              createRoom(conv._id, 'direct', undefined, conv.participants.map((p: any) => p._id));
-              // Update unread count manually
-              const rooms = useChatStore.getState().rooms;
-              if (rooms[conv._id]) {
-                useChatStore.setState({
-                  rooms: {
-                    ...rooms,
-                    [conv._id]: {
-                      ...rooms[conv._id],
-                      unreadCount: conv.unreadCount
-                    }
+            // Ensure room exists for every conversation (not only unread > 0)
+            const participants = (conv.participants || [])
+              .map((p: any) => (typeof p === 'string' ? p : p?._id))
+              .filter(Boolean);
+            createRoom(conv._id, 'direct', undefined, participants);
+
+            // Apply authoritative unread count from API
+            const rooms = useChatStore.getState().rooms;
+            if (rooms[conv._id]) {
+              useChatStore.setState({
+                rooms: {
+                  ...rooms,
+                  [conv._id]: {
+                    ...rooms[conv._id],
+                    type: 'direct',
+                    unreadCount: Number(conv.unreadCount || 0),
+                    participants: participants.length > 0 ? participants : rooms[conv._id].participants,
                   }
-                });
-              }
+                }
+              });
             }
           });
         } catch (error) {

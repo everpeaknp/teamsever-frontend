@@ -124,25 +124,32 @@ export const useChatStore = create<ChatStore>()(
       },
 
       addMessage: (roomId: string, message: ChatMessage) => {
-        const rooms = get().rooms;
-        const room = rooms[roomId];
-        
-        if (!room) {
-          // Create room if it doesn't exist
-          // DMs have conversation ID, workspace messages have workspace ID
-          const type = (message.conversation || roomId.startsWith('dm_')) ? 'direct' : 'workspace';
-          get().createRoom(roomId, type, message.workspace);
-        }
+        set((state) => {
+          const existingRoom = state.rooms[roomId];
+          const inferredType: 'workspace' | 'direct' =
+            (message.conversation || roomId.startsWith('dm_')) ? 'direct' : 'workspace';
 
-        set({
-          rooms: {
-            ...rooms,
-            [roomId]: {
-              ...rooms[roomId],
-              messages: [...(rooms[roomId]?.messages || []), message],
-              lastMessage: message,
+          const baseRoom = existingRoom || {
+            roomId,
+            type: inferredType,
+            messages: [],
+            unreadCount: 0,
+            draft: '',
+            workspaceId: typeof message.workspace === 'string' ? message.workspace : undefined,
+            participants: undefined,
+          };
+
+          return {
+            rooms: {
+              ...state.rooms,
+              [roomId]: {
+                ...baseRoom,
+                unreadCount: typeof baseRoom.unreadCount === 'number' ? baseRoom.unreadCount : 0,
+                messages: [...(baseRoom.messages || []), message],
+                lastMessage: message,
+              },
             },
-          },
+          };
         });
 
         const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
@@ -222,12 +229,13 @@ export const useChatStore = create<ChatStore>()(
         const rooms = get().rooms;
         const room = rooms[roomId];
         if (room) {
+          const currentUnread = typeof room.unreadCount === 'number' ? room.unreadCount : 0;
           set({
             rooms: {
               ...rooms,
               [roomId]: {
                 ...room,
-                unreadCount: room.unreadCount + 1,
+                unreadCount: currentUnread + 1,
               },
             },
           });

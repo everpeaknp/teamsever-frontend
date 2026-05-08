@@ -151,23 +151,55 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       const handleGlobalChatMessage = (data: { message: any }) => {
         const { addMessage } = useChatStore.getState();
-        
-        const roomId = `workspace_${data.message.workspace}`;
+
+        const workspaceId =
+          typeof data.message.workspace === 'string'
+            ? data.message.workspace
+            : data.message.workspace?._id?.toString?.() || data.message.workspace?.toString?.();
+        if (!workspaceId) return;
+
+        const roomId = `workspace_${workspaceId}`;
         addMessage(roomId, data.message);
       };
 
       const handleGlobalDM = (data: { message: any; conversation: any }) => {
-        const { addMessage } = useChatStore.getState();
-        
-        const roomId = data.message.conversation;
+        const { addMessage, createRoom } = useChatStore.getState();
+
+        const roomId =
+          typeof data.message.conversation === 'string'
+            ? data.message.conversation
+            : data.message.conversation?._id?.toString?.() || data.message.conversation?.toString?.();
+        if (!roomId) return;
+
+        const participants = Array.isArray(data?.conversation?.participants)
+          ? data.conversation.participants
+              .map((p: any) => (typeof p === 'string' ? p : p?._id?.toString?.()))
+              .filter(Boolean)
+          : undefined;
+        if (participants && participants.length > 0) {
+          createRoom(roomId, 'direct', undefined, participants);
+        }
+
         addMessage(roomId, data.message);
       };
 
       const handleGlobalNotification = (data: { notification: any }) => {
-        const { addNotification } = useNotificationStore.getState();
-        
-        // Add to local notification store - this already triggers showBrowserNotification internally
-        addNotification(data.notification);
+        const { addNotification, showBrowserNotification, processedNotificationIds } = useNotificationStore.getState();
+        const notification = data?.notification;
+        if (!notification?._id) return;
+
+        // Dedupe across socket + FCM paths.
+        if (processedNotificationIds.has(notification._id)) return;
+        processedNotificationIds.add(notification._id);
+
+        addNotification(notification);
+
+        // Ensure browser popup still works even when FCM foreground path is unavailable.
+        showBrowserNotification(
+          notification.title || 'New Notification',
+          notification.body || '',
+          { ...notification.data, notificationId: notification._id, _id: notification._id }
+        );
       };
 
       socketInstance.on('connect', handleConnect);
