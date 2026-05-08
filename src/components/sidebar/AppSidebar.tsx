@@ -618,10 +618,9 @@ export function AppSidebar() {
             <div
               onMouseDown={startResizing}
               onDoubleClick={resetSidebarWidth}
-              className="absolute top-0 right-0 w-1 h-full cursor-col-resize z-50 hover:bg-blue-500/20 active:bg-blue-500/40 transition-colors"
-              title="Drag to resize, double-click to reset"
+              className="absolute top-0 right-0 w-1 h-full cursor-col-resize z-40 group/resize transition-colors hover:bg-slate-300/30 dark:hover:bg-slate-600/20"
             >
-              <div className="absolute right-0 top-0 w-[2px] h-full bg-blue-500 opacity-0 group-hover/sidebar:opacity-50 transition-opacity" />
+              <div className="absolute right-0 top-0 w-px h-full bg-slate-300/80 dark:bg-slate-700/70 opacity-0 group-hover/resize:opacity-100 transition-opacity" />
             </div>
           )}
           {/* Workspace Header */}
