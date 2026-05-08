@@ -392,7 +392,14 @@ function MetricCard({ title, value, icon, color, badge, subtext }: any) {
                 </div>
                 <div className="flex items-baseline gap-2">
                     <h3 className="text-2xl font-bold">{value}</h3>
-                    {badge && <Badge className="bg-emerald-50 text-emerald-600">{badge}</Badge>}
+                    {badge && (
+                        <Badge
+                            variant="outline"
+                            className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700"
+                        >
+                            {badge}
+                        </Badge>
+                    )}
                     {subtext && <span className="text-xs font-semibold text-emerald-500">{subtext}</span>}
                 </div>
             </CardContent>
