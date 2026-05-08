@@ -158,8 +158,25 @@ export const useChatStore = create<ChatStore>()(
         const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
         const isFromOthers = senderId !== currentUserId;
         
-        if (get().activeRoomId !== roomId && isFromOthers) {
-          get().incrementUnread(roomId);
+        if (isFromOthers) {
+          const activeRoomId = get().activeRoomId;
+          const isActiveRoom = activeRoomId === roomId;
+
+          // Guard against stale activeRoomId suppressing unread badges after navigation.
+          // Only suppress unread when user is actually on the matching chat screen.
+          let isActivelyViewingThisRoom = false;
+          if (typeof window !== 'undefined' && isActiveRoom) {
+            const path = window.location.pathname || '';
+            const isWorkspaceRoom = roomId.startsWith('workspace_') || roomId.startsWith('channel_');
+            const isDirectRoom = !isWorkspaceRoom;
+            isActivelyViewingThisRoom =
+              (isWorkspaceRoom && path.includes('/chat')) ||
+              (isDirectRoom && path.includes('/inbox'));
+          }
+
+          if (!isActivelyViewingThisRoom) {
+            get().incrementUnread(roomId);
+          }
         }
       },
 

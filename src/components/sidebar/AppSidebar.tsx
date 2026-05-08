@@ -146,9 +146,19 @@ export function AppSidebar() {
   }
 
   // Chat unread counts - Optimized selectors
-  const groupChatUnread = useChatStore(state => 
-    workspaceId ? (state.rooms[`workspace_${workspaceId}`]?.unreadCount || 0) : 0
-  );
+  const groupChatUnread = useChatStore(state => {
+    if (!workspaceId) return 0;
+
+    // Aggregate unread across all workspace chat rooms for this workspace.
+    // This includes the synthetic workspace room and per-channel rooms.
+    return Object.values(state.rooms)
+      .filter((room) => {
+        if (room.type !== 'workspace') return false;
+        if (room.workspaceId === workspaceId) return true;
+        return room.roomId === `workspace_${workspaceId}`;
+      })
+      .reduce((sum, room) => sum + (room.unreadCount || 0), 0);
+  });
   
   const inboxUnread = useChatStore(state => {
     const isConversationId = (roomId: string) => /^[a-fA-F0-9]{24}$/.test(roomId);
@@ -264,22 +274,21 @@ export function AppSidebar() {
           try {
             const chatRes = await api.get(`/workspaces/${workspaceId}/chat/unread`);
             const chatUnreadCount = chatRes.data?.data?.unreadCount || 0;
-            
-            if (chatUnreadCount > 0) {
-              const roomId = `workspace_${workspaceId}`;
-              createRoom(roomId, 'workspace', workspaceId);
-              const rooms = useChatStore.getState().rooms;
-              if (rooms[roomId]) {
-                useChatStore.setState({
-                  rooms: {
-                    ...rooms,
-                    [roomId]: {
-                      ...rooms[roomId],
-                      unreadCount: chatUnreadCount
-                    }
+
+            const roomId = `workspace_${workspaceId}`;
+            createRoom(roomId, 'workspace', workspaceId);
+            const rooms = useChatStore.getState().rooms;
+            if (rooms[roomId]) {
+              useChatStore.setState({
+                rooms: {
+                  ...rooms,
+                  [roomId]: {
+                    ...rooms[roomId],
+                    unreadCount: Number(chatUnreadCount || 0),
+                    workspaceId,
                   }
-                });
-              }
+                }
+              });
             }
           } catch (error) {
             console.error('[AppSidebar] Failed to sync group chat unread:', error);
