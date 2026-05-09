@@ -219,7 +219,9 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
           </div>
           <div className="space-y-0.5">
             {publicChannels.map((channel) => {
-              const unread = getRoom(`channel_${channel._id}`)?.unreadCount || 0;
+              const unread = channel.isDefault
+                ? (getRoom(`workspace_${workspaceId}`)?.unreadCount || 0)
+                : (getRoom(`channel_${channel._id}`)?.unreadCount || 0);
               return (
                 <button
                   key={channel._id}

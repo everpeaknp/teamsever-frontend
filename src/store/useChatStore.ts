@@ -141,6 +141,11 @@ export const useChatStore = create<ChatStore>()(
             participants: undefined,
           };
 
+          const messageWorkspaceId =
+            typeof message.workspace === 'string'
+              ? message.workspace
+              : (message.workspace as any)?._id?.toString?.();
+
           // Prevent duplicate inserts when the same socket event is handled
           // by multiple listeners (global + page-level).
           if ((baseRoom.messages || []).some((m) => m._id === message._id)) {
@@ -154,6 +159,7 @@ export const useChatStore = create<ChatStore>()(
               ...state.rooms,
               [roomId]: {
                 ...baseRoom,
+                workspaceId: baseRoom.workspaceId || messageWorkspaceId,
                 unreadCount: typeof baseRoom.unreadCount === 'number' ? baseRoom.unreadCount : 0,
                 messages: [...(baseRoom.messages || []), message],
                 lastMessage: message,
@@ -184,6 +190,16 @@ export const useChatStore = create<ChatStore>()(
             isActivelyViewingThisRoom =
               (isWorkspaceRoom && path.includes('/chat')) ||
               (isDirectRoom && path.includes('/inbox'));
+          }
+
+          if (
+            !isActivelyViewingThisRoom &&
+            typeof window !== 'undefined' &&
+            roomId.startsWith('workspace_') &&
+            activeRoomId?.startsWith('channel_') &&
+            window.location.pathname.includes('/chat')
+          ) {
+            isActivelyViewingThisRoom = true;
           }
 
           if (!isActivelyViewingThisRoom) {

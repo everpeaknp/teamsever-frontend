@@ -359,6 +359,7 @@ export default function InboxPage() {
         {selectedMember && conversationId ? (
           <div className="flex flex-col h-full">
             <ChatWindow
+              workspaceId={workspaceId}
               conversationId={conversationId}
               userId={selectedMember._id}
               type="direct"

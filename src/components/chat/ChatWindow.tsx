@@ -65,7 +65,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     getDraft, 
     setDraft, 
     clearDraft,
-    setActiveRoom
+    setActiveRoom,
+    clearUnread
   } = useChatStore();
   
   // Get or create room
@@ -79,13 +80,34 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       }
       // Set active room - this also clears unread count in useChatStore
       setActiveRoom(roomId);
+      if (type === 'workspace' && workspaceId) {
+        clearUnread(`workspace_${workspaceId}`);
+      }
     }
 
     // Cleanup: clear active room when leaving component
     return () => {
       setActiveRoom('');
     };
-  }, [roomId, type, workspaceId, userId, currentUserId, getRoom, createRoom, setActiveRoom]);
+  }, [roomId, type, workspaceId, userId, currentUserId, getRoom, createRoom, setActiveRoom, clearUnread]);
+
+  useEffect(() => {
+    const syncReadState = async () => {
+      try {
+        if (type === 'workspace' && workspaceId) {
+          await api.patch(`/workspaces/${workspaceId}/chat/read`);
+        } else if (type === 'direct' && conversationId) {
+          await api.patch(`/dm/${conversationId}/read`);
+        }
+      } catch (error) {
+        console.error('[ChatWindow] Failed to sync read state:', error);
+      }
+    };
+
+    if ((type === 'workspace' && workspaceId) || (type === 'direct' && conversationId)) {
+      syncReadState();
+    }
+  }, [type, workspaceId, conversationId]);
 
   // Get draft from store
   const draft = getDraft(roomId);

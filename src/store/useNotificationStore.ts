@@ -73,9 +73,15 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     
     set({ notifications: newNotifications, unreadCount });
 
-    // ONLY update UI state here (unread counts, lists). 
-    // Do NOT show browser notifications from socket events to avoid "double shouting" with FCM.
-    // FCM (onMessageListener) will handle all OS-level popups.
+    // For active users, websocket/store badge is enough.
+    // Only surface browser popup when tab is backgrounded.
+    if (typeof document !== 'undefined' && document.hidden) {
+      get().showBrowserNotification(notification.title, notification.body, {
+        ...(notification.data || {}),
+        notificationId: notification._id,
+        _id: notification._id,
+      });
+    }
   },
 
   markAsRead: (notificationId) => {

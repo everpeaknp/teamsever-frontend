@@ -63,6 +63,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const onInitialLoadRef = useRef(onInitialLoad);
   const socket = getSocket();
+  const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
   
   // Update ref when callback changes
   useEffect(() => {
@@ -195,6 +196,19 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
             ? generateDMRoomId(localStorage.getItem('userId')!, userId) 
             : conversationId!);
         addMessageToStore(roomId, msg);
+
+        const senderId = typeof msg.sender === 'object' ? msg.sender._id : undefined;
+        if (senderId && currentUserId && senderId !== currentUserId) {
+          if (type === 'workspace' && workspaceId) {
+            api.patch(`/workspaces/${workspaceId}/chat/read`).catch((err) => {
+              console.error('[useChat] Failed to mark workspace chat as read:', err);
+            });
+          } else if (type === 'direct' && conversationId) {
+            api.patch(`/dm/${conversationId}/read`).catch((err) => {
+              console.error('[useChat] Failed to mark DM as read:', err);
+            });
+          }
+        }
       }
     };
 
@@ -228,7 +242,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       socket.off('chat:user_typing', handleUserTyping);
       socket.off('chat:user_stop_typing', handleUserStopTyping);
     };
-  }, [socket, type, workspaceId, channelId, conversationId, addMessageToStore]);
+  }, [socket, type, workspaceId, channelId, conversationId, addMessageToStore, currentUserId, userId]);
 
   // Load messages on mount/change
   useEffect(() => {

@@ -153,6 +153,9 @@ export function AppSidebar() {
   });
   
   const inboxUnread = useChatStore(state => {
+    const activeWorkspaceId = workspaceId && workspaceId !== 'undefined' ? workspaceId : '';
+    if (!activeWorkspaceId) return 0;
+
     const isConversationId = (roomId: string) => /^[a-fA-F0-9]{24}$/.test(roomId);
     const directRooms = Object.values(state.rooms).filter(room => room.type === 'direct' || isConversationId(room.roomId));
 
@@ -162,14 +165,13 @@ export function AppSidebar() {
     const roomsToCount = canonicalDirectRooms.length > 0 ? canonicalDirectRooms : directRooms;
 
     const filteredRooms = roomsToCount.filter(room => {
-      // If we have workspace members, only count rooms with those members
-      if (workspaceMembers.length > 0) {
-        // Socket-created rooms may not have participants yet; include them so realtime badges still work.
-        if (!room.participants || room.participants.length === 0) return true;
-        const isMatch = room.participants?.some(p => workspaceMembers.includes(p));
-        return isMatch;
+      // Strict workspace scoping: count only rooms explicitly tagged to active workspace.
+      if (!room.workspaceId || room.workspaceId !== activeWorkspaceId) return false;
+
+      // If we have workspace members, keep an additional membership guard.
+      if (workspaceMembers.length > 0 && room.participants && room.participants.length > 0) {
+        return room.participants.some(p => workspaceMembers.includes(p));
       }
-      // Fallback: still show realtime unread if member list isn't loaded yet.
       return true;
     });
 
@@ -243,7 +245,11 @@ export function AppSidebar() {
             const participants = (conv.participants || [])
               .map((p: any) => (typeof p === 'string' ? p : p?._id))
               .filter(Boolean);
-            createRoom(conv._id, 'direct', undefined, participants);
+            const convWorkspaceId =
+              (typeof conv.workspace === 'string'
+                ? conv.workspace
+                : conv.workspace?._id?.toString?.()) || dmWorkspaceId || undefined;
+            createRoom(conv._id, 'direct', convWorkspaceId, participants);
 
             // Apply authoritative unread count from API
             const rooms = useChatStore.getState().rooms;
@@ -254,6 +260,7 @@ export function AppSidebar() {
                   [conv._id]: {
                     ...rooms[conv._id],
                     type: 'direct',
+                    workspaceId: convWorkspaceId,
                     unreadCount: Number(conv.unreadCount || 0),
                     participants: participants.length > 0 ? participants : rooms[conv._id].participants,
                   }

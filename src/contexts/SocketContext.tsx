@@ -6,6 +6,7 @@ import { initializeSocket, disconnectSocket, getSocket } from '@/lib/socket';
 import { api } from '@/lib/axios';
 import { useChatStore } from '@/store/useChatStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -151,6 +152,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       const handleGlobalChatMessage = (data: { message: any }) => {
         const { addMessage } = useChatStore.getState();
+        const { showBrowserNotification } = useNotificationStore.getState();
 
         const workspaceId =
           typeof data.message.workspace === 'string'
@@ -160,10 +162,31 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         const roomId = `workspace_${workspaceId}`;
         addMessage(roomId, data.message);
+
+        const channelId =
+          typeof data.message.channel === 'string'
+            ? data.message.channel
+            : data.message.channel?._id?.toString?.() || data.message.channel?.toString?.();
+        if (channelId) {
+          addMessage(`channel_${channelId}`, data.message);
+        }
+
+        const currentUserId = useAuthStore.getState().user?._id || localStorage.getItem('userId');
+        const senderId =
+          typeof data?.message?.sender === 'string'
+            ? data.message.sender
+            : data?.message?.sender?._id?.toString?.();
+        if (senderId && currentUserId && senderId !== currentUserId && document.hidden) {
+          showBrowserNotification('New Group Message', data?.message?.content || 'You have a new message', {
+            workspaceId,
+            resourceType: 'chat',
+          });
+        }
       };
 
       const handleGlobalDM = (data: { message: any; conversation: any }) => {
         const { addMessage, createRoom } = useChatStore.getState();
+        const { showBrowserNotification } = useNotificationStore.getState();
 
         const roomId =
           typeof data.message.conversation === 'string'
@@ -176,17 +199,55 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               .map((p: any) => (typeof p === 'string' ? p : p?._id?.toString?.()))
               .filter(Boolean)
           : undefined;
+
+        const conversationWorkspaceId =
+          (typeof data?.conversation?.workspace === 'string'
+            ? data.conversation.workspace
+            : data?.conversation?.workspace?._id?.toString?.()) ||
+          (typeof data?.message?.workspace === 'string'
+            ? data.message.workspace
+            : data?.message?.workspace?._id?.toString?.());
+
         if (participants && participants.length > 0) {
-          createRoom(roomId, 'direct', undefined, participants);
+          createRoom(roomId, 'direct', conversationWorkspaceId, participants);
         }
 
         addMessage(roomId, data.message);
+
+        const currentUserId = useAuthStore.getState().user?._id || localStorage.getItem('userId');
+        const senderId =
+          typeof data?.message?.sender === 'string'
+            ? data.message.sender
+            : data?.message?.sender?._id?.toString?.();
+        if (senderId && currentUserId && senderId !== currentUserId && document.hidden) {
+          const senderName = data?.message?.sender?.name || 'Someone';
+          showBrowserNotification(`New DM from ${senderName}`, data?.message?.content || 'You have a new direct message', {
+            workspaceId: conversationWorkspaceId,
+            conversationId: roomId,
+            resourceType: 'dm',
+          });
+        }
       };
 
       const handleGlobalNotification = (data: { notification: any }) => {
         const { addNotification, processedNotificationIds } = useNotificationStore.getState();
         const notification = data?.notification;
         if (!notification?._id) return;
+
+        // Workspace scoping guard: while inside a workspace route, ignore
+        // notifications from other workspaces for sidebar/badge realtime.
+        if (typeof window !== 'undefined') {
+          const match = window.location.pathname.match(/\/workspace\/([^/]+)/);
+          const activeWorkspaceId = match?.[1];
+          const notificationWorkspaceId = notification?.data?.workspaceId;
+          if (
+            activeWorkspaceId &&
+            notificationWorkspaceId &&
+            notificationWorkspaceId !== activeWorkspaceId
+          ) {
+            return;
+          }
+        }
 
         // Dedupe across socket + FCM paths.
         if (processedNotificationIds.has(notification._id)) return;
