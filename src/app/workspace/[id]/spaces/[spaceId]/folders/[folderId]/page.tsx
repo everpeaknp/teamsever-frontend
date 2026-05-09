@@ -28,6 +28,7 @@ import { useWorkspaceStore } from '@/store/useWorkspaceStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePermission, SpacePermissionLevel } from '@/hooks/usePermission';
 import { FolderMemberManagement } from '@/components/FolderMemberManagement';
+import { InviteMemberModal } from '@/components/InviteMemberModal';
 import { toast } from 'sonner';
 
 export default function FolderHomePage() {
@@ -43,24 +44,38 @@ export default function FolderHomePage() {
   const { deleteList: deleteListFromWorkspace } = useWorkspaceStore();
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [folderData, setFolderData] = useState<any | null>(null);
   const [spacePermissionLevel, setSpacePermissionLevel] = useState<SpacePermissionLevel | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [showFolderPermissions, setShowFolderPermissions] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'lists' | 'activity'>('lists');
   const [folderActivity, setFolderActivity] = useState<any[]>([]);
   const [loadingTabData, setLoadingTabData] = useState(false);
+  const [folderMembers, setFolderMembers] = useState<any[]>([]);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [memberPermissions, setMemberPermissions] = useState<Record<string, SpacePermissionLevel>>({});
+  const [searchMemberQuery, setSearchMemberQuery] = useState('');
 
   const { isAdmin, isOwner } = usePermission(spacePermissionLevel);
   const canManage = isAdmin || isOwner;
 
   const folder = useMemo(
-    () => folders.find((f) => f._id === folderId) || null,
-    [folders, folderId]
+    () => folderData || folders.find((f) => f._id === folderId) || null,
+    [folderData, folders, folderId]
   );
+  const workspaceMembersForInvite = useMemo(() => {
+    return (workspace?.members || [])
+      .map((member: any) => ({
+        user: typeof member.user === 'object' ? member.user : null,
+        role: member.role || 'member',
+      }))
+      .filter((member: any) => !!member.user?._id);
+  }, [workspace]);
 
   const folderLists = folder?.lists || [];
-  const totalTasks = folderLists.reduce((sum, l: any) => sum + (l.taskCount || 0), 0);
-  const completedTasks = folderLists.reduce((sum, l: any) => sum + (l.completedCount || 0), 0);
+  const totalTasks = folderLists.reduce((sum: number, l: any) => sum + (l.taskCount || 0), 0);
+  const completedTasks = folderLists.reduce((sum: number, l: any) => sum + (l.completedCount || 0), 0);
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   useEffect(() => {
@@ -86,7 +101,14 @@ export default function FolderHomePage() {
           isOwnerUser ? 'owner' : (workspaceMember?.role === 'admin' || workspaceMember?.role === 'owner') ? 'admin' : 'member';
         setWorkspaceContext(workspaceId, role);
 
-        await Promise.all([fetchSpace(spaceId), fetchFolders(spaceId)]);
+        await Promise.all([
+          fetchSpace(spaceId).catch(() => null),
+          fetchFolders(spaceId).catch(() => null),
+          api.get(`/folders/${folderId}`).then((res) => {
+            if (!active) return;
+            setFolderData(res.data?.data || null);
+          }).catch(() => null),
+        ]);
 
         try {
           const spaceMembersRes = await api.get(`/spaces/${spaceId}/space-members`);
@@ -149,6 +171,70 @@ export default function FolderHomePage() {
     }
   };
 
+  const fetchFolderMembers = async () => {
+    try {
+      const response = await api.get(`/folders/${folderId}/folder-members`);
+      setFolderMembers(response.data?.data || []);
+    } catch (error) {
+      console.error('[FolderPage] Failed to fetch folder members for invite:', error);
+      toast.error('Failed to load invite members');
+    }
+  };
+
+  const toggleMemberSelection = (memberId: string) => {
+    setSelectedMembers((prev) => {
+      const isSelected = prev.includes(memberId);
+      if (isSelected) {
+        const { [memberId]: _, ...rest } = memberPermissions;
+        setMemberPermissions(rest);
+        return prev.filter((id) => id !== memberId);
+      }
+      return [...prev, memberId];
+    });
+  };
+
+  const handlePermissionChange = (memberId: string, level: SpacePermissionLevel) => {
+    setMemberPermissions((prev) => ({ ...prev, [memberId]: level }));
+  };
+
+  const handleAddFolderMembers = async () => {
+    if (selectedMembers.length === 0) {
+      toast.error('Please select at least one member');
+      return;
+    }
+
+    try {
+      await Promise.all(
+        selectedMembers.map((memberId) => {
+          const level = memberPermissions[memberId] || 'EDIT';
+          return api.post(`/folders/${folderId}/folder-members`, {
+            userId: memberId,
+            permissionLevel: level,
+          });
+        })
+      );
+
+      toast.success(`${selectedMembers.length} member(s) invited to folder`);
+      setSelectedMembers([]);
+      setMemberPermissions({});
+      setSearchMemberQuery('');
+      setShowInviteModal(false);
+      await fetchFolderMembers();
+    } catch (error: any) {
+      console.error('[FolderPage] Failed to invite folder members:', error);
+      toast.error(error.response?.data?.message || 'Failed to invite members');
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+  };
+
   if (loading && !folder) {
     return <div className="p-6 text-sm text-muted-foreground">Loading folder...</div>;
   }
@@ -195,10 +281,29 @@ export default function FolderHomePage() {
               </div>
             </div>
             {canManage && (
-              <Button variant="outline" onClick={() => setShowFolderPermissions(true)}>
-                <Users className="w-4 h-4 mr-2" />
-                Folder Access
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Users className="w-4 h-4 mr-2" />
+                    Members
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await fetchFolderMembers();
+                      setShowInviteModal(true);
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Invite Members
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowFolderPermissions(true)}>
+                    <Users className="w-4 h-4 mr-2" />
+                    Folder Access
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>
@@ -309,6 +414,25 @@ export default function FolderHomePage() {
         folderId={folder._id}
         folderName={folder.name}
         folderColor={folder.color}
+      />
+
+      <InviteMemberModal
+        open={showInviteModal}
+        onOpenChange={setShowInviteModal}
+        spaceColor={folder.color || '#3b82f6'}
+        title="Add Members to Folder"
+        description={`Select members to grant access inside ${folder.name}.`}
+        searchPlaceholder="Search workspace members..."
+        emptyStateMessage="No workspace members available to invite"
+        availableMembers={workspaceMembersForInvite}
+        selectedMembers={selectedMembers}
+        memberPermissions={memberPermissions}
+        onToggleMemberSelection={toggleMemberSelection}
+        onPermissionChange={handlePermissionChange}
+        onAddMembers={handleAddFolderMembers}
+        searchQuery={searchMemberQuery}
+        onSearchChange={setSearchMemberQuery}
+        getInitials={getInitials}
       />
     </div>
   );

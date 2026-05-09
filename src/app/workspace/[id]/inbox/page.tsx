@@ -183,7 +183,7 @@ export default function InboxPage() {
 
   const handleMemberSelect = async (member: WorkspaceMember) => {
     try {
-      const response = await api.post(`/dm/${member._id}`, {});
+      const response = await api.post(`/dm/${member._id}`, { workspaceId });
 
       if (response.data.success) {
         const conversation = response.data.data;

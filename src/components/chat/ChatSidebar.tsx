@@ -100,7 +100,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
 
         const [membersRes, convsRes] = await Promise.all([
           axios.get(`${API_URL}/api/workspaces/${workspaceId}/members`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_URL}/api/dm`, { headers: { Authorization: `Bearer ${token}` } })
+          axios.get(`${API_URL}/api/dm?workspaceId=${workspaceId}`, { headers: { Authorization: `Bearer ${token}` } })
         ]);
 
         if (membersRes.data.success) {
@@ -163,7 +163,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       const response = await axios.post(
         `${API_URL}/api/dm/${member._id}`,
-        {},
+        { workspaceId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

@@ -22,6 +22,11 @@ interface InviteMemberModalProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   getInitials: (name: string) => string;
+  title?: string;
+  description?: string;
+  searchPlaceholder?: string;
+  emptyStateMessage?: string;
+  noResultsMessagePrefix?: string;
 }
 
 const PERMISSION_ICONS = {
@@ -51,6 +56,11 @@ export function InviteMemberModal({
   searchQuery,
   onSearchChange,
   getInitials,
+  title = 'Add Workspace Members to Space',
+  description = 'Select members from your workspace to give them access to this space.',
+  searchPlaceholder = 'Search workspace members...',
+  emptyStateMessage = 'All workspace members are already in this space',
+  noResultsMessagePrefix = 'No members found matching',
 }: InviteMemberModalProps) {
   const filteredMembers = availableMembers.filter((m: any) => {
     const user = typeof m.user === 'object' ? m.user : null;
@@ -63,16 +73,14 @@ export function InviteMemberModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Add Workspace Members to Space</DialogTitle>
-          <DialogDescription>
-            Select members from your workspace to give them access to this space.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
           <div>
             <Input
-              placeholder="Search workspace members..."
+              placeholder={searchPlaceholder}
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
             />
@@ -84,10 +92,10 @@ export function InviteMemberModal({
                 {availableMembers.length === 0 ? (
                   <>
                     <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>All workspace members are already in this space</p>
+                    <p>{emptyStateMessage}</p>
                   </>
                 ) : (
-                  <p>No members found matching "{searchQuery}"</p>
+                  <p>{noResultsMessagePrefix} "{searchQuery}"</p>
                 )}
               </div>
             ) : (

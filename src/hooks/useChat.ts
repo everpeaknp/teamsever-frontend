@@ -145,7 +145,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
           mentions
         });
       } else if (type === 'direct' && userId) {
-        await api.post(`/dm/${userId}/message`, { content: content.trim() });
+        await api.post(`/dm/${userId}/message`, { content: content.trim(), workspaceId });
       }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to send message');

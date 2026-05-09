@@ -61,13 +61,6 @@ const PERMISSION_ICONS = {
   VIEW: Eye,
 };
 
-const PERMISSION_COLORS = {
-  FULL: 'text-purple-600 bg-purple-100 dark:bg-purple-900/20',
-  EDIT: 'text-blue-600 bg-blue-100 dark:bg-blue-900/20',
-  COMMENT: 'text-green-600 bg-green-100 dark:bg-green-900/20',
-  VIEW: 'text-gray-600 bg-gray-100 dark:bg-gray-900/20',
-};
-
 const PERMISSION_DESCRIPTIONS = {
   FULL: 'Full access - can create, edit, and delete',
   EDIT: 'Can create and edit tasks',
@@ -139,30 +132,20 @@ export function FolderMemberManagement({
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[78vh] overflow-hidden flex flex-col rounded-2xl border border-border bg-background p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
           <DialogTitle className="flex items-center gap-2">
-            <Folder className="w-5 h-5" style={{ color: folderColor }} />
+            <Folder className="w-5 h-5 text-primary" />
             Manage Folder Permissions
           </DialogTitle>
-          <DialogDescription>
-            Set custom permission levels for members in {folderName}. Overrides
-            space and workspace permissions.
+          <DialogDescription className="text-sm">
+            Members from the parent space inside {folderName}. Use invite flow to add members.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
@@ -193,16 +176,12 @@ export function FolderMemberManagement({
                     : null;
 
                   return (
-                    <TableRow key={member._id}>
+                    <TableRow key={member._id} className="hover:bg-muted/40">
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <UserAvatar 
                             user={member} 
-                            className="h-9 w-9" 
-                            style={{
-                              backgroundColor: folderColor,
-                              color: 'white',
-                            }}
+                            className="h-9 w-9"
                           />
                           <div>
                             <p className="font-medium text-sm">{member.name}</p>
@@ -213,7 +192,7 @@ export function FolderMemberManagement({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">
+                        <Badge variant="secondary" className="capitalize">
                           {member.workspaceRole}
                         </Badge>
                       </TableCell>
@@ -232,14 +211,14 @@ export function FolderMemberManagement({
                           }}
                           disabled={updating === member._id}
                         >
-                          <SelectTrigger className="w-[180px]">
+                          <SelectTrigger className="w-[170px] h-9">
                             <SelectValue>
                               {member.folderPermissionLevel ? (
                                 <div className="flex items-center gap-2">
                                   {PermissionIcon && (
                                     <PermissionIcon className="w-4 h-4" />
                                   )}
-                                  <span>{member.folderPermissionLevel}</span>
+                                  <span className="text-sm">{member.folderPermissionLevel}</span>
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground">
@@ -285,9 +264,9 @@ export function FolderMemberManagement({
                             size="sm"
                             onClick={() => handleRemoveOverride(member._id)}
                             disabled={updating === member._id}
+                            className="h-8 px-2.5 text-xs"
                           >
-                            <X className="w-4 h-4 mr-1" />
-                            Remove Override
+                            Reset
                           </Button>
                         )}
                       </TableCell>
@@ -299,20 +278,8 @@ export function FolderMemberManagement({
           )}
         </div>
 
-        <div className="border-t pt-4 mt-4">
-          <div className="flex items-start gap-2 text-sm text-muted-foreground">
-            <Shield className="w-4 h-4 mt-0.5" />
-            <div>
-              <p className="font-medium mb-1">Permission Resolution Order:</p>
-              <ol className="list-decimal list-inside space-y-1 text-xs">
-                <li>Owner always has full access (bypass all checks)</li>
-                <li>List permission override (if in a list)</li>
-                <li>Folder permission override (if set)</li>
-                <li>Space permission override (fallback)</li>
-                <li>Workspace role permissions (final fallback)</li>
-              </ol>
-            </div>
-          </div>
+        <div className="border-t border-border px-6 py-3 text-xs text-muted-foreground">
+          Owner bypasses checks. List override {'>'} folder override {'>'} space override {'>'} workspace role.
         </div>
       </DialogContent>
     </Dialog>
