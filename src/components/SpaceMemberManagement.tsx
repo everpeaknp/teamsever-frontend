@@ -30,6 +30,7 @@ import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { X, Shield, Edit, MessageSquare, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePermissions } from '@/store/useAuthStore';
 
 export type SpacePermissionLevel = 'FULL' | 'EDIT' | 'COMMENT' | 'VIEW';
 
@@ -40,6 +41,7 @@ interface SpaceMember {
   avatar?: string;
   profilePicture?: string;
   workspaceRole: string;
+  spaceRole?: string;
   spacePermissionLevel: SpacePermissionLevel | null;
   hasOverride: boolean;
   addedBy: string | null;
@@ -85,6 +87,8 @@ export function SpaceMemberManagement({
   const [members, setMembers] = useState<SpaceMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState<string | null>(null);
+  const { isAdmin, isOwner } = usePermissions();
+  const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
   useEffect(() => {
     if (open) {
@@ -139,6 +143,20 @@ export function SpaceMemberManagement({
     }
   };
 
+  const handleRemoveMember = async (userId: string, memberName: string) => {
+    setUpdating(userId);
+    try {
+      await api.delete(`/spaces/${spaceId}/members/${userId}`);
+      toast.success(`${memberName} removed from space`);
+      fetchMembers();
+    } catch (error: any) {
+      console.error('Failed to remove member from space:', error);
+      toast.error(error.response?.data?.message || 'Failed to remove member');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -157,8 +175,7 @@ export function SpaceMemberManagement({
             Manage Space Permissions
           </DialogTitle>
           <DialogDescription>
-            Set custom permission levels for members in {spaceName}. Overrides
-            workspace-level permissions.
+            Manage only members currently inside {spaceName}. Invitation is handled from the invite modal.
           </DialogDescription>
         </DialogHeader>
 
@@ -279,17 +296,31 @@ export function SpaceMemberManagement({
                         </Select>
                       </TableCell>
                       <TableCell className="text-right">
-                        {member.hasOverride && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveOverride(member._id)}
-                            disabled={updating === member._id}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Remove Override
-                          </Button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {member.hasOverride && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveOverride(member._id)}
+                              disabled={updating === member._id}
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Remove Override
+                            </Button>
+                          )}
+                          {(isOwner() || isAdmin()) && member.workspaceRole !== 'owner' && member._id !== currentUserId && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveMember(member._id, member.name)}
+                              disabled={updating === member._id}
+                              className="text-red-600 hover:text-red-600"
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Remove Member
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
