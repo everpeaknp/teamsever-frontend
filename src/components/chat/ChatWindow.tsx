@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, Filter, ExternalLink, GitBranch, Calendar as CalendarIcon, User } from 'lucide-react';
+import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, Filter, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
@@ -419,11 +419,16 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       {/* Header - Fixed */}
       <div className="h-14 border-b border-border px-4 md:px-6 flex items-center justify-between flex-shrink-0 bg-background/80 backdrop-blur-md sticky top-0 z-20">
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <button 
+          <button
             className="md:hidden p-2 -ml-2 hover:bg-muted rounded-lg transition-colors"
             onClick={onMenuClick}
+            aria-label={type === 'direct' ? 'Back to conversations' : 'Open filters'}
           >
-            <Filter className="h-5 w-5 text-muted-foreground" />
+            {type === 'direct' ? (
+              <ArrowLeft className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <Filter className="h-5 w-5 text-muted-foreground" />
+            )}
           </button>
           <h2 className="text-base md:text-lg font-bold text-foreground truncate">{title}</h2>
           
