@@ -359,6 +359,16 @@ export function AppSidebar() {
           } else {
             localStorage.removeItem(key);
           }
+
+          const folders = space?.folders || [];
+          for (const folder of folders as any[]) {
+            const folderKey = `folderPermission:${folder._id}`;
+            if (folder?.folderPermissionLevel) {
+              localStorage.setItem(folderKey, folder.folderPermissionLevel);
+            } else {
+              localStorage.removeItem(folderKey);
+            }
+          }
         }
       }
 

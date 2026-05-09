@@ -74,14 +74,25 @@ export const HierarchyItemComponent = React.memo(function HierarchyItemComponent
     if (!targetSpaceId) return null;
     return localStorage.getItem(`spacePermission:${targetSpaceId}`);
   };
+  const getFolderPermissionLevelForItem = () => {
+    if (typeof window === 'undefined') return null;
+    if (item.type !== 'folder') return null;
+    return localStorage.getItem(`folderPermission:${item._id}`);
+  };
 
   // Check if user can create/manage content
   useEffect(() => {
     if (userId) {
-      const level = getSpacePermissionLevelForItem();
-      const hasFullSpaceAccess = level === 'FULL';
-      setCanCreateContent(isAdminOrOwner || hasFullSpaceAccess);
-      setCanManageItem(isAdminOrOwner || hasFullSpaceAccess);
+      const spaceLevel = getSpacePermissionLevelForItem();
+      const folderLevel = getFolderPermissionLevelForItem();
+      const hasFullSpaceAccess = spaceLevel === 'FULL';
+      const hasFullFolderAccess = folderLevel === 'FULL';
+      const canManageByPermission = item.type === 'folder'
+        ? (hasFullSpaceAccess || hasFullFolderAccess)
+        : hasFullSpaceAccess;
+
+      setCanCreateContent(isAdminOrOwner || canManageByPermission);
+      setCanManageItem(isAdminOrOwner || canManageByPermission);
     }
   }, [userId, isAdminOrOwner, item._id, item.type, parentSpaceId]);
 

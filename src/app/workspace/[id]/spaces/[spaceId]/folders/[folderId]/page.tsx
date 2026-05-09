@@ -27,6 +27,7 @@ import { useSpaceStore } from '@/store/useSpaceStore';
 import { useWorkspaceStore } from '@/store/useWorkspaceStore';
 import { useAuthStore } from '@/store/useAuthStore';
 import { usePermission, SpacePermissionLevel } from '@/hooks/usePermission';
+import { useModalStore } from '@/store/useModalStore';
 import { FolderMemberManagement } from '@/components/FolderMemberManagement';
 import { InviteMemberModal } from '@/components/InviteMemberModal';
 import { toast } from 'sonner';
@@ -46,6 +47,7 @@ export default function FolderHomePage() {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [folderData, setFolderData] = useState<any | null>(null);
   const [spacePermissionLevel, setSpacePermissionLevel] = useState<SpacePermissionLevel | null>(null);
+  const [folderPermissionLevel, setFolderPermissionLevel] = useState<SpacePermissionLevel | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [showFolderPermissions, setShowFolderPermissions] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -58,7 +60,8 @@ export default function FolderHomePage() {
   const [searchMemberQuery, setSearchMemberQuery] = useState('');
 
   const { isAdmin, isOwner } = usePermission(spacePermissionLevel);
-  const canManage = isAdmin || isOwner;
+  const openModal = useModalStore((state) => state.openModal);
+  const canManage = isAdmin || isOwner || spacePermissionLevel === 'FULL' || folderPermissionLevel === 'FULL';
 
   const folder = useMemo(
     () => folderData || folders.find((f) => f._id === folderId) || null,
@@ -156,6 +159,7 @@ export default function FolderHomePage() {
     };
 
     loadActivity();
+    fetchFolderMembers();
     return () => {
       active = false;
     };
@@ -174,7 +178,12 @@ export default function FolderHomePage() {
   const fetchFolderMembers = async () => {
     try {
       const response = await api.get(`/folders/${folderId}/folder-members`);
-      setFolderMembers(response.data?.data || []);
+      const members = response.data?.data || [];
+      setFolderMembers(members);
+      if (userId) {
+        const currentUserMember = members.find((m: any) => m?._id === userId);
+        setFolderPermissionLevel((currentUserMember?.folderPermissionLevel || null) as SpacePermissionLevel | null);
+      }
     } catch (error) {
       console.error('[FolderPage] Failed to fetch folder members for invite:', error);
       toast.error('Failed to load invite members');
@@ -352,7 +361,11 @@ export default function FolderHomePage() {
                 <CheckCircle2 className="w-5 h-5 text-muted-foreground" />
                 <h2 className="text-lg font-semibold">Lists</h2>
               </button>
-              <Button size="sm" onClick={() => router.push(`/workspace/${workspaceId}/spaces/${spaceId}`)}>
+              <Button
+                size="sm"
+                onClick={() => openModal('list', folder._id, 'folder', folder.name, spaceId)}
+                disabled={!canManage}
+              >
                 <Plus className="w-4 h-4 mr-1" />
                 Add List
               </Button>
