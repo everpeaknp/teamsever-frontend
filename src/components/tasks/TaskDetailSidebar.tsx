@@ -310,6 +310,24 @@ export function TaskDetailSidebar() {
 
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
+  const derivedCommentsFromActivity: Comment[] = (task?.activity || [])
+    .filter((a) => a.type === 'comment')
+    .map((a) => ({
+      _id: `activity-${a._id}`,
+      content: a.content || '',
+      author: {
+        _id: a.user._id,
+        name: a.user.name,
+        email: a.user.email,
+      },
+      createdAt: a.createdAt,
+    }));
+
+  const displayComments: Comment[] =
+    task?.comments && task.comments.length > 0
+      ? task.comments
+      : derivedCommentsFromActivity;
+
   const formatActivityField = (field?: string) => {
     if (!field) return 'task';
     const labels: Record<string, string> = {
@@ -629,12 +647,12 @@ export function TaskDetailSidebar() {
                 <div className="space-y-3">
                   <Label className="text-sm font-semibold flex items-center gap-2">
                     <MessageSquare className="w-4 h-4" />
-                    Comments ({task.comments?.length || 0})
+                    Comments ({displayComments.length})
                   </Label>
                   
-                  {task.comments && task.comments.length > 0 && (
+                  {displayComments.length > 0 && (
                     <div className="space-y-4">
-                      {task.comments.map((comment) => (
+                      {displayComments.map((comment) => (
                         <div key={comment._id} className="flex gap-3">
                           <UserAvatar 
                             user={comment.author} 
