@@ -603,14 +603,14 @@ export function TaskDetailSidebar() {
                             className="w-6 h-6 flex-shrink-0" 
                           />
                             <div className="flex-1">
-                              <p className="text-gray-700">
+                              <p className="text-foreground">
                                 <span className="font-medium">{activity.user.name}</span>
                                 {activity.type === 'comment' ? (
                                   <>
                                     {' '}commented
                                     {activity.content ? (
                                       <>
-                                        : <span className="text-gray-800">{activity.content}</span>
+                                        : <span className="text-foreground">{activity.content}</span>
                                       </>
                                     ) : null}
                                   </>
@@ -631,7 +631,7 @@ export function TaskDetailSidebar() {
                                   </>
                                 )}
                               </p>
-                              <p className="text-xs text-gray-500">
+                              <p className="text-xs text-muted-foreground">
                                 {new Date(activity.createdAt).toLocaleString()}
                               </p>
                             </div>
@@ -661,11 +661,11 @@ export function TaskDetailSidebar() {
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-medium">{comment.author.name}</span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-muted-foreground">
                                 {new Date(comment.createdAt).toLocaleString()}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-700">{comment.content}</p>
+                            <p className="text-sm text-foreground">{comment.content}</p>
                           </div>
                         </div>
                       ))}
