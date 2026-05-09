@@ -120,6 +120,8 @@ export default function SpaceHomePage() {
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
   const [showCreateListModal, setShowCreateListModal] = useState(false);
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+  const [creatingList, setCreatingList] = useState(false);
+  const [creatingFolder, setCreatingFolder] = useState(false);
   const [showSettingsSheet, setShowSettingsSheet] = useState(false);
   const [showDeleteFolderModal, setShowDeleteFolderModal] = useState(false);
   const [folderToDelete, setFolderToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -317,11 +319,13 @@ export default function SpaceHomePage() {
   };
 
   const handleCreateList = async () => {
+    if (creatingList) return;
     if (!newListData.name.trim()) {
       toast.error('List name is required');
       return;
     }
     try {
+      setCreatingList(true);
       const listPayload: any = {
         name: newListData.name,
         description: newListData.description,
@@ -371,6 +375,8 @@ export default function SpaceHomePage() {
       } else {
         toast.error(errorMessage || 'Failed to create list');
       }
+    } finally {
+      setCreatingList(false);
     }
   };
 
@@ -380,11 +386,13 @@ export default function SpaceHomePage() {
   };
 
   const handleCreateFolder = async () => {
+    if (creatingFolder) return;
     if (!newFolderData.name.trim()) {
       toast.error('Folder name is required');
       return;
     }
     try {
+      setCreatingFolder(true);
       const folder = await createFolder(spaceId, newFolderData);
       
       // Update global workspace store for sidebar
@@ -409,6 +417,8 @@ export default function SpaceHomePage() {
       } else {
         toast.error(errorMessage || 'Failed to create folder');
       }
+    } finally {
+      setCreatingFolder(false);
     }
   };
 
@@ -1003,11 +1013,11 @@ export default function SpaceHomePage() {
                         />
                       </div>
                       <div className="flex gap-3">
-                        <Button variant="outline" onClick={() => setShowCreateFolderModal(false)} className="flex-1">
+                        <Button variant="outline" onClick={() => setShowCreateFolderModal(false)} className="flex-1" disabled={creatingFolder}>
                           Cancel
                         </Button>
-                        <Button onClick={handleCreateFolder} className="flex-1">
-                          Create Folder
+                        <Button onClick={handleCreateFolder} className="flex-1" disabled={creatingFolder}>
+                          {creatingFolder ? 'Creating...' : 'Create Folder'}
                         </Button>
                       </div>
                     </div>
@@ -1041,11 +1051,11 @@ export default function SpaceHomePage() {
                         />
                       </div>
                       <div className="flex gap-3">
-                        <Button variant="outline" onClick={() => setShowCreateListModal(false)} className="flex-1">
+                        <Button variant="outline" onClick={() => setShowCreateListModal(false)} className="flex-1" disabled={creatingList}>
                           Cancel
                         </Button>
-                        <Button onClick={handleCreateList} className="flex-1">
-                          Create List
+                        <Button onClick={handleCreateList} className="flex-1" disabled={creatingList}>
+                          {creatingList ? 'Creating...' : 'Create List'}
                         </Button>
                       </div>
                     </div>

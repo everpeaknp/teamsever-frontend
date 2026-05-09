@@ -85,8 +85,10 @@ export const HierarchyItemComponent = React.memo(function HierarchyItemComponent
     }
   }, [userId, isAdminOrOwner, item._id, item.type, parentSpaceId]);
 
-  // Admins/owners/full-space can rename spaces/folders/lists
+  // Admins/owners/full-space can manage folders/lists
+  // Space-level destructive/admin actions stay admin/owner only.
   const canEdit = canManageItem;
+  const canManageSpaceSettings = isAdminOrOwner;
 
   const isExpanded = expandedIds.includes(item._id);
   const isFavorite = favoriteIds.includes(item._id);
@@ -311,7 +313,7 @@ const getRoute = () => {
                   {canEdit && (
                     <>
                       <DropdownMenuSeparator />
-                      {item.type === 'space' && (
+                      {item.type === 'space' && canManageSpaceSettings && (
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.preventDefault();
@@ -378,7 +380,7 @@ const getRoute = () => {
                             Delete folder
                           </DropdownMenuItem>
                       )}
-                      {item.type === 'space' && (
+                      {item.type === 'space' && canManageSpaceSettings && (
                         <>
                           <DropdownMenuItem
                             onClick={(e) => {
