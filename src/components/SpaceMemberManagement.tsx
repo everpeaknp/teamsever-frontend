@@ -63,13 +63,6 @@ const PERMISSION_ICONS = {
   VIEW: Eye,
 };
 
-const PERMISSION_COLORS = {
-  FULL: 'text-purple-600 bg-purple-100 dark:bg-purple-900/20',
-  EDIT: 'text-blue-600 bg-blue-100 dark:bg-blue-900/20',
-  COMMENT: 'text-green-600 bg-green-100 dark:bg-green-900/20',
-  VIEW: 'text-gray-600 bg-gray-100 dark:bg-gray-900/20',
-};
-
 const PERMISSION_DESCRIPTIONS = {
   FULL: 'Full access - can create, edit, and delete',
   EDIT: 'Can create and edit tasks',
@@ -157,29 +150,20 @@ export function SpaceMemberManagement({
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[78vh] overflow-hidden flex flex-col rounded-2xl border border-border bg-background p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
           <DialogTitle className="flex items-center gap-2">
-            <Shield className="w-5 h-5" style={{ color: spaceColor }} />
+            <Shield className="w-5 h-5 text-primary" />
             Manage Space Permissions
           </DialogTitle>
-          <DialogDescription>
-            Manage only members currently inside {spaceName}. Invitation is handled from the invite modal.
+          <DialogDescription className="text-sm">
+            Members inside {spaceName}. Invite from the separate invite modal.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-6 py-4">
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
@@ -210,16 +194,12 @@ export function SpaceMemberManagement({
                     : null;
 
                   return (
-                    <TableRow key={member._id}>
+                    <TableRow key={member._id} className="hover:bg-muted/40">
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <UserAvatar 
                             user={member} 
-                            className="h-9 w-9" 
-                            style={{
-                              backgroundColor: spaceColor,
-                              color: 'white',
-                            }}
+                            className="h-9 w-9"
                           />
                           <div>
                             <p className="font-medium text-sm">{member.name}</p>
@@ -230,7 +210,7 @@ export function SpaceMemberManagement({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="capitalize">
+                        <Badge variant="secondary" className="capitalize">
                           {member.workspaceRole}
                         </Badge>
                       </TableCell>
@@ -249,17 +229,17 @@ export function SpaceMemberManagement({
                           }}
                           disabled={updating === member._id}
                         >
-                          <SelectTrigger className="w-[180px]">
+                          <SelectTrigger className="w-[170px] h-9">
                             <SelectValue>
                               {member.spacePermissionLevel ? (
                                 <div className="flex items-center gap-2">
                                   {PermissionIcon && (
                                     <PermissionIcon className="w-4 h-4" />
                                   )}
-                                  <span>{member.spacePermissionLevel}</span>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">
+                                    <span className="text-sm">{member.spacePermissionLevel}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">
                                   Use workspace role
                                 </span>
                               )}
@@ -296,28 +276,27 @@ export function SpaceMemberManagement({
                         </Select>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
                           {member.hasOverride && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleRemoveOverride(member._id)}
                               disabled={updating === member._id}
+                              className="h-8 px-2.5 text-xs"
                             >
-                              <X className="w-4 h-4 mr-1" />
-                              Remove Override
+                              Reset
                             </Button>
                           )}
                           {(isOwner() || isAdmin()) && member.workspaceRole !== 'owner' && member._id !== currentUserId && (
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
                               onClick={() => handleRemoveMember(member._id, member.name)}
                               disabled={updating === member._id}
-                              className="text-red-600 hover:text-red-600"
+                              className="h-8 px-2.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
                             >
-                              <X className="w-4 h-4 mr-1" />
-                              Remove Member
+                              Remove
                             </Button>
                           )}
                         </div>
@@ -330,18 +309,8 @@ export function SpaceMemberManagement({
           )}
         </div>
 
-        <div className="border-t pt-4 mt-4">
-          <div className="flex items-start gap-2 text-sm text-muted-foreground">
-            <Shield className="w-4 h-4 mt-0.5" />
-            <div>
-              <p className="font-medium mb-1">Permission Resolution Order:</p>
-              <ol className="list-decimal list-inside space-y-1 text-xs">
-                <li>Owner always has full access (bypass all checks)</li>
-                <li>Space permission override (if set)</li>
-                <li>Workspace role permissions (fallback)</li>
-              </ol>
-            </div>
-          </div>
+        <div className="border-t border-border px-6 py-3 text-xs text-muted-foreground">
+          Owner bypasses all checks. Then space override applies. Else workspace role fallback.
         </div>
       </DialogContent>
     </Dialog>
