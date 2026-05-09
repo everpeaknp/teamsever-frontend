@@ -28,12 +28,12 @@ export function MobileSidebar() {
           <span className="sr-only">Toggle menu</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="p-0 w-[300px]">
+      <SheetContent side="left" className="p-0 w-[300px]" hideCloseButton>
         <VisuallyHidden>
           <SheetTitle>Navigation Menu</SheetTitle>
           <SheetDescription>Main navigation and workspace switcher sidebar for mobile devices</SheetDescription>
         </VisuallyHidden>
-        <AppSidebar />
+        <AppSidebar isMobile />
       </SheetContent>
     </Sheet>
   );

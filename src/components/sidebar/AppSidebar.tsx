@@ -51,7 +51,11 @@ import UpgradeButton from '@/components/subscription/UpgradeButton';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  isMobile?: boolean;
+}
+
+export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   const pathname = usePathname();
   const params = useParams();
   const router = useRouter();
@@ -88,12 +92,13 @@ export function AppSidebar() {
   }, []);
 
   const resize = useCallback((e: MouseEvent) => {
+    if (isMobile) return;
     if (isResizing.current) {
       // Subtract the left icon bar width (64px) to get the sidebar's relative width
       const newWidth = e.clientX - 64;
       setSidebarWidth(newWidth);
     }
-  }, [setSidebarWidth]);
+  }, [setSidebarWidth, isMobile]);
 
   useEffect(() => {
     window.addEventListener('mousemove', resize);
@@ -460,7 +465,8 @@ export function AppSidebar() {
       <DeleteItemModal />
 
       <div className="flex h-screen overflow-hidden">
-        {/* Left Icon Bar - "Extra" Sidebar - Always Visible */}
+        {/* Left Icon Bar - desktop only */}
+        {!isMobile && (
         <div
           className="w-[64px] flex flex-col items-center py-5 transition-all duration-500 relative z-20 border-r border-white/5 flex-shrink-0"
           style={{
@@ -634,6 +640,7 @@ export function AppSidebar() {
 
           </div>
         </div>
+        )}
 
         {/* Main Sidebar Content - Resizable & Collapsible */}
         <div 
@@ -641,10 +648,10 @@ export function AppSidebar() {
             "bg-white dark:bg-[#1a1a1a] border-r border-slate-200 dark:border-slate-800 flex flex-col relative group/sidebar overflow-hidden",
             !isResizingState && "transition-all duration-300"
           )}
-          style={{ width: isSidebarOpen ? `${sidebarWidth}px` : '0px' }}
+          style={{ width: isMobile ? '100%' : (isSidebarOpen ? `${sidebarWidth}px` : '0px') }}
         >
           {/* Resize Handle - Only show when sidebar is open */}
-          {isSidebarOpen && (
+          {!isMobile && isSidebarOpen && (
             <div
               onMouseDown={startResizing}
               onDoubleClick={resetSidebarWidth}
