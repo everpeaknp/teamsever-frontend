@@ -347,6 +347,35 @@ export function AppSidebar() {
       // Use the optimized hierarchy endpoint
       await fetchHierarchy(workspaceId);
 
+      // Sync per-space permission cache for sidebar action visibility (+ / ...)
+      // This is needed because sidebar renders across pages, not only on space page.
+      if (typeof window !== 'undefined' && user?._id) {
+        const { hierarchy: currentHierarchy } = useWorkspaceStore.getState();
+        const spaces = currentHierarchy?.spaces || [];
+
+        await Promise.all(
+          spaces.map(async (space: any) => {
+            try {
+              const res = await api.get(`/spaces/${space._id}/space-members`);
+              const rows = res.data?.data || [];
+              const me = rows.find((m: any) => {
+                const memberId = typeof m._id === 'string' ? m._id : m?._id?.toString?.();
+                return memberId === user._id;
+              });
+
+              const key = `spacePermission:${space._id}`;
+              if (me?.spacePermissionLevel) {
+                localStorage.setItem(key, me.spacePermissionLevel);
+              } else {
+                localStorage.removeItem(key);
+              }
+            } catch (error) {
+              console.error('[AppSidebar] Failed to sync space permission cache:', space?._id, error);
+            }
+          })
+        );
+      }
+
       // Auto-expand all spaces
       const { hierarchy: currentHierarchy } = useWorkspaceStore.getState();
       if (currentHierarchy?.spaces) {
