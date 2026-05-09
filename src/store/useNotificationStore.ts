@@ -73,15 +73,22 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     
     set({ notifications: newNotifications, unreadCount });
 
-    // For active users, websocket/store badge is enough.
-    // Only surface browser popup when tab is backgrounded.
+    // Backgrounded tab: use native/browser notification path.
     if (typeof document !== 'undefined' && document.hidden) {
       get().showBrowserNotification(notification.title, notification.body, {
         ...(notification.data || {}),
         notificationId: notification._id,
         _id: notification._id,
       });
+      return;
     }
+
+    // Active tab: show a small in-app toast so webhook/system events are still visible
+    // without forcing a browser popup.
+    toast.info(notification.title, {
+      description: notification.body,
+      duration: 5000,
+    });
   },
 
   markAsRead: (notificationId) => {

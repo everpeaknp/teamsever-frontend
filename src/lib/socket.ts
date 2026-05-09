@@ -4,7 +4,6 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 let socket: Socket | null = null;
 let isInitializing = false;
-let initializationPromise: Promise<Socket> | null = null;
 
 export const initializeSocket = (token: string): Socket => {
   // VALIDATE TOKEN before attempting connection
@@ -16,14 +15,16 @@ export const initializeSocket = (token: string): Socket => {
     throw new Error('Invalid authentication token for socket connection');
   }
   
-  // If socket exists and is connected, reuse it
-  if (socket?.connected) {
+  // If socket already exists, reuse it while connected or still actively connecting/reconnecting.
+  // This avoids tearing down a websocket mid-handshake, which creates noisy
+  // "closed before the connection is established" warnings in the browser.
+  if (socket?.connected || socket?.active) {
     return socket;
   }
 
-  // If already initializing, wait for that to complete
-  if (isInitializing && initializationPromise) {
-    throw new Error('Socket initialization in progress');
+  // If already initializing, reuse the in-flight socket instance if present.
+  if (isInitializing && socket) {
+    return socket;
   }
 
   // Disconnect old socket if it exists but not connected
