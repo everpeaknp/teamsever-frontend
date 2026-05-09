@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Socket } from 'socket.io-client';
 import { initializeSocket, disconnectSocket, getSocket } from '@/lib/socket';
 import { api } from '@/lib/axios';
@@ -30,6 +30,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isConnecting, setIsConnecting] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [token, setToken] = useState<string | null>(null);
+  const joinedWorkspaceIdsRef = useRef<string[]>([]);
 
   // Monitor token changes
   useEffect(() => {
@@ -114,13 +115,18 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setIsConnected(true);
         setIsConnecting(false);
 
-        // Join all workspace rooms to receive chat updates globally
         try {
-          const response = await api.get('/workspaces');
-          const workspaces = response.data.data || [];
-          workspaces.forEach((ws: any) => {
-            console.log(`[SocketContext] Joining workspace room: ${ws._id}`);
-            socketInstance.emit('join_workspace', { workspaceId: ws._id });
+          if (joinedWorkspaceIdsRef.current.length === 0) {
+            const response = await api.get('/workspaces');
+            const workspaces = response.data.data || [];
+            joinedWorkspaceIdsRef.current = workspaces
+              .map((ws: any) => ws?._id)
+              .filter(Boolean);
+          }
+
+          joinedWorkspaceIdsRef.current.forEach((workspaceId) => {
+            console.log(`[SocketContext] Joining workspace room: ${workspaceId}`);
+            socketInstance.emit('join_workspace', { workspaceId });
           });
         } catch (error) {
           console.error('[SocketContext] Failed to join workspace rooms:', error);

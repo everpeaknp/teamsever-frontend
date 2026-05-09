@@ -138,6 +138,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
 
     try {
       setSending(true);
+      setError(null);
       if (type === 'workspace' && workspaceId) {
         socket?.emit('chat:send', {
           workspaceId,
@@ -149,7 +150,9 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
         await api.post(`/dm/${userId}/message`, { content: content.trim(), workspaceId });
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to send message');
+      const message = err.response?.data?.message || err.message || 'Failed to send message';
+      setError(message);
+      throw err;
     } finally {
       setSending(false);
     }

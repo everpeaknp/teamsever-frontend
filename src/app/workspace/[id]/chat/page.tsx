@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatWindow, ChatSidebar } from '@/components/chat';
 import { cn } from '@/lib/utils';
-import { initializeSocket, joinWorkspace } from '@/lib/socket';
 import { useChatStore } from '@/store/useChatStore';
 import { Loader2, Hash, Lock, Crown, Sparkles, User, Send } from 'lucide-react';
 import { api } from '@/lib/axios';
@@ -43,24 +42,17 @@ export default function GroupChatPage() {
 
   const { setActiveRoom } = useChatStore();
 
-  // Initialize auth and socket
+  // Initialize auth
   useEffect(() => {
     const token = localStorage.getItem('authToken') || localStorage.getItem('token');
     const userId = localStorage.getItem('userId');
-    
+
     if (!token || !userId || token === 'undefined' || token === 'null' || token.trim() === '') {
       router.push('/login');
       return;
     }
 
-    try {
-      initializeSocket(token);
-      joinWorkspace(workspaceId);
-      setIsLoading(false);
-    } catch (error) {
-      console.error('[GroupChat] Socket initialization failed:', error);
-      setIsLoading(false);
-    }
+    setIsLoading(false);
   }, [router, workspaceId]);
 
   // Fetch workspace details and check access

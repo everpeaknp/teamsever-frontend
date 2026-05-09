@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatWindow } from '@/components/chat/ChatWindow';
-import { initializeSocket, joinWorkspace, getSocket } from '@/lib/socket';
+import { useSocket } from '@/contexts/SocketContext';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { usePresence } from '@/hooks/usePresence';
 import { Loader2, User, Circle } from 'lucide-react';
@@ -46,6 +46,7 @@ export default function InboxPage() {
 
   const { setActiveRoom, getRoom } = useChatStore();
   const { isUserOnline } = usePresence(workspaceId);
+  const { socket } = useSocket();
 
   // Initialize auth and socket
   useEffect(() => {
@@ -75,18 +76,7 @@ export default function InboxPage() {
     }
 
     setCurrentUserId(userId);
-
-    // Initialize socket with error handling
-    try {
-      initializeSocket(finalToken);
-      joinWorkspace(workspaceId);
-
-      setIsLoading(false);
-    } catch (error) {
-      console.error('[Inbox] Socket initialization failed:', error);
-      // Don't redirect, just log - socket will retry
-      setIsLoading(false);
-    }
+    setIsLoading(false);
   }, [router, workspaceId]);
 
   useEffect(() => {
@@ -117,7 +107,6 @@ export default function InboxPage() {
 
   // Socket listener for real-time updates
   useEffect(() => {
-    const socket = getSocket();
     if (!socket) return;
 
     const handleNewMessage = (payload: any) => {
@@ -147,7 +136,7 @@ export default function InboxPage() {
     return () => {
       socket.off('dm:new', handleNewMessage);
     };
-  }, [getSocket()]);
+  }, [socket]);
 
   // Memoized sorted members
   const sortedMembers = useMemo(() => {
