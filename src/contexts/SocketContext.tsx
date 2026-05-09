@@ -182,7 +182,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           typeof data?.message?.sender === 'string'
             ? data.message.sender
             : data?.message?.sender?._id?.toString?.();
-        if (senderId && currentUserId && senderId !== currentUserId && document.hidden) {
+        const { permission, fcmToken } = useNotificationStore.getState();
+        const hasFCMDelivery = permission === 'granted' && !!fcmToken;
+        if (senderId && currentUserId && senderId !== currentUserId && document.hidden && !hasFCMDelivery) {
           showBrowserNotification('New Group Message', data?.message?.content || 'You have a new message', {
             workspaceId,
             resourceType: 'chat',
@@ -225,7 +227,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           typeof data?.message?.sender === 'string'
             ? data.message.sender
             : data?.message?.sender?._id?.toString?.();
-        if (senderId && currentUserId && senderId !== currentUserId && document.hidden) {
+        const { permission, fcmToken } = useNotificationStore.getState();
+        const hasFCMDelivery = permission === 'granted' && !!fcmToken;
+        if (senderId && currentUserId && senderId !== currentUserId && document.hidden && !hasFCMDelivery) {
           const senderName = data?.message?.sender?.name || 'Someone';
           showBrowserNotification(`New DM from ${senderName}`, data?.message?.content || 'You have a new direct message', {
             workspaceId: conversationWorkspaceId,

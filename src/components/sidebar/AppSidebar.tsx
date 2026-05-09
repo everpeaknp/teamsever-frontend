@@ -736,16 +736,16 @@ export function AppSidebar() {
                     <Link
                       href={`/workspace/${workspaceId}/chat`}
                       className={cn(
-                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors w-full',
                         pathname === `/workspace/${workspaceId}/chat`
                           ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
                           : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       )}
                     >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Group Chat</span>
+                      <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="flex-1 min-w-0 truncate">Group Chat</span>
                       {groupChatUnread > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg transform scale-110">
+                        <span className="flex-shrink-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg transform scale-110">
                           {groupChatUnread > 99 ? '99+' : groupChatUnread}
                         </span>
                       )}
@@ -753,16 +753,16 @@ export function AppSidebar() {
                     <Link
                       href={`/workspace/${workspaceId}/inbox`}
                       className={cn(
-                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors w-full',
                         pathname === `/workspace/${workspaceId}/inbox`
                           ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
                           : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       )}
                     >
-                      <Inbox className="w-3.5 h-3.5" />
-                      <span>Inbox (DMs)</span>
+                      <Inbox className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="flex-1 min-w-0 truncate">Inbox (DMs)</span>
                       {inboxUnread > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg transform scale-110">
+                        <span className="flex-shrink-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center shadow-lg transform scale-110">
                           {inboxUnread > 99 ? '99+' : inboxUnread}
                         </span>
                       )}
@@ -806,16 +806,16 @@ export function AppSidebar() {
                     <Link
                       href={`/workspace/${workspaceId}/notifications`}
                       className={cn(
-                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors relative',
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors relative w-full',
                         pathname === `/workspace/${workspaceId}/notifications`
                           ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
                           : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       )}
                     >
-                      <Bell className="w-3.5 h-3.5" />
-                      Notifications
+                      <Bell className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="flex-1 min-w-0 truncate">Notifications</span>
                       {unreadCount > 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1 py-0.5 rounded-full min-w-[16px] text-center">
+                        <span className="flex-shrink-0 bg-red-500 text-white text-[10px] font-bold px-1 py-0.5 rounded-full min-w-[16px] text-center">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
