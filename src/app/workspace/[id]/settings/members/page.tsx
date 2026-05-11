@@ -23,6 +23,7 @@ import {
   Copy,
   Check,
   FolderOpen,
+  Key,
 } from 'lucide-react';
 import {
   Table,
