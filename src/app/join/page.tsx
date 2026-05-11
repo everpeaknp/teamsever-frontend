@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/axios';
-import { Loader2, CheckCircle2, XCircle, Mail, Users, Shield, Layers, ArrowRight } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Mail, Users, Shield, Layers, ArrowRight, FolderOpen } from 'lucide-react';
 
 function JoinPageContent() {
   const router = useRouter();
@@ -73,8 +73,13 @@ function JoinPageContent() {
 
       setSuccess(true);
 
+      // If the invite had a target space, go straight there
       setTimeout(() => {
-        router.push(`/workspace/${data.workspace._id}`);
+        if (data.spaceId) {
+          router.push(`/workspace/${data.workspace._id}/spaces/${data.spaceId}`);
+        } else {
+          router.push(`/workspace/${data.workspace._id}`);
+        }
       }, 2000);
     } catch (err: any) {
       console.error('Failed to accept invitation:', err);
@@ -195,6 +200,23 @@ function JoinPageContent() {
                   <p className="text-sm font-bold text-green-600 dark:text-green-400 capitalize">{invitation.role}</p>
                 </div>
               </div>
+              {/* Space info — shown only if invite targets a specific space */}
+              {invitation.spaceId && invitation.spaceName && (
+                <div className="flex items-center gap-2.5 p-2.5 bg-purple-50 dark:bg-purple-900/10 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <div className="flex-shrink-0 size-8 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
+                    <FolderOpen className="size-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Auto-assigned Space</p>
+                    <p className="text-sm font-bold text-purple-600 dark:text-purple-400 truncate">
+                      {invitation.spaceName}
+                      {invitation.spacePermissionLevel && (
+                        <span className="ml-1.5 text-[10px] font-normal text-purple-400">({invitation.spacePermissionLevel})</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2">
@@ -224,7 +246,10 @@ function JoinPageContent() {
             </div>
 
             <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-3">
-              By accepting, you'll become a member of this workspace
+              {invitation.spaceId
+                ? `You'll join the workspace and be added to "${invitation.spaceName}" automatically.`
+                : `By accepting, you'll become a member of this workspace.`
+              }
             </p>
           </div>
         </div>

@@ -19,6 +19,10 @@ import {
   Shield,
   User as UserIcon,
   Eye,
+  Link2,
+  Copy,
+  Check,
+  FolderOpen,
 } from 'lucide-react';
 import {
   Table,
@@ -67,6 +71,14 @@ export default function MembersPage() {
   const [maxAdmins, setMaxAdmins] = useState<number>(1);
   const [currentAdminCount, setCurrentAdminCount] = useState<number>(0);
 
+  // Fast-Pass invite state
+  const [inviteTab, setInviteTab] = useState<'email' | 'link'>('email');
+  const [spaces, setSpaces] = useState<any[]>([]);
+  const [inviteSpaceId, setInviteSpaceId] = useState<string>('none');
+  const [inviteSpacePermission, setInviteSpacePermission] = useState<'FULL' | 'EDIT' | 'COMMENT' | 'VIEW'>('EDIT');
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
+
   // Custom roles state
   const [showCustomRoleModal, setShowCustomRoleModal] = useState(false);
   const [customRoleTitle, setCustomRoleTitle] = useState('');
@@ -83,8 +95,18 @@ export default function MembersPage() {
 
   useEffect(() => {
     fetchMembers();
+    fetchSpaces();
     checkCustomRoleEntitlement();
   }, [workspaceId]);
+
+  const fetchSpaces = async () => {
+    try {
+      const res = await api.get(`/workspaces/${workspaceId}/spaces`);
+      setSpaces(res.data.data || []);
+    } catch {
+      // non-critical
+    }
+  };
 
   // Socket.IO listeners for real-time member updates
   useEffect(() => {
@@ -269,7 +291,6 @@ export default function MembersPage() {
     e.preventDefault();
     if (!inviteEmail.trim()) return;
 
-    // Check member limit before inviting
     const currentMemberCount = members.length;
     if (!canInviteMember(currentMemberCount)) {
       setShowUpgradeModal(true);
@@ -284,22 +305,15 @@ export default function MembersPage() {
       await api.post(`/workspaces/${workspaceId}/invites`, {
         email: inviteEmail.trim(),
         role: inviteRole,
+        inviteType: 'email',
+        ...(inviteSpaceId && inviteSpaceId !== 'none' && { spaceId: inviteSpaceId, spacePermissionLevel: inviteSpacePermission }),
       });
 
-      // Show success message
       toast.success(`Invitation sent to ${inviteEmail}!`);
-      setInviteEmail('');
-      setInviteRole('member');
-      setShowInviteModal(false);
-      
-      // Optionally refresh members list
-      fetchMembers();
+      resetInviteModal();
     } catch (error: any) {
-      console.error('Failed to invite member:', error);
-      
-      // Check for member limit error from backend
       if (error.response?.data?.code === 'MEMBER_LIMIT_REACHED') {
-        toast.error(error.response?.data?.message || 'Member limit reached. Please upgrade your plan.');
+        toast.error(error.response?.data?.message || 'Member limit reached.');
         setShowUpgradeModal(true);
         setShowInviteModal(false);
       } else {
@@ -310,6 +324,50 @@ export default function MembersPage() {
     } finally {
       setInviting(false);
     }
+  };
+
+  const handleGenerateLink = async () => {
+    const currentMemberCount = members.length;
+    if (!canInviteMember(currentMemberCount)) {
+      setShowUpgradeModal(true);
+      setShowInviteModal(false);
+      return;
+    }
+
+    try {
+      setInviting(true);
+      setError(null);
+
+      const res = await api.post(`/workspaces/${workspaceId}/invites`, {
+        inviteType: 'link',
+        role: inviteRole,
+        ...(inviteSpaceId && inviteSpaceId !== 'none' && { spaceId: inviteSpaceId, spacePermissionLevel: inviteSpacePermission }),
+      });
+
+      const token = res.data.data?.token;
+      if (token) {
+        const link = `${window.location.origin}/join?token=${token}`;
+        setGeneratedLink(link);
+        toast.success('Invite link generated!');
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to generate link');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const resetInviteModal = () => {
+    setShowInviteModal(false);
+    setError(null);
+    setInviteEmail('');
+    setInviteRole('member');
+    setInviteTab('email');
+    setInviteSpaceId('none');
+    setInviteSpacePermission('EDIT');
+    setGeneratedLink(null);
+    setLinkCopied(false);
+    fetchMembers();
   };
 
   // Custom role functions
@@ -815,14 +873,35 @@ export default function MembersPage() {
           <div className="bg-card rounded-2xl p-4 sm:p-6 w-full max-w-md border border-border">
             <h3 className="text-lg sm:text-xl font-bold text-card-foreground mb-4">Invite Member</h3>
 
+            {/* Tab toggle */}
+            <div className="flex gap-1 p-1 bg-muted rounded-lg mb-4">
+              <button
+                onClick={() => { setInviteTab('email'); setGeneratedLink(null); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${
+                  inviteTab === 'email' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <UserPlus className="w-4 h-4" /> Email Invite
+              </button>
+              <button
+                onClick={() => { setInviteTab('link'); setGeneratedLink(null); }}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${
+                  inviteTab === 'link' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Link2 className="w-4 h-4" /> Generate Link
+              </button>
+            </div>
+
             {error && (
               <div className="mb-4 bg-destructive/10 border border-destructive/20 rounded-lg p-3">
                 <p className="text-sm text-destructive">{error}</p>
               </div>
             )}
 
-            <form onSubmit={handleInviteMember}>
-              <div className="space-y-4 mb-6">
+            <div className="space-y-4 mb-4">
+              {/* Email field — only for email tab */}
+              {inviteTab === 'email' && (
                 <div>
                   <Label htmlFor="email">Email Address</Label>
                   <Input
@@ -836,68 +915,122 @@ export default function MembersPage() {
                     className="min-h-[44px]"
                   />
                 </div>
+              )}
 
-                <div>
-                  <Label htmlFor="role">Role</Label>
+              {/* Workspace Role */}
+              <div>
+                <Label>Workspace Role</Label>
+                <Select value={inviteRole} onValueChange={(v: any) => setInviteRole(v)} disabled={inviting}>
+                  <SelectTrigger className="min-h-[44px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">
+                      <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-blue-500" />Admin</div>
+                    </SelectItem>
+                    <SelectItem value="member">
+                      <div className="flex items-center gap-2"><UserIcon className="w-4 h-4 text-green-500" />Member</div>
+                    </SelectItem>
+                    <SelectItem value="guest">
+                      <div className="flex items-center gap-2"><Eye className="w-4 h-4 text-gray-500" />Guest</div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Optional: Assign to a Space */}
+              <div className="border border-dashed border-border rounded-lg p-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="w-4 h-4 text-purple-500" />
+                  <span className="text-sm font-medium text-foreground">Auto-assign to Space</span>
+                  <span className="text-xs text-muted-foreground">(optional)</span>
+                </div>
+
+                <Select
+                  value={inviteSpaceId}
+                  onValueChange={setInviteSpaceId}
+                  disabled={inviting}
+                >
+                  <SelectTrigger className="min-h-[40px]">
+                    <SelectValue placeholder="No space selected" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No space (workspace only)</SelectItem>
+                    {spaces.map((space: any) => (
+                      <SelectItem key={space._id} value={space._id}>{space.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {inviteSpaceId && inviteSpaceId !== 'none' && (
                   <Select
-                    value={inviteRole}
-                    onValueChange={(value: any) => setInviteRole(value)}
+                    value={inviteSpacePermission}
+                    onValueChange={(v: any) => setInviteSpacePermission(v)}
                     disabled={inviting}
                   >
-                    <SelectTrigger className="min-h-[44px]">
+                    <SelectTrigger className="min-h-[40px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="admin">
-                        <div className="flex items-center gap-2">
-                          <Shield className="w-4 h-4 text-blue-500" />
-                          Admin
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="member">
-                        <div className="flex items-center gap-2">
-                          <UserIcon className="w-4 h-4 text-green-500" />
-                          Member
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="guest">
-                        <div className="flex items-center gap-2">
-                          <Eye className="w-4 h-4 text-gray-500" />
-                          Guest
-                        </div>
-                      </SelectItem>
+                      <SelectItem value="FULL"><div className="flex items-center gap-2"><Shield className="w-3.5 h-3.5" />FULL — full control</div></SelectItem>
+                      <SelectItem value="EDIT"><div className="flex items-center gap-2"><UserIcon className="w-3.5 h-3.5" />EDIT — create &amp; edit tasks</div></SelectItem>
+                      <SelectItem value="COMMENT"><div className="flex items-center gap-2"><Eye className="w-3.5 h-3.5" />COMMENT — comment only</div></SelectItem>
+                      <SelectItem value="VIEW"><div className="flex items-center gap-2"><Eye className="w-3.5 h-3.5" />VIEW — read only</div></SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
+                )}
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
+              {/* Generated link display */}
+              {generatedLink && (
+                <div className="bg-muted rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">Share this link:</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs break-all text-foreground">{generatedLink}</code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedLink);
+                        setLinkCopied(true);
+                        setTimeout(() => setLinkCopied(false), 2000);
+                      }}
+                      className="flex-shrink-0 p-1.5 rounded hover:bg-accent transition-colors"
+                    >
+                      {linkCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetInviteModal}
+                disabled={inviting}
+                className="flex-1 min-h-[44px]"
+              >
+                {generatedLink ? 'Done' : 'Cancel'}
+              </Button>
+
+              {inviteTab === 'email' ? (
                 <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowInviteModal(false);
-                    setError(null);
-                    setInviteEmail('');
-                    setInviteRole('member');
-                  }}
-                  disabled={inviting}
-                  className="flex-1 min-h-[44px]"
+                  onClick={handleInviteMember as any}
+                  disabled={inviting || !inviteEmail.trim()}
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]"
                 >
-                  Cancel
+                  {inviting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Inviting...</> : 'Send Invite'}
                 </Button>
-                <Button type="submit" disabled={inviting} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]">
-                  {inviting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Inviting...
-                    </>
-                  ) : (
-                    'Invite'
-                  )}
+              ) : (
+                <Button
+                  onClick={handleGenerateLink}
+                  disabled={inviting || !!generatedLink}
+                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]"
+                >
+                  {inviting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : generatedLink ? 'Link Ready ✓' : 'Generate Link'}
                 </Button>
-              </div>
-            </form>
+              )}
+            </div>
           </div>
         </div>
       )}
