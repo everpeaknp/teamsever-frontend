@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Hash, User, Circle, Plus, Lock, Settings, Github } from 'lucide-react';
+import { Hash, User, Circle, Plus, Lock, Settings, Github, Bell, BellOff } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuthStore } from '@/store/useAuthStore';
+import { api } from '@/lib/axios';
 import { cn } from '@/lib/utils';
 import { usePresence } from '@/hooks/usePresence';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
@@ -56,6 +59,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isUserOnline } = usePresence(workspaceId);
   const { getRoom } = useChatStore();
+  const { user, setUser } = useAuthStore();
 
   const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
@@ -163,16 +167,39 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
     };
   }, []);
 
+  const handleToggleMute = async (channelId: string, channelName: string) => {
+    if (!user) return;
+    
+    const mutedChannels = user?.notificationPreferences?.mutedChannels || [];
+    const isMuted = mutedChannels.includes(channelId);
+    
+    const newMutedChannels = isMuted 
+      ? mutedChannels.filter(id => id !== channelId)
+      : [...mutedChannels, channelId];
+      
+    try {
+      await api.patch('/users/notification-preferences', {
+        mutedChannels: newMutedChannels
+      });
+      
+      setUser({
+        ...user,
+        notificationPreferences: {
+          ...user.notificationPreferences!,
+          mutedChannels: newMutedChannels
+        }
+      });
+      
+      toast.success(isMuted ? `Unmuted ${channelName}` : `Muted ${channelName}`);
+    } catch (error) {
+      toast.error('Failed to update mute settings');
+    }
+  };
+
   const handleMemberClick = useCallback(async (member: WorkspaceMember) => {
     try {
       if (!workspaceId || workspaceId === 'undefined' || workspaceId === 'null') return;
-      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
-      if (!token) return;
-      const response = await axios.post(
-        `${API_URL}/api/dm/${member._id}`,
-        { workspaceId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.post(`/dm/${member._id}`, { workspaceId });
 
       if (response.data.success) {
         onChannelSelect(member._id, 'direct', member.name, response.data.data._id, member._id);
@@ -246,9 +273,30 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                     <Hash className={cn("h-4 w-4 flex-shrink-0", activeChannel === channel._id ? "text-primary-foreground" : "text-muted-foreground")} />
                   )}
                   <span className="flex-1 text-left truncate font-medium">{channel.name}</span>
-                  {unread > 0 && activeChannel !== channel._id && (
-                    <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
-                  )}
+                  <div className="flex items-center gap-1">
+                    {unread > 0 && activeChannel !== channel._id && (
+                      <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleToggleMute(channel._id, channel.name);
+                      }}
+                      className={cn(
+                        "p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-all",
+                        user?.notificationPreferences?.mutedChannels?.includes(channel._id) 
+                          ? "opacity-100 text-amber-500" 
+                          : "opacity-0 group-hover:opacity-100 text-muted-foreground"
+                      )}
+                    >
+                      {user?.notificationPreferences?.mutedChannels?.includes(channel._id) ? (
+                        <BellOff className="h-3 w-3" />
+                      ) : (
+                        <Bell className="h-3 w-3" />
+                      )}
+                    </button>
+                  </div>
                 </button>
               );
             })}
@@ -277,9 +325,30 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                   >
                     <Lock className={cn("h-4 w-4 flex-shrink-0", activeChannel === channel._id ? "text-primary-foreground" : "text-muted-foreground")} />
                     <span className="flex-1 text-left truncate font-medium">{channel.name}</span>
-                    {unread > 0 && activeChannel !== channel._id && (
-                      <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
-                    )}
+                    <div className="flex items-center gap-1">
+                      {unread > 0 && activeChannel !== channel._id && (
+                        <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                      )}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleToggleMute(channel._id, channel.name);
+                        }}
+                        className={cn(
+                          "p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-all",
+                          user?.notificationPreferences?.mutedChannels?.includes(channel._id) 
+                            ? "opacity-100 text-amber-500" 
+                            : "opacity-0 group-hover:opacity-100 text-muted-foreground"
+                        )}
+                      >
+                        {user?.notificationPreferences?.mutedChannels?.includes(channel._id) ? (
+                          <BellOff className="h-3 w-3" />
+                        ) : (
+                          <Bell className="h-3 w-3" />
+                        )}
+                      </button>
+                    </div>
                   </button>
                 );
               })}

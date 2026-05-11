@@ -224,7 +224,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const mutedChannels = (user?.notificationPreferences as any)?.mutedChannels || [];
         const isCommitMessage = data.message.type === 'github_commit';
 
-        const isMuted = channelId && mutedChannels.includes(channelId);
+        const isMuted = (channelId && mutedChannels.includes(channelId)) || 
+                        mutedChannels.includes(`workspace_${workspaceId}`);
 
         // Always show a small in-app toast for group chat in active tabs.
         if (
