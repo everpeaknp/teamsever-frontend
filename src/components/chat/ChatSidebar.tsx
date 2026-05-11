@@ -257,11 +257,19 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                 ? (getRoom(`workspace_${workspaceId}`)?.unreadCount || 0)
                 : (getRoom(`channel_${channel._id}`)?.unreadCount || 0);
               return (
-                <button
+                <div
                   key={channel._id}
                   onClick={() => onChannelSelect(channel._id, 'workspace', channel.name)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onChannelSelect(channel._id, 'workspace', channel.name);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                   className={cn(
-                    'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative group',
+                    'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative group cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     activeChannel === channel._id
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-accent text-foreground'
@@ -297,7 +305,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                       )}
                     </button>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -313,11 +321,19 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
               {privateChannels.map((channel) => {
                 const unread = getRoom(`channel_${channel._id}`)?.unreadCount || 0;
                 return (
-                  <button
+                  <div
                     key={channel._id}
                     onClick={() => onChannelSelect(channel._id, 'workspace', channel.name)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onChannelSelect(channel._id, 'workspace', channel.name);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                     className={cn(
-                      'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative',
+                      'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative group cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
                       activeChannel === channel._id
                         ? 'bg-primary text-primary-foreground'
                         : 'hover:bg-accent text-foreground'
@@ -349,7 +365,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                         )}
                       </button>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
