@@ -218,6 +218,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         const isSameWorkspace = !activeWorkspaceId || activeWorkspaceId === workspaceId;
         const { permission } = useNotificationStore.getState();
+        const user = useAuthStore.getState().user;
+        const messagesEnabled = user?.notificationPreferences?.messages !== false;
+        const isCommitMessage = data.message.type === 'github_commit';
 
         // Always show a small in-app toast for group chat in active tabs.
         if (
@@ -225,7 +228,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           normalizedCurrentUserId &&
           !isSenderSelf &&
           !document.hidden &&
-          isSameWorkspace
+          isSameWorkspace &&
+          messagesEnabled &&
+          !isCommitMessage
         ) {
           toast.info(`${senderName} to ${groupName}`, {
             description: data?.message?.content || 'Message',
@@ -238,7 +243,9 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           normalizedCurrentUserId &&
           !isSenderSelf &&
           document.hidden &&
-          permission === 'granted'
+          permission === 'granted' &&
+          messagesEnabled &&
+          !isCommitMessage
         ) {
           const channelIdForNotification =
             typeof data?.message?.channel === 'string'
@@ -307,6 +314,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             : data?.message?.sender?._id?.toString?.();
         const { permission, fcmToken } = useNotificationStore.getState();
         const hasFCMDelivery = permission === 'granted' && !!fcmToken;
+        const user = useAuthStore.getState().user;
+        const messagesEnabled = user?.notificationPreferences?.messages !== false;
         const isSameWorkspace =
           !activeWorkspaceId ||
           !conversationWorkspaceId ||
@@ -317,7 +326,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           senderId !== currentUserId &&
           document.hidden &&
           !hasFCMDelivery &&
-          isSameWorkspace
+          isSameWorkspace &&
+          messagesEnabled
         ) {
           const senderName = data?.message?.sender?.name || 'Someone';
           showBrowserNotification(senderName, data?.message?.content || 'Message', {
