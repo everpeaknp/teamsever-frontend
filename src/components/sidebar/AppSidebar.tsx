@@ -523,7 +523,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
     const isMuted = mutedChannels.includes(channelId);
     
     const newMutedChannels = isMuted 
-      ? mutedChannels.filter(id => id !== channelId)
+      ? mutedChannels.filter((id: string) => id !== channelId)
       : [...mutedChannels, channelId];
       
     try {

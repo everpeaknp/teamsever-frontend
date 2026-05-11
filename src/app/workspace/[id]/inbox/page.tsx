@@ -199,7 +199,7 @@ export default function InboxPage() {
     const mutedUsers = user.notificationPreferences?.mutedUsers || [];
     const isMuted = mutedUsers.includes(userId);
     const newMutedUsers = isMuted
-      ? mutedUsers.filter((id) => id !== userId)
+      ? mutedUsers.filter((id: string) => id !== userId)
       : [...mutedUsers, userId];
 
     try {

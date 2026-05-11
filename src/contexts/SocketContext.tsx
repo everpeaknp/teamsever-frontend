@@ -219,8 +219,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const isSameWorkspace = !activeWorkspaceId || activeWorkspaceId === workspaceId;
         const { permission } = useNotificationStore.getState();
         const user = useAuthStore.getState().user;
-        const groupChatsEnabled = (user?.notificationPreferences as any)?.groupChats !== false;
-        const mutedChannels = (user?.notificationPreferences as any)?.mutedChannels || [];
+        const groupChatsEnabled = user?.notificationPreferences?.groupChats !== false;
+        const mutedChannels = user?.notificationPreferences?.mutedChannels || [];
         const isCommitMessage = data.message.type === 'github_commit';
         const githubCommitsEnabled = user?.notificationPreferences?.githubCommits !== false;
         const allowCommitChatNotification = !isCommitMessage || !githubCommitsEnabled;
@@ -324,7 +324,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const hasFCMDelivery = permission === 'granted' && !!fcmToken;
         const user = useAuthStore.getState().user;
         const messagesEnabled = user?.notificationPreferences?.messages !== false;
-        const mutedUsers = (user?.notificationPreferences as any)?.mutedUsers || [];
+        const mutedUsers = user?.notificationPreferences?.mutedUsers || [];
         const isMuted = senderId && mutedUsers.includes(senderId);
         const isSameWorkspace =
           !activeWorkspaceId ||

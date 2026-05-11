@@ -200,7 +200,7 @@ const getRoute = () => {
     if (!user) return;
     
     const newMutedChannels = isMuted 
-      ? mutedChannels.filter(id => id !== item._id)
+      ? mutedChannels.filter((id: string) => id !== item._id)
       : [...mutedChannels, item._id];
       
     try {

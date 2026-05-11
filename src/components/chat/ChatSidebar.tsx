@@ -174,7 +174,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
     const isMuted = mutedChannels.includes(channelId);
     
     const newMutedChannels = isMuted 
-      ? mutedChannels.filter(id => id !== channelId)
+      ? mutedChannels.filter((id: string) => id !== channelId)
       : [...mutedChannels, channelId];
       
     try {
@@ -199,11 +199,11 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
   const handleToggleMuteUser = async (userId: string, userName: string) => {
     if (!user) return;
     
-    const mutedUsers = (user?.notificationPreferences as any)?.mutedUsers || [];
+    const mutedUsers = user?.notificationPreferences?.mutedUsers || [];
     const isMuted = mutedUsers.includes(userId);
     
     const newMutedUsers = isMuted 
-      ? mutedUsers.filter(id => id !== userId)
+      ? mutedUsers.filter((id: string) => id !== userId)
       : [...mutedUsers, userId];
       
     try {
