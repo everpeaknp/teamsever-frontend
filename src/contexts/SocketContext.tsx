@@ -219,10 +219,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const isSameWorkspace = !activeWorkspaceId || activeWorkspaceId === workspaceId;
         const { permission } = useNotificationStore.getState();
         const user = useAuthStore.getState().user;
-        const messagesEnabled = user?.notificationPreferences?.messages !== false;
         const groupChatsEnabled = (user?.notificationPreferences as any)?.groupChats !== false;
         const mutedChannels = (user?.notificationPreferences as any)?.mutedChannels || [];
         const isCommitMessage = data.message.type === 'github_commit';
+        const githubCommitsEnabled = user?.notificationPreferences?.githubCommits !== false;
+        const allowCommitChatNotification = !isCommitMessage || !githubCommitsEnabled;
 
         const isMuted = (channelId && mutedChannels.includes(channelId)) || 
                         mutedChannels.includes(`workspace_${workspaceId}`);
@@ -236,7 +237,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           isSameWorkspace &&
           groupChatsEnabled &&
           !isMuted &&
-          !isCommitMessage
+          allowCommitChatNotification
         ) {
           toast.info(`${senderName} to ${groupName}`, {
             description: data?.message?.content || 'Message',
@@ -252,7 +253,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           permission === 'granted' &&
           groupChatsEnabled &&
           !isMuted &&
-          !isCommitMessage
+          allowCommitChatNotification
         ) {
           const channelIdForNotification =
             typeof data?.message?.channel === 'string'
@@ -323,6 +324,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const hasFCMDelivery = permission === 'granted' && !!fcmToken;
         const user = useAuthStore.getState().user;
         const messagesEnabled = user?.notificationPreferences?.messages !== false;
+        const mutedUsers = (user?.notificationPreferences as any)?.mutedUsers || [];
+        const isMuted = senderId && mutedUsers.includes(senderId);
         const isSameWorkspace =
           !activeWorkspaceId ||
           !conversationWorkspaceId ||
@@ -334,7 +337,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           document.hidden &&
           !hasFCMDelivery &&
           isSameWorkspace &&
-          messagesEnabled
+          messagesEnabled &&
+          !isMuted
         ) {
           const senderName = data?.message?.sender?.name || 'Someone';
           showBrowserNotification(senderName, data?.message?.content || 'Message', {

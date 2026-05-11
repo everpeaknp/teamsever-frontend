@@ -91,6 +91,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
               email: userData.email,
               profilePicture: userData.profilePicture,
               avatar: userData.avatar,
+              notificationPreferences: userData.notificationPreferences,
             });
           }
         })

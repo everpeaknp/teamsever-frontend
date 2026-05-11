@@ -37,6 +37,7 @@ interface User {
     comments: boolean;
     notices: boolean;
     mutedChannels: string[];
+    mutedUsers: string[];
   };
 }
 
@@ -116,11 +117,18 @@ export const useAuthStore = create<AuthState>()(
 
       // Set user info
       setUser: (user: User) => {
-        set({ 
-          user,
-          userId: user._id,
-          userName: user.name,
-          userEmail: user.email,
+        set((state) => {
+          const mergedUser = {
+            ...(state.user || {}),
+            ...user,
+          };
+
+          return {
+            user: mergedUser,
+            userId: mergedUser._id,
+            userName: mergedUser.name,
+            userEmail: mergedUser.email,
+          };
         });
       },
 

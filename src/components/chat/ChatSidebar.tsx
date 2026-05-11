@@ -196,6 +196,35 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
     }
   };
 
+  const handleToggleMuteUser = async (userId: string, userName: string) => {
+    if (!user) return;
+    
+    const mutedUsers = (user?.notificationPreferences as any)?.mutedUsers || [];
+    const isMuted = mutedUsers.includes(userId);
+    
+    const newMutedUsers = isMuted 
+      ? mutedUsers.filter(id => id !== userId)
+      : [...mutedUsers, userId];
+      
+    try {
+      await api.patch('/users/notification-preferences', {
+        mutedUsers: newMutedUsers
+      });
+      
+      setUser({
+        ...user,
+        notificationPreferences: {
+          ...user.notificationPreferences!,
+          mutedUsers: newMutedUsers
+        }
+      });
+      
+      toast.success(isMuted ? `Unmuted ${userName}` : `Muted ${userName}`);
+    } catch (error) {
+      toast.error('Failed to update mute settings');
+    }
+  };
+
   const handleMemberClick = useCallback(async (member: WorkspaceMember) => {
     try {
       if (!workspaceId || workspaceId === 'undefined' || workspaceId === 'null') return;
@@ -414,11 +443,19 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                 (getRoom(dmRoomId)?.unreadCount || 0);
 
               return (
-                <button
+                <div
                   key={member._id}
                   onClick={() => handleMemberClick(member)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleMemberClick(member);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                   className={cn(
-                    'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative',
+                    'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative group cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     activeChannel === member._id
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-accent text-foreground'
@@ -438,12 +475,34 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                     />
                   </div>
                   <span className="flex-1 text-left truncate">{member.name}</span>
-                  {unread > 0 && activeChannel !== member._id && (
-                    <div className="bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                      {unread > 9 ? '9+' : unread}
-                    </div>
-                  )}
-                </button>
+                  <div className="flex items-center gap-1">
+                    {unread > 0 && activeChannel !== member._id && (
+                      <div className="bg-primary text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        {unread > 9 ? '9+' : unread}
+                      </div>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleToggleMuteUser(member._id, member.name);
+                      }}
+                      className={cn(
+                        "p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-all",
+                        (user?.notificationPreferences as any)?.mutedUsers?.includes(member._id) 
+                          ? "opacity-100 text-amber-500" 
+                          : "opacity-0 group-hover:opacity-100 text-muted-foreground"
+                      )}
+                      title={(user?.notificationPreferences as any)?.mutedUsers?.includes(member._id) ? "Unmute" : "Mute"}
+                    >
+                      {(user?.notificationPreferences as any)?.mutedUsers?.includes(member._id) ? (
+                        <BellOff className="h-3 w-3" />
+                      ) : (
+                        <Bell className="h-3 w-3" />
+                      )}
+                    </button>
+                  </div>
+                </div>
               );
             })}
           </div>

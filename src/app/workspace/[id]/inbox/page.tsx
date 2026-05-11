@@ -6,13 +6,15 @@ import { ChatWindow } from '@/components/chat/ChatWindow';
 import { useSocket } from '@/contexts/SocketContext';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { usePresence } from '@/hooks/usePresence';
-import { Loader2, User, Circle } from 'lucide-react';
+import { Loader2, User, Circle, Bell, BellOff } from 'lucide-react';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/axios';
 import { ChatSkeleton } from '@/components/skeletons/PageSkeleton';
 import { format, isToday, isYesterday } from 'date-fns';
 import { useMemo } from 'react';
+import { useAuthStore } from '@/store/useAuthStore';
+import { toast } from 'sonner';
 
 interface WorkspaceMember {
   _id: string;
@@ -47,6 +49,7 @@ export default function InboxPage() {
   const { setActiveRoom, getRoom } = useChatStore();
   const { isUserOnline } = usePresence(workspaceId);
   const { socket } = useSocket();
+  const { user, setUser } = useAuthStore();
 
   // Initialize auth and socket
   useEffect(() => {
@@ -190,6 +193,34 @@ export default function InboxPage() {
     }
   };
 
+  const handleToggleMuteUser = async (userId: string, userName: string) => {
+    if (!user) return;
+
+    const mutedUsers = user.notificationPreferences?.mutedUsers || [];
+    const isMuted = mutedUsers.includes(userId);
+    const newMutedUsers = isMuted
+      ? mutedUsers.filter((id) => id !== userId)
+      : [...mutedUsers, userId];
+
+    try {
+      await api.patch('/users/notification-preferences', {
+        mutedUsers: newMutedUsers
+      });
+
+      setUser({
+        ...user,
+        notificationPreferences: {
+          ...(user.notificationPreferences || {}),
+          mutedUsers: newMutedUsers
+        }
+      });
+
+      toast.success(isMuted ? `Unmuted ${userName}` : `Muted ${userName}`);
+    } catch (error) {
+      toast.error('Failed to update mute settings');
+    }
+  };
+
   const startSidebarResizing = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     isResizingRef.current = true;
@@ -292,12 +323,22 @@ export default function InboxPage() {
                 const isSelected = selectedMember?._id === member._id;
                 const lastMessageTime = conversation?.lastMessageAt;
 
+                const isMuted = user?.notificationPreferences?.mutedUsers?.includes(member._id) ?? false;
+
                 return (
-                  <button
+                  <div
                     key={member._id}
                     onClick={() => handleMemberSelect(member)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        handleMemberSelect(member);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
                     className={cn(
-                      'w-full flex items-center gap-3 p-3 rounded-lg transition-colors mb-1',
+                      'w-full flex items-center gap-3 p-3 rounded-lg transition-colors mb-1 group cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
                       isSelected
                         ? 'bg-primary text-primary-foreground'
                         : 'hover:bg-accent text-foreground'
@@ -326,12 +367,36 @@ export default function InboxPage() {
                       </div>
                       <div className="text-xs opacity-70 truncate">{member.email}</div>
                     </div>
-                    {unreadCount > 0 && (
-                      <div className="h-6 w-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </div>
-                    )}
-                  </button>
+                    <div className="flex items-center gap-2">
+                      {unreadCount > 0 && (
+                        <div className="h-6 w-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          handleToggleMuteUser(member._id, member.name);
+                        }}
+                        className={cn(
+                          'p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-all',
+                          isMuted
+                            ? 'opacity-100 text-amber-500'
+                            : 'opacity-0 group-hover:opacity-100 text-muted-foreground'
+                        )}
+                        title={isMuted ? 'Unmute' : 'Mute'}
+                        aria-label={isMuted ? `Unmute ${member.name}` : `Mute ${member.name}`}
+                      >
+                        {isMuted ? (
+                          <BellOff className="h-4 w-4" />
+                        ) : (
+                          <Bell className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
             </div>

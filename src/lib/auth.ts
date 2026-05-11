@@ -14,6 +14,19 @@ interface AuthResponse {
     isSuperUser?: boolean;
     profilePicture?: string;
     avatar?: string;
+    notificationPreferences?: {
+      githubCommits?: boolean;
+      taskAssigned?: boolean;
+      taskStatusChange?: boolean;
+      taskUpdates?: boolean;
+      messages?: boolean;
+      groupChats?: boolean;
+      mentions?: boolean;
+      comments?: boolean;
+      notices?: boolean;
+      mutedChannels?: string[];
+      mutedUsers?: string[];
+    };
   };
 }
 
@@ -36,6 +49,7 @@ function normalizeAuthResponse(data: any): AuthResponse {
         isSuperUser: data.user.isSuperUser || false,
         profilePicture: data.user.profilePicture,
         avatar: data.user.avatar,
+        notificationPreferences: data.user.notificationPreferences,
       },
     };
   }
@@ -92,6 +106,7 @@ function storeAuthData(authData: AuthResponse): void {
       email: authData.user.email,
       profilePicture: authData.user.profilePicture,
       avatar: authData.user.avatar,
+      notificationPreferences: authData.user.notificationPreferences,
     });
   } catch (e) {
     // Non-critical - store will rehydrate from localStorage persist on next render

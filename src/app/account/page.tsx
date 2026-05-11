@@ -98,6 +98,25 @@ export default function AccountSettingsPage() {
   const [isLinkingGithub, setIsLinkingGithub] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const defaultNotificationPrefs = {
+    githubCommits: true,
+    taskAssigned: true,
+    taskStatusChange: true,
+    taskUpdates: true,
+    messages: true,
+    groupChats: true,
+    mentions: true,
+    comments: true,
+    notices: true,
+    mutedChannels: [] as string[],
+  };
+
+  const normalizeNotificationPrefs = (prefs: any) => ({
+    ...defaultNotificationPrefs,
+    ...(prefs || {}),
+    mutedChannels: Array.isArray(prefs?.mutedChannels) ? prefs.mutedChannels : [],
+  });
+
   // Profile form
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -111,18 +130,7 @@ export default function AccountSettingsPage() {
   });
 
   // Notification preferences state
-  const [notificationPrefs, setNotificationPrefs] = useState({
-    githubCommits: true,
-    taskAssigned: true,
-    taskStatusChange: true,
-    taskUpdates: true,
-    messages: true,
-    groupChats: true,
-    mentions: true,
-    comments: true,
-    notices: true,
-    mutedChannels: [],
-  });
+  const [notificationPrefs, setNotificationPrefs] = useState(defaultNotificationPrefs);
 
   // Check if GitHub is actually linked in Firebase
   const isGithubVerified = auth.currentUser?.providerData.some(
@@ -162,9 +170,7 @@ export default function AccountSettingsPage() {
         setLanguage(userData.language || 'en-US');
         setTimezone(userData.timezone || 'America/Los_Angeles');
         
-        if (userData.notificationPreferences) {
-          setNotificationPrefs(userData.notificationPreferences);
-        }
+        setNotificationPrefs(normalizeNotificationPrefs(userData.notificationPreferences));
         
       } catch (error) {
         console.error('Failed to fetch user data:', error);
@@ -391,9 +397,7 @@ export default function AccountSettingsPage() {
     setLanguage((currentUser as any).language || 'en-US');
     setTimezone((currentUser as any).timezone || 'America/Los_Angeles');
     
-    if ((currentUser as any).notificationPreferences) {
-      setNotificationPrefs((currentUser as any).notificationPreferences);
-    }
+    setNotificationPrefs(normalizeNotificationPrefs((currentUser as any).notificationPreferences));
     
     toast.info('Changes cancelled');
   };
