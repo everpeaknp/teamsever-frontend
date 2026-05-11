@@ -117,9 +117,11 @@ export default function AccountSettingsPage() {
     taskStatusChange: true,
     taskUpdates: true,
     messages: true,
+    groupChats: true,
     mentions: true,
     comments: true,
     notices: true,
+    mutedChannels: [],
   });
 
   // Check if GitHub is actually linked in Firebase
@@ -893,6 +895,16 @@ export default function AccountSettingsPage() {
                         <Switch
                           checked={notificationPrefs.messages}
                           onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, messages: checked }))}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-900 dark:text-white">Group Chats</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Global notifications for all public and private channels</p>
+                        </div>
+                        <Switch
+                          checked={(notificationPrefs as any).groupChats !== false}
+                          onCheckedChange={(checked) => setNotificationPrefs(prev => ({ ...prev, groupChats: checked }))}
                         />
                       </div>
                       <div className="flex items-center justify-between">

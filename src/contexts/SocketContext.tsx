@@ -220,7 +220,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const { permission } = useNotificationStore.getState();
         const user = useAuthStore.getState().user;
         const messagesEnabled = user?.notificationPreferences?.messages !== false;
+        const groupChatsEnabled = (user?.notificationPreferences as any)?.groupChats !== false;
+        const mutedChannels = (user?.notificationPreferences as any)?.mutedChannels || [];
         const isCommitMessage = data.message.type === 'github_commit';
+
+        const isMuted = channelId && mutedChannels.includes(channelId);
 
         // Always show a small in-app toast for group chat in active tabs.
         if (
@@ -229,7 +233,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           !isSenderSelf &&
           !document.hidden &&
           isSameWorkspace &&
-          messagesEnabled &&
+          groupChatsEnabled &&
+          !isMuted &&
           !isCommitMessage
         ) {
           toast.info(`${senderName} to ${groupName}`, {
@@ -244,7 +249,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           !isSenderSelf &&
           document.hidden &&
           permission === 'granted' &&
-          messagesEnabled &&
+          groupChatsEnabled &&
+          !isMuted &&
           !isCommitMessage
         ) {
           const channelIdForNotification =

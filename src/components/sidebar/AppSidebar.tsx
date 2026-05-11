@@ -6,6 +6,7 @@ import { usePathname, useParams, useRouter } from 'next/navigation';
 import {
   Inbox,
   Bell,
+  BellOff,
   Settings as SettingsIcon,
   Plus,
   Star,
@@ -19,7 +20,9 @@ import {
   MessageSquare,
   FolderOpen,
   Clock,
+  MoreHorizontal,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from 'next-themes';
@@ -512,6 +515,35 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
       localStorage.setItem('lastWorkspaceId', workspaceId);
     }
   }, [workspaceId, router]);
+ 
+  const handleToggleMute = async (channelId: string, channelName: string) => {
+    if (!user) return;
+    
+    const mutedChannels = user?.notificationPreferences?.mutedChannels || [];
+    const isMuted = mutedChannels.includes(channelId);
+    
+    const newMutedChannels = isMuted 
+      ? mutedChannels.filter(id => id !== channelId)
+      : [...mutedChannels, channelId];
+      
+    try {
+      await api.patch('/users/notification-preferences', {
+        mutedChannels: newMutedChannels
+      });
+      
+      setUser({
+        ...user,
+        notificationPreferences: {
+          ...user.notificationPreferences!,
+          mutedChannels: newMutedChannels
+        }
+      });
+      
+      toast.success(isMuted ? `Unmuted ${channelName}` : `Muted ${channelName}`);
+    } catch (error) {
+      toast.error('Failed to update mute settings');
+    }
+  };
 
   // If no workspaceId in URL, try to get from localStorage for certain global pages
   if (!workspaceId && (pathname === '/account' || pathname === '/notifications')) {
@@ -817,23 +849,46 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                 {/* Quick Links */}
                 <div>
                   <div className="space-y-0.5">
-                    <Link
-                      href={`/workspace/${workspaceId}/chat`}
-                      className={cn(
-                        'relative flex items-center gap-2 px-2 py-1.5 pr-10 rounded-md text-xs transition-colors w-full',
-                        pathname === `/workspace/${workspaceId}/chat`
-                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
-                      )}
-                    >
-                      <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span className="flex-1 min-w-0 truncate">Group Chat</span>
-                      {effectiveGroupChatUnread > 0 && (
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                          {effectiveGroupChatUnread > 99 ? '99+' : effectiveGroupChatUnread}
-                        </span>
-                      )}
-                    </Link>
+                    <div className="relative group/chat">
+                      <Link
+                        href={`/workspace/${workspaceId}/chat`}
+                        className={cn(
+                          'relative flex items-center gap-2 px-2 py-1.5 pr-10 rounded-md text-xs transition-colors w-full',
+                          pathname === `/workspace/${workspaceId}/chat`
+                            ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
+                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        )}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="flex-1 min-w-0 truncate">Group Chat</span>
+                        {effectiveGroupChatUnread > 0 && (
+                          <span className="absolute right-7 top-1/2 -translate-y-1/2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
+                            {effectiveGroupChatUnread > 99 ? '99+' : effectiveGroupChatUnread}
+                          </span>
+                        )}
+                      </Link>
+                      
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleToggleMute(`workspace_${workspaceId}`, 'Group Chat');
+                        }}
+                        className={cn(
+                          "absolute right-1 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-all",
+                          user?.notificationPreferences?.mutedChannels?.includes(`workspace_${workspaceId}`) 
+                            ? "opacity-100 text-amber-500" 
+                            : "opacity-0 group-hover/chat:opacity-100 text-slate-400"
+                        )}
+                        title={user?.notificationPreferences?.mutedChannels?.includes(`workspace_${workspaceId}`) ? "Unmute" : "Mute"}
+                      >
+                        {user?.notificationPreferences?.mutedChannels?.includes(`workspace_${workspaceId}`) ? (
+                          <BellOff className="w-3.5 h-3.5" />
+                        ) : (
+                          <Bell className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                     <Link
                       href={`/workspace/${workspaceId}/inbox`}
                       className={cn(

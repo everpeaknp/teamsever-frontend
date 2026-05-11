@@ -11,7 +11,12 @@ import {
   Star,
   Trash2,
   Github,
+  Bell,
+  BellOff,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { api } from '@/lib/axios';
+import { useAuthStore } from '@/store/useAuthStore';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/store/useUIStore';
 import { useModalStore } from '@/store/useModalStore';
@@ -51,6 +56,7 @@ export const HierarchyItemComponent = React.memo(function HierarchyItemComponent
   
   const openModal = useModalStore(state => state.openModal);
   const { isAdmin, isOwner } = usePermissions();
+  const { user, setUser } = useAuthStore();
   
   const [isHovered, setIsHovered] = useState(false);
   const [canCreateContent, setCanCreateContent] = useState(false);
@@ -182,6 +188,38 @@ const getRoute = () => {
     e.preventDefault();
     e.stopPropagation();
     toggleFavorite(item._id);
+  };
+
+  const mutedChannels = user?.notificationPreferences?.mutedChannels || [];
+  const isMuted = mutedChannels.includes(item._id);
+
+  const handleToggleMute = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!user) return;
+    
+    const newMutedChannels = isMuted 
+      ? mutedChannels.filter(id => id !== item._id)
+      : [...mutedChannels, item._id];
+      
+    try {
+      const response = await api.patch('/users/notification-preferences', {
+        mutedChannels: newMutedChannels
+      });
+      
+      setUser({
+        ...user,
+        notificationPreferences: {
+          ...user.notificationPreferences!,
+          mutedChannels: newMutedChannels
+        }
+      });
+      
+      toast.success(isMuted ? `Unmuted ${item.name}` : `Muted ${item.name}`);
+    } catch (error) {
+      toast.error('Failed to update mute settings');
+    }
   };
 
   const handleRowClick = () => {
@@ -318,6 +356,16 @@ const getRoute = () => {
                   >
                     <Star className="h-4 w-4 mr-2" />
                     {isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                  </DropdownMenuItem>
+                  
+                  <DropdownMenuItem 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleMute(e);
+                    }}
+                  >
+                    {isMuted ? <Bell className="h-4 w-4 mr-2" /> : <BellOff className="h-4 w-4 mr-2" />}
+                    {isMuted ? 'Unmute channel' : 'Mute channel'}
                   </DropdownMenuItem>
                   
                   {/* Edit options for owner only */}

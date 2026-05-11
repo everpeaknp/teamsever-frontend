@@ -32,9 +32,11 @@ interface User {
     taskStatusChange: boolean;
     taskUpdates: boolean;
     messages: boolean;
+    groupChats: boolean;
     mentions: boolean;
     comments: boolean;
     notices: boolean;
+    mutedChannels: string[];
   };
 }
 
