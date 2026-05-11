@@ -542,8 +542,8 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
       <DeleteItemModal />
 
       <div className="flex h-screen overflow-hidden">
-        {/* Left Icon Bar - desktop only */}
-        {!isMobile && (
+        {/* Left Icon Bar */}
+        {
         <div
           className="w-[64px] flex flex-col items-center py-5 transition-all duration-500 relative z-20 border-r border-white/5 flex-shrink-0"
           style={{
@@ -717,7 +717,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
 
           </div>
         </div>
-        )}
+        }
 
         {/* Main Sidebar Content - Resizable & Collapsible */}
         <div 
@@ -725,7 +725,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
             "bg-white dark:bg-[#1a1a1a] border-r border-slate-200 dark:border-slate-800 flex flex-col relative group/sidebar overflow-hidden",
             !isResizingState && "transition-all duration-300"
           )}
-          style={{ width: isMobile ? '100%' : (isSidebarOpen ? `${sidebarWidth}px` : '0px') }}
+          style={{ width: isMobile ? 'calc(100% - 64px)' : (isSidebarOpen ? `${sidebarWidth}px` : '0px') }}
         >
           {/* Resize Handle - Only show when sidebar is open */}
           {!isMobile && isSidebarOpen && (
