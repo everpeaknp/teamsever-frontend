@@ -295,9 +295,43 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
                 ? `chat_${data.workspaceId}` 
                 : undefined;
 
+            const rawTitle = notification.title || 'New Notification';
+            const normalizedType = String(data?.type || '').toUpperCase();
+            let formattedTitle = rawTitle;
+            let formattedBody = notification.body || '';
+
+            if (normalizedType === 'DM_NEW') {
+              const senderName =
+                data?.senderName ||
+                rawTitle.replace(/^Message from\s+/i, '').trim() ||
+                'Someone';
+              formattedTitle = senderName;
+              formattedBody = notification.body || data?.message || 'Message';
+            }
+
+            if (normalizedType === 'GROUP_CHAT_NEW') {
+              const senderName = data?.senderName || 'Someone';
+              const groupName = data?.channelName || data?.groupName || 'Group';
+              formattedTitle = `${senderName} to ${groupName}`;
+              formattedBody = notification.body || data?.message || 'Message';
+            }
+
+            // Backward-compatible fallback:
+            // Some payloads still come with generic title "New Group Message"
+            // without normalized `type`. Format them anyway using data fields.
+            if (
+              normalizedType !== 'GROUP_CHAT_NEW' &&
+              /^new group message$/i.test(rawTitle)
+            ) {
+              const senderName = data?.senderName || data?.userName || 'Someone';
+              const groupName = data?.channelName || data?.groupName || data?.channel || 'Group';
+              formattedTitle = `${senderName} to ${groupName}`;
+              formattedBody = notification.body || data?.message || 'Message';
+            }
+
             get().showBrowserNotification(
-              notification.title || 'New Notification',
-              notification.body || '',
+              formattedTitle,
+              formattedBody,
               { ...data, tag }
             );
           }

@@ -15,7 +15,6 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
 
   // Remove all console.* calls from production bundle
   compiler: {

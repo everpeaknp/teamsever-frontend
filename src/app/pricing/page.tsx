@@ -43,8 +43,8 @@ export default function PricingPage() {
 
   const fetchNotificationCount = async () => {
     try {
-      const response = await api.get('/notifications/unread-count');
-      setUnreadNotifications(response.data.count || 0);
+      // Pricing page is global (no workspace scope), so skip scoped unread endpoint.
+      setUnreadNotifications(0);
     } catch (error) {
       console.error('Failed to fetch notification count:', error);
     }

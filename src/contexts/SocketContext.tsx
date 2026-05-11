@@ -7,6 +7,7 @@ import { api } from '@/lib/axios';
 import { useChatStore } from '@/store/useChatStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { useAuthStore } from '@/store/useAuthStore';
+import { toast } from 'sonner';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -31,6 +32,8 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [token, setToken] = useState<string | null>(null);
   const joinedWorkspaceIdsRef = useRef<string[]>([]);
+  const processedChatEventIdsRef = useRef<Set<string>>(new Set());
+  const processedDMEventIdsRef = useRef<Set<string>>(new Set());
 
   // Monitor token changes
   useEffect(() => {
@@ -159,12 +162,27 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const handleGlobalChatMessage = (data: { message: any }) => {
         const { addMessage } = useChatStore.getState();
         const { showBrowserNotification } = useNotificationStore.getState();
+        const messageId = data?.message?._id?.toString?.();
 
-        const workspaceId =
+        let activeWorkspaceId: string | undefined;
+        if (typeof window !== 'undefined') {
+          const match = window.location.pathname.match(/\/workspace\/([^/]+)/);
+          activeWorkspaceId = match?.[1];
+        }
+
+        const payloadWorkspaceId =
           typeof data.message.workspace === 'string'
             ? data.message.workspace
             : data.message.workspace?._id?.toString?.() || data.message.workspace?.toString?.();
+        const workspaceId = payloadWorkspaceId || activeWorkspaceId;
         if (!workspaceId) return;
+
+        if (messageId) {
+          if (processedChatEventIdsRef.current.has(messageId)) return;
+          processedChatEventIdsRef.current.add(messageId);
+          // Keep dedupe window bounded to avoid unbounded memory growth.
+          setTimeout(() => processedChatEventIdsRef.current.delete(messageId), 120000);
+        }
 
         const roomId = `workspace_${workspaceId}`;
         addMessage(roomId, data.message);
@@ -182,12 +200,55 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           typeof data?.message?.sender === 'string'
             ? data.message.sender
             : data?.message?.sender?._id?.toString?.();
-        const { permission, fcmToken } = useNotificationStore.getState();
-        const hasFCMDelivery = permission === 'granted' && !!fcmToken;
-        if (senderId && currentUserId && senderId !== currentUserId && document.hidden && !hasFCMDelivery) {
-          showBrowserNotification('New Group Message', data?.message?.content || 'You have a new message', {
+        const normalizedCurrentUserId = currentUserId?.toString?.();
+        const normalizedSenderId = senderId?.toString?.();
+        const isSenderSelf =
+          !!normalizedCurrentUserId &&
+          !!normalizedSenderId &&
+          normalizedCurrentUserId === normalizedSenderId;
+        const senderName =
+          data?.message?.sender?.name ||
+          (isSenderSelf ? 'You' : 'Someone');
+        const groupName =
+          data?.message?.channelName ||
+          data?.message?.channel?.name ||
+          (typeof data?.message?.channel === 'string' && data.message.channel.toLowerCase() === 'general'
+            ? 'General'
+            : 'Group');
+
+        const isSameWorkspace = !activeWorkspaceId || activeWorkspaceId === workspaceId;
+        const { permission } = useNotificationStore.getState();
+
+        // Always show a small in-app toast for group chat in active tabs.
+        if (
+          normalizedSenderId &&
+          normalizedCurrentUserId &&
+          !isSenderSelf &&
+          !document.hidden &&
+          isSameWorkspace
+        ) {
+          toast.info(`${senderName} to ${groupName}`, {
+            description: data?.message?.content || 'Message',
+            duration: 3500,
+          });
+        }
+
+        if (
+          normalizedSenderId &&
+          normalizedCurrentUserId &&
+          !isSenderSelf &&
+          document.hidden &&
+          permission === 'granted'
+        ) {
+          const channelIdForNotification =
+            typeof data?.message?.channel === 'string'
+              ? data.message.channel
+              : data?.message?.channel?._id?.toString?.() || data?.message?.channel?.toString?.();
+          showBrowserNotification(`${senderName} to ${groupName}`, data?.message?.content || 'Message', {
             workspaceId,
+            channelId: channelIdForNotification,
             resourceType: 'chat',
+            notificationId: data?.message?._id,
           });
         }
       };
@@ -195,6 +256,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const handleGlobalDM = (data: { message: any; conversation: any }) => {
         const { addMessage, createRoom } = useChatStore.getState();
         const { showBrowserNotification } = useNotificationStore.getState();
+        const messageId = data?.message?._id?.toString?.();
 
         const roomId =
           typeof data.message.conversation === 'string'
@@ -216,8 +278,24 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             ? data.message.workspace
             : data?.message?.workspace?._id?.toString?.());
 
+        let activeWorkspaceId: string | undefined;
+        if (typeof window !== 'undefined') {
+          const match = window.location.pathname.match(/\/workspace\/([^/]+)/);
+          activeWorkspaceId = match?.[1];
+        }
+
+        // Some server payloads may omit workspace in conversation/message.
+        // Fallback to the currently active workspace so unread counters stay scoped.
+        const scopedWorkspaceId = conversationWorkspaceId || activeWorkspaceId;
+
         if (participants && participants.length > 0) {
-          createRoom(roomId, 'direct', conversationWorkspaceId, participants);
+          createRoom(roomId, 'direct', scopedWorkspaceId, participants);
+        }
+
+        if (messageId) {
+          if (processedDMEventIdsRef.current.has(messageId)) return;
+          processedDMEventIdsRef.current.add(messageId);
+          setTimeout(() => processedDMEventIdsRef.current.delete(messageId), 120000);
         }
 
         addMessage(roomId, data.message);
@@ -229,9 +307,20 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             : data?.message?.sender?._id?.toString?.();
         const { permission, fcmToken } = useNotificationStore.getState();
         const hasFCMDelivery = permission === 'granted' && !!fcmToken;
-        if (senderId && currentUserId && senderId !== currentUserId && document.hidden && !hasFCMDelivery) {
+        const isSameWorkspace =
+          !activeWorkspaceId ||
+          !conversationWorkspaceId ||
+          conversationWorkspaceId === activeWorkspaceId;
+        if (
+          senderId &&
+          currentUserId &&
+          senderId !== currentUserId &&
+          document.hidden &&
+          !hasFCMDelivery &&
+          isSameWorkspace
+        ) {
           const senderName = data?.message?.sender?.name || 'Someone';
-          showBrowserNotification(`New DM from ${senderName}`, data?.message?.content || 'You have a new direct message', {
+          showBrowserNotification(senderName, data?.message?.content || 'Message', {
             workspaceId: conversationWorkspaceId,
             conversationId: roomId,
             resourceType: 'dm',

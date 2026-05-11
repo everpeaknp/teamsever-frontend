@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { api } from '@/lib/axios';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { toast } from 'sonner';
@@ -29,6 +30,9 @@ interface NotificationsModalProps {
 }
 
 export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps) {
+  const pathname = usePathname();
+  const workspaceMatch = pathname?.match(/\/workspace\/([^/]+)/);
+  const scopedWorkspaceId = workspaceMatch?.[1];
   const {
     notifications,
     unreadCount,
@@ -49,8 +53,13 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
   }, [isOpen]);
 
   const fetchNotifications = async () => {
+    if (!scopedWorkspaceId) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await api.get('/notifications');
+      const response = await api.get(`/notifications?workspaceId=${scopedWorkspaceId}`);
       setNotifications(response.data.data || []);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -60,6 +69,7 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
   };
 
   const handleMarkAsRead = async (notificationId: string, notificationType: string) => {
+    if (!scopedWorkspaceId) return;
     try {
       await api.patch(`/notifications/${notificationId}/read`);
       
@@ -78,7 +88,7 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
         markAsRead(notificationId);
       }
       
-      const response = await api.get('/notifications/unread-count');
+      const response = await api.get(`/notifications/unread-count?workspaceId=${scopedWorkspaceId}`);
       const { setUnreadCount } = useNotificationStore.getState();
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {
@@ -87,11 +97,12 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
   };
 
   const handleMarkAllAsRead = async () => {
+    if (!scopedWorkspaceId) return;
     try {
-      await api.patch('/notifications/read-all');
+      await api.patch(`/notifications/read-all?workspaceId=${scopedWorkspaceId}`);
       markAllAsRead();
       
-      const response = await api.get('/notifications/unread-count');
+      const response = await api.get(`/notifications/unread-count?workspaceId=${scopedWorkspaceId}`);
       const { setUnreadCount } = useNotificationStore.getState();
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { api } from '@/lib/axios';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { toast } from 'sonner';
@@ -23,6 +24,9 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function NotificationsPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const workspaceMatch = pathname?.match(/\/workspace\/([^/]+)/);
+  const scopedWorkspaceId = workspaceMatch?.[1];
   
   const {
     notifications,
@@ -90,8 +94,13 @@ export default function NotificationsPage() {
   }, [permission]);
 
   const fetchNotifications = async () => {
+    if (!scopedWorkspaceId) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
     try {
-      const response = await api.get('/notifications');
+      const response = await api.get(`/notifications?workspaceId=${scopedWorkspaceId}`);
       setNotifications(response.data.data || []);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -101,6 +110,7 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAsRead = async (notificationId: string, notificationType: string) => {
+    if (!scopedWorkspaceId) return;
     try {
       await api.patch(`/notifications/${notificationId}/read`);
       
@@ -123,7 +133,7 @@ export default function NotificationsPage() {
       }
       
       // Refresh unread count
-      const response = await api.get('/notifications/unread-count');
+      const response = await api.get(`/notifications/unread-count?workspaceId=${scopedWorkspaceId}`);
       const { setUnreadCount } = useNotificationStore.getState();
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {
@@ -132,12 +142,13 @@ export default function NotificationsPage() {
   };
 
   const handleMarkAllAsRead = async () => {
+    if (!scopedWorkspaceId) return;
     try {
-      await api.patch('/notifications/read-all');
+      await api.patch(`/notifications/read-all?workspaceId=${scopedWorkspaceId}`);
       markAllAsRead();
       
       // Refresh unread count
-      const response = await api.get('/notifications/unread-count');
+      const response = await api.get(`/notifications/unread-count?workspaceId=${scopedWorkspaceId}`);
       const { setUnreadCount } = useNotificationStore.getState();
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {

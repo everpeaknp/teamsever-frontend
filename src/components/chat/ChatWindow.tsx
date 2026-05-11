@@ -96,8 +96,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       try {
         if (type === 'workspace' && workspaceId) {
           await api.patch(`/workspaces/${workspaceId}/chat/read`);
-        } else if (type === 'direct' && conversationId) {
-          await api.patch(`/dm/${conversationId}/read`);
+        } else if (type === 'direct' && conversationId && workspaceId) {
+          await api.patch(`/dm/${conversationId}/read?workspaceId=${workspaceId}`);
         }
       } catch (error) {
         console.error('[ChatWindow] Failed to sync read state:', error);

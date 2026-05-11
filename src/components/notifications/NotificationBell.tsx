@@ -69,6 +69,11 @@ export function NotificationBell() {
   }, [isOpen]);
 
   const fetchNotifications = async () => {
+    if (!scopedWorkspaceId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
     try {
       // Check if user is authenticated
       if (typeof window !== 'undefined') {
@@ -80,7 +85,7 @@ export function NotificationBell() {
       
       setLoading(true);
       // Only fetch unread notifications for the bell dropdown
-      const response = await api.get(`/notifications?limit=20&unreadOnly=true${scopedWorkspaceId ? `&workspaceId=${scopedWorkspaceId}` : ''}`);
+      const response = await api.get(`/notifications?limit=20&unreadOnly=true&workspaceId=${scopedWorkspaceId}`);
       setNotifications(response.data.data || []);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -90,6 +95,10 @@ export function NotificationBell() {
   };
 
   const fetchUnreadCount = async () => {
+    if (!scopedWorkspaceId) {
+      setUnreadCount(0);
+      return;
+    }
     try {
       // Check if user is authenticated
       if (typeof window !== 'undefined') {
@@ -99,7 +108,7 @@ export function NotificationBell() {
         }
       }
       
-      const response = await api.get(`/notifications/unread-count${scopedWorkspaceId ? `?workspaceId=${scopedWorkspaceId}` : ''}`);
+      const response = await api.get(`/notifications/unread-count?workspaceId=${scopedWorkspaceId}`);
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {
       console.error('Failed to fetch unread count:', error);
@@ -204,7 +213,8 @@ export function NotificationBell() {
                 onClick={async () => {
                   try {
                     // Call backend API to mark all as read
-                    await api.patch(`/notifications/read-all${scopedWorkspaceId ? `?workspaceId=${scopedWorkspaceId}` : ''}`);
+                    if (!scopedWorkspaceId) return;
+                    await api.patch(`/notifications/read-all?workspaceId=${scopedWorkspaceId}`);
                     
                     // Clear all notifications from the bell dropdown
                     const { clearNotifications } = useNotificationStore.getState();

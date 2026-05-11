@@ -100,8 +100,8 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       } else if (type === 'workspace' && workspaceId) {
         // Fallback for General chat if channelId not provided or is 'general'
         response = await api.get(`/workspaces/${workspaceId}/chat?page=${pageNum}&limit=${limit}${filterQuery}`);
-      } else if (type === 'direct' && conversationId) {
-        response = await api.get(`/dm/${conversationId}/messages?page=${pageNum}&limit=${limit}${filterQuery}`);
+      } else if (type === 'direct' && conversationId && workspaceId) {
+        response = await api.get(`/dm/${conversationId}/messages?page=${pageNum}&limit=${limit}&workspaceId=${workspaceId}${filterQuery}`);
       } else {
         setLoading(false);
         setLoadingMore(false);
@@ -146,8 +146,10 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
           content: content.trim(),
           mentions
         });
-      } else if (type === 'direct' && userId) {
+      } else if (type === 'direct' && userId && workspaceId) {
         await api.post(`/dm/${userId}/message`, { content: content.trim(), workspaceId });
+      } else if (type === 'direct' && userId && !workspaceId) {
+        throw new Error('workspaceId is required for direct messages');
       }
     } catch (err: any) {
       const message = err.response?.data?.message || err.message || 'Failed to send message';
@@ -206,8 +208,8 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
             api.patch(`/workspaces/${workspaceId}/chat/read`).catch((err) => {
               console.error('[useChat] Failed to mark workspace chat as read:', err);
             });
-          } else if (type === 'direct' && conversationId) {
-            api.patch(`/dm/${conversationId}/read`).catch((err) => {
+          } else if (type === 'direct' && conversationId && workspaceId) {
+            api.patch(`/dm/${conversationId}/read?workspaceId=${workspaceId}`).catch((err) => {
               console.error('[useChat] Failed to mark DM as read:', err);
             });
           }

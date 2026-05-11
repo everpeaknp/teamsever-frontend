@@ -28,13 +28,34 @@ const messaging = firebase.messaging();
 // Handle background messages
 messaging.onBackgroundMessage((payload) => {
   console.log('[firebase-messaging-sw.js] Received background message ', payload);
-  
-  const notificationTitle = payload.notification.title;
+
+  const data = payload?.data || {};
+  const rawType = String(data?.type || '').toUpperCase();
+  const senderName = data?.senderName || data?.sender || '';
+  const groupName = data?.channelName || data?.groupName || data?.channel || 'Group';
+  const fallbackTitle = payload?.notification?.title || 'New Notification';
+  const fallbackBody = payload?.notification?.body || data?.message || 'Message';
+
+  let notificationTitle = fallbackTitle;
+  let notificationBody = fallbackBody;
+
+  if (rawType === 'DM_NEW') {
+    notificationTitle = senderName || fallbackTitle;
+    notificationBody = data?.message || fallbackBody;
+  } else if (rawType === 'GROUP_CHAT_NEW') {
+    notificationTitle = `${senderName || 'Someone'} to ${groupName || 'Group'}`;
+    notificationBody = data?.message || fallbackBody;
+  } else if (senderName && groupName && data?.resourceType === 'chat') {
+    // Backward-compatible fallback when `type` isn't explicitly provided.
+    notificationTitle = `${senderName} to ${groupName}`;
+    notificationBody = data?.message || fallbackBody;
+  }
+
   const notificationOptions = {
-    body: payload.notification.body,
+    body: notificationBody,
     icon: '/teamsever_logo.png',
     badge: '/teamsever_logo.png',
-    data: payload.data,
+    data,
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);

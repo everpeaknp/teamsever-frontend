@@ -61,6 +61,9 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
 
   const fetchChannels = useCallback(async () => {
     try {
+      if (!workspaceId || workspaceId === 'undefined' || workspaceId === 'null') {
+        return;
+      }
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       if (!token) return;
 
@@ -88,11 +91,13 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
 
   // Fetch channels
   useEffect(() => {
+    if (!workspaceId || workspaceId === 'undefined' || workspaceId === 'null') return;
     fetchChannels();
-  }, [workspaceId]);
+  }, [workspaceId, fetchChannels]);
 
   // Fetch DM-related data
   useEffect(() => {
+    if (!workspaceId || workspaceId === 'undefined' || workspaceId === 'null') return;
     const fetchData = async () => {
       try {
         const token = localStorage.getItem('authToken') || localStorage.getItem('token');
@@ -160,7 +165,9 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
 
   const handleMemberClick = useCallback(async (member: WorkspaceMember) => {
     try {
+      if (!workspaceId || workspaceId === 'undefined' || workspaceId === 'null') return;
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) return;
       const response = await axios.post(
         `${API_URL}/api/dm/${member._id}`,
         { workspaceId },
@@ -173,7 +180,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
     } catch (err) {
       console.error('Failed to start conversation:', err);
     }
-  }, [onChannelSelect]);
+  }, [workspaceId, onChannelSelect]);
 
   const publicChannels = useMemo(() => {
     return [...channels]
@@ -311,7 +318,15 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
             }, [members, conversations, currentUserId]).map((member) => {
               const online = isUserOnline(member._id);
               const dmRoomId = currentUserId ? generateDMRoomId(currentUserId, member._id) : '';
-              const unread = getRoom(dmRoomId)?.unreadCount || 0;
+              const linkedConversation = conversations.find(conv =>
+                conv.participants?.some((p) => p._id === member._id)
+              );
+              const conversationRoomId = linkedConversation?._id;
+              // Realtime DM events are keyed by conversationId in the chat store.
+              // Fallback to legacy generated room id for backward compatibility.
+              const unread =
+                (conversationRoomId ? (getRoom(conversationRoomId)?.unreadCount || 0) : 0) ||
+                (getRoom(dmRoomId)?.unreadCount || 0);
 
               return (
                 <button

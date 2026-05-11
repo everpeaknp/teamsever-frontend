@@ -60,6 +60,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   const params = useParams();
   const router = useRouter();
   const favoriteIds = useUIStore(state => state.favoriteIds);
+  const expandedIds = useUIStore(state => state.expandedIds);
   const isSidebarOpen = useUIStore(state => state.isSidebarOpen);
   const { openModal, setOnSuccess } = useModalStore();
   const { can, isAdmin, isOwner } = usePermissions();
@@ -121,6 +122,9 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   const [allWorkspaces, setAllWorkspaces] = useState<any[]>([]);
   const [workspaceMembers, setWorkspaceMembers] = useState<string[]>([]);
   const [isResizingState, setIsResizingState] = useState(false);
+  const [inboxUnreadFallback, setInboxUnreadFallback] = useState(0);
+  const [groupUnreadFallback, setGroupUnreadFallback] = useState(0);
+  const [notificationUnreadFallback, setNotificationUnreadFallback] = useState(0);
 
   // Extract workspaceId from URL
   let workspaceId = params?.id as string;
@@ -147,6 +151,11 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
       if (workspaceId === 'undefined') workspaceId = '';
     }
   }
+
+  const expansionSessionKey =
+    workspaceId && workspaceId !== 'undefined'
+      ? `sidebar_expanded_ids_${workspaceId}`
+      : null;
 
   // Chat unread counts - Optimized selectors
   const groupChatUnread = useChatStore(state => {
@@ -221,7 +230,11 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   // Sync unread counts on mount
   useEffect(() => {
     const syncUnreadCounts = async () => {
-      if (!isClient || !user?._id) return;
+      if (!isClient) return;
+      const token = typeof window !== 'undefined'
+        ? (localStorage.getItem('authToken') || localStorage.getItem('token'))
+        : null;
+      if (!token) return;
       
       try {
         const { createRoom } = useChatStore.getState();
@@ -244,6 +257,11 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
           const dmWorkspaceId = (workspaceId && workspaceId !== 'undefined') ? workspaceId : '';
           const response = await api.get(`/dm${dmWorkspaceId ? `?workspaceId=${dmWorkspaceId}` : ''}`);
           const conversations = response.data.data || [];
+          const apiInboxUnread = conversations.reduce(
+            (sum: number, conv: any) => sum + Number(conv?.unreadCount || 0),
+            0
+          );
+          setInboxUnreadFallback(apiInboxUnread);
           
           conversations.forEach((conv: any) => {
             // Ensure room exists for every conversation (not only unread > 0)
@@ -282,6 +300,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
           try {
             const chatRes = await api.get(`/workspaces/${workspaceId}/chat/unread`);
             const chatUnreadCount = chatRes.data?.data?.unreadCount || 0;
+            setGroupUnreadFallback(Number(chatUnreadCount || 0));
 
             const roomId = `workspace_${workspaceId}`;
             createRoom(roomId, 'workspace', workspaceId);
@@ -302,6 +321,17 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
             console.error('[AppSidebar] Failed to sync group chat unread:', error);
           }
         }
+
+        // 3. Sync Notifications unread count (workspace scoped)
+        if (workspaceId && workspaceId !== 'undefined') {
+          try {
+            const notifRes = await api.get(`/notifications/unread-count?workspaceId=${workspaceId}`);
+            const unread = Number(notifRes.data?.data?.unreadCount || notifRes.data?.count || 0);
+            setNotificationUnreadFallback(unread);
+          } catch (error) {
+            console.error('[AppSidebar] Failed to sync notifications unread:', error);
+          }
+        }
       } catch (error) {
         console.error('[AppSidebar] Failed to outer sync unread counts:', error);
       }
@@ -309,6 +339,10 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
 
     syncUnreadCounts();
   }, [isClient, user?._id, workspaceId]);
+
+  const effectiveGroupChatUnread = Math.max(groupChatUnread, groupUnreadFallback);
+  const effectiveInboxUnread = Math.max(inboxUnread, inboxUnreadFallback);
+  const effectiveNotificationUnread = Math.max(unreadCount, notificationUnreadFallback);
 
   // Fetch all workspaces for switcher
   const fetchAllWorkspaces = async () => {
@@ -384,15 +418,46 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
         }
       }
 
-      // Auto-expand all spaces
+      // Restore per-workspace expansion state from session first.
+      // Fallback to one-time auto-expand only if nothing was saved yet.
       const { hierarchy: currentHierarchy } = useWorkspaceStore.getState();
       if (currentHierarchy?.spaces) {
-        const spaceIds = currentHierarchy.spaces.map(s => s._id);
-        const { expandedIds } = useUIStore.getState();
-        const newSpaceIds = spaceIds.filter(id => !expandedIds.includes(id));
-        if (newSpaceIds.length > 0) {
-          useUIStore.getState().expandAll(newSpaceIds);
-          console.log('[AppSidebar] Auto-expanded spaces:', newSpaceIds);
+        const expandableIds = currentHierarchy.spaces.flatMap((space: any) => [
+          space._id,
+          ...((space.folders || []).map((folder: any) => folder._id)),
+        ]);
+        const expandableSet = new Set(expandableIds);
+
+        let restoredFromSession = false;
+        if (typeof window !== 'undefined' && expansionSessionKey) {
+          const raw = sessionStorage.getItem(expansionSessionKey);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) {
+                const validExpandedIds = parsed
+                  .filter((id: unknown): id is string => typeof id === 'string' && expandableSet.has(id));
+                const existingExpandedIds = useUIStore.getState().expandedIds;
+                const outsideCurrentWorkspace = existingExpandedIds.filter(id => !expandableSet.has(id));
+                useUIStore.setState({
+                  expandedIds: [...outsideCurrentWorkspace, ...validExpandedIds],
+                });
+                restoredFromSession = true;
+              }
+            } catch {
+              // Ignore malformed session data; we'll fallback below.
+            }
+          }
+        }
+
+        if (!restoredFromSession) {
+          const spaceIds = currentHierarchy.spaces.map(s => s._id);
+          const { expandedIds } = useUIStore.getState();
+          const newSpaceIds = spaceIds.filter(id => !expandedIds.includes(id));
+          if (newSpaceIds.length > 0) {
+            useUIStore.getState().expandAll(newSpaceIds);
+            console.log('[AppSidebar] Auto-expanded spaces:', newSpaceIds);
+          }
         }
       }
     } catch (err: any) {
@@ -412,6 +477,18 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
       setOnSuccess(loadHierarchy);
     }
   }, [workspaceId, loadHierarchy, setOnSuccess]);
+
+  // Persist expanded tree state per workspace for current browser session
+  useEffect(() => {
+    if (typeof window === 'undefined' || !expansionSessionKey || !hierarchy?.spaces) return;
+    const expandableIds = hierarchy.spaces.flatMap((space: any) => [
+      space._id,
+      ...((space.folders || []).map((folder: any) => folder._id)),
+    ]);
+    const expandableSet = new Set(expandableIds);
+    const scopedExpandedIds = expandedIds.filter(id => expandableSet.has(id));
+    sessionStorage.setItem(expansionSessionKey, JSON.stringify(scopedExpandedIds));
+  }, [expansionSessionKey, hierarchy?.spaces, expandedIds]);
 
   const favoriteItems = hierarchy?.spaces
     .flatMap((space) => [
@@ -751,9 +828,9 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                     >
                       <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
                       <span className="flex-1 min-w-0 truncate">Group Chat</span>
-                      {groupChatUnread > 0 && (
+                      {effectiveGroupChatUnread > 0 && (
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                          {groupChatUnread > 99 ? '99+' : groupChatUnread}
+                          {effectiveGroupChatUnread > 99 ? '99+' : effectiveGroupChatUnread}
                         </span>
                       )}
                     </Link>
@@ -768,9 +845,9 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                     >
                       <Inbox className="w-3.5 h-3.5 flex-shrink-0" />
                       <span className="flex-1 min-w-0 truncate">Inbox (DMs)</span>
-                      {inboxUnread > 0 && (
+                      {effectiveInboxUnread > 0 && (
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                          {inboxUnread > 99 ? '99+' : inboxUnread}
+                          {effectiveInboxUnread > 99 ? '99+' : effectiveInboxUnread}
                         </span>
                       )}
                     </Link>
@@ -821,9 +898,9 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                     >
                       <Bell className="w-3.5 h-3.5 flex-shrink-0" />
                       <span className="flex-1 min-w-0 truncate">Notifications</span>
-                      {unreadCount > 0 && (
+                      {effectiveNotificationUnread > 0 && (
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-500 text-white text-[10px] font-bold px-1 py-0.5 rounded-full min-w-[16px] text-center leading-none">
-                          {unreadCount > 9 ? '9+' : unreadCount}
+                          {effectiveNotificationUnread > 9 ? '9+' : effectiveNotificationUnread}
                         </span>
                       )}
                     </Link>
