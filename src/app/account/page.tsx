@@ -109,12 +109,14 @@ export default function AccountSettingsPage() {
     comments: true,
     notices: true,
     mutedChannels: [] as string[],
+    mutedUsers: [] as string[],
   };
 
   const normalizeNotificationPrefs = (prefs: any) => ({
     ...defaultNotificationPrefs,
     ...(prefs || {}),
     mutedChannels: Array.isArray(prefs?.mutedChannels) ? prefs.mutedChannels : [],
+    mutedUsers: Array.isArray(prefs?.mutedUsers) ? prefs.mutedUsers : [],
   });
 
   // Profile form

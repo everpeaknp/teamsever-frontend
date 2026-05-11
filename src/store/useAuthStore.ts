@@ -27,17 +27,17 @@ interface User {
   twoFactorEnabled?: boolean;
   githubUsername?: string;
   notificationPreferences?: {
-    githubCommits: boolean;
-    taskAssigned: boolean;
-    taskStatusChange: boolean;
-    taskUpdates: boolean;
-    messages: boolean;
-    groupChats: boolean;
-    mentions: boolean;
-    comments: boolean;
-    notices: boolean;
-    mutedChannels: string[];
-    mutedUsers: string[];
+    githubCommits?: boolean;
+    taskAssigned?: boolean;
+    taskStatusChange?: boolean;
+    taskUpdates?: boolean;
+    messages?: boolean;
+    groupChats?: boolean;
+    mentions?: boolean;
+    comments?: boolean;
+    notices?: boolean;
+    mutedChannels?: string[];
+    mutedUsers?: string[];
   };
 }
 
