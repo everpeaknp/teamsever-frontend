@@ -20,7 +20,10 @@ import {
   Bell,
   Zap,
   Clock,
-  CheckSquare
+  CheckSquare,
+  Key,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 import { useSocket } from '@/contexts/SocketContext';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -165,6 +168,13 @@ export default function DashboardPage() {
   const [selectedWorkspace, setSelectedWorkspace] = useState<any>(null);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [renameWorkspaceName, setRenameWorkspaceName] = useState('');
+
+  // Invite code state
+  const [showInviteCodeModal, setShowInviteCodeModal] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
+  const [redeemSuccess, setRedeemSuccess] = useState<string | null>(null);
   const [userName, setUserName] = useState('');
 
   // Subscription state
@@ -276,6 +286,35 @@ export default function DashboardPage() {
 
   const handleLaunchWorkspace = (workspaceId: string) => {
     router.push(`/workspace/${workspaceId}`);
+  };
+
+  const handleRedeemCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = inviteCode.trim().toUpperCase();
+    if (!code || code.length < 6) return;
+    setRedeemLoading(true);
+    setRedeemError(null);
+    setRedeemSuccess(null);
+    try {
+      const response = await api.post('/invites/redeem', { code });
+      const data = response.data.data;
+      setRedeemSuccess(response.data.message || 'Joined successfully!');
+      // Redirect after short delay
+      setTimeout(() => {
+        setShowInviteCodeModal(false);
+        setInviteCode('');
+        setRedeemSuccess(null);
+        if (data.spaceId) {
+          router.push(`/workspace/${data.workspace._id}/spaces/${data.spaceId}`);
+        } else {
+          router.push(`/workspace/${data.workspace._id}`);
+        }
+      }, 1500);
+    } catch (err: any) {
+      setRedeemError(err.response?.data?.message || 'Invalid or expired invite code');
+    } finally {
+      setRedeemLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -545,10 +584,16 @@ export default function DashboardPage() {
         {/* Workspace Section Header */}
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-semibold">Your Workspaces</h3>
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Workspace
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => { setShowInviteCodeModal(true); setRedeemError(null); setRedeemSuccess(null); setInviteCode(''); }}>
+              <Key className="w-4 h-4 mr-2" />
+              Join Workspace
+            </Button>
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Workspace
+            </Button>
+          </div>
         </div>
 
         {/* Error Message */}
@@ -667,6 +712,79 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
+      {/* Join Workspace (Invite Code) Modal */}
+      <Dialog open={showInviteCodeModal} onOpenChange={setShowInviteCodeModal}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-[#135bec]" />
+              Join Workspace
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-6">
+              Enter the 8-character invite code shared with you to instantly join the team.
+            </p>
+            
+            <form onSubmit={handleRedeemCode} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="inviteCode">Invite Code</Label>
+                <Input
+                  id="inviteCode"
+                  placeholder="e.g. A3BX9K2T"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  className="text-center text-2xl tracking-widest font-mono h-14 uppercase"
+                  maxLength={8}
+                  disabled={redeemLoading || !!redeemSuccess}
+                  autoFocus
+                />
+              </div>
+
+              {redeemError && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg flex items-center gap-2 text-red-600 dark:text-red-400 text-sm animate-in fade-in slide-in-from-top-1">
+                  <XCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{redeemError}</span>
+                </div>
+              )}
+
+              {redeemSuccess && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/30 rounded-lg flex items-center gap-2 text-green-600 dark:text-green-400 text-sm animate-in fade-in slide-in-from-top-1">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  <span>{redeemSuccess}</span>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowInviteCodeModal(false)}
+                  disabled={redeemLoading || !!redeemSuccess}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={redeemLoading || inviteCode.length < 6 || !!redeemSuccess}
+                  className="flex-1 bg-[#135bec] hover:bg-[#135bec]/90 text-white"
+                >
+                  {redeemLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    'Join Workspace'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Create Workspace Modal */}
       <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>

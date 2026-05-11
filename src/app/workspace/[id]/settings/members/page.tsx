@@ -77,7 +77,9 @@ export default function MembersPage() {
   const [inviteSpaceId, setInviteSpaceId] = useState<string>('none');
   const [inviteSpacePermission, setInviteSpacePermission] = useState<'FULL' | 'EDIT' | 'COMMENT' | 'VIEW'>('EDIT');
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [generatedShortCode, setGeneratedShortCode] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   // Custom roles state
   const [showCustomRoleModal, setShowCustomRoleModal] = useState(false);
@@ -345,9 +347,11 @@ export default function MembersPage() {
       });
 
       const token = res.data.data?.token;
+      const shortCode = res.data.data?.shortCode;
       if (token) {
         const link = `${window.location.origin}/join?token=${token}`;
         setGeneratedLink(link);
+        setGeneratedShortCode(shortCode);
         toast.success('Invite link generated!');
       }
     } catch (error: any) {
@@ -366,7 +370,9 @@ export default function MembersPage() {
     setInviteSpaceId('none');
     setInviteSpacePermission('EDIT');
     setGeneratedLink(null);
+    setGeneratedShortCode(null);
     setLinkCopied(false);
+    setCodeCopied(false);
     fetchMembers();
   };
 
@@ -981,23 +987,50 @@ export default function MembersPage() {
                 )}
               </div>
 
-              {/* Generated link display */}
+              {/* Generated link & code display */}
               {generatedLink && (
-                <div className="bg-muted rounded-lg p-3">
-                  <p className="text-xs text-muted-foreground mb-2 font-medium">Share this link:</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs break-all text-foreground">{generatedLink}</code>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(generatedLink);
-                        setLinkCopied(true);
-                        setTimeout(() => setLinkCopied(false), 2000);
-                      }}
-                      className="flex-shrink-0 p-1.5 rounded hover:bg-accent transition-colors"
-                    >
-                      {linkCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                    </button>
+                <div className="space-y-3">
+                  <div className="bg-muted rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-2 font-medium">Share this link:</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs break-all text-foreground">{generatedLink}</code>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedLink);
+                          setLinkCopied(true);
+                          setTimeout(() => setLinkCopied(false), 2000);
+                        }}
+                        className="flex-shrink-0 p-1.5 rounded hover:bg-accent transition-colors"
+                      >
+                        {linkCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
+
+                  {generatedShortCode && (
+                    <div className="bg-[#135bec]/5 border border-[#135bec]/10 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs text-[#135bec] font-semibold flex items-center gap-1.5">
+                          <Key className="w-3.5 h-3.5" /> Mobile Invite Code
+                        </p>
+                        <Badge variant="outline" className="bg-white text-[10px] py-0 border-[#135bec]/20 text-[#135bec]">NEW</Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-lg font-mono font-bold tracking-widest text-[#135bec]">{generatedShortCode}</code>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedShortCode);
+                            setCodeCopied(true);
+                            setTimeout(() => setCodeCopied(false), 2000);
+                          }}
+                          className="flex-shrink-0 p-1.5 rounded bg-[#135bec]/10 hover:bg-[#135bec]/20 transition-colors"
+                        >
+                          {codeCopied ? <Check className="w-4 h-4 text-[#135bec]" /> : <Copy className="w-4 h-4 text-[#135bec]" />}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-2">Mobile users can enter this code in their dashboard to join instantly.</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
