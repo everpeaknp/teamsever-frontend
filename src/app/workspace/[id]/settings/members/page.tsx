@@ -77,6 +77,7 @@ export default function MembersPage() {
   const [spaces, setSpaces] = useState<any[]>([]);
   const [inviteSpaceId, setInviteSpaceId] = useState<string>('none');
   const [inviteSpacePermission, setInviteSpacePermission] = useState<'FULL' | 'EDIT' | 'COMMENT' | 'VIEW'>('EDIT');
+  const [inviteExpiryHours, setInviteExpiryHours] = useState<string>('168'); // Default 7 days
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [generatedShortCode, setGeneratedShortCode] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -309,6 +310,7 @@ export default function MembersPage() {
         email: inviteEmail.trim(),
         role: inviteRole,
         inviteType: 'email',
+        expiresInHours: parseInt(inviteExpiryHours),
         ...(inviteSpaceId && inviteSpaceId !== 'none' && { spaceId: inviteSpaceId, spacePermissionLevel: inviteSpacePermission }),
       });
 
@@ -344,6 +346,7 @@ export default function MembersPage() {
       const res = await api.post(`/workspaces/${workspaceId}/invites`, {
         inviteType: 'link',
         role: inviteRole,
+        expiresInHours: parseInt(inviteExpiryHours),
         ...(inviteSpaceId && inviteSpaceId !== 'none' && { spaceId: inviteSpaceId, spacePermissionLevel: inviteSpacePermission }),
       });
 
@@ -370,6 +373,7 @@ export default function MembersPage() {
     setInviteTab('email');
     setInviteSpaceId('none');
     setInviteSpacePermission('EDIT');
+    setInviteExpiryHours('168');
     setGeneratedLink(null);
     setGeneratedShortCode(null);
     setLinkCopied(false);
@@ -896,7 +900,7 @@ export default function MembersPage() {
                   inviteTab === 'link' ? 'bg-card shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <Link2 className="w-4 h-4" /> Generate Link
+                <Key className="w-4 h-4" /> Invite Code
               </button>
             </div>
 
@@ -941,6 +945,23 @@ export default function MembersPage() {
                     <SelectItem value="guest">
                       <div className="flex items-center gap-2"><Eye className="w-4 h-4 text-gray-500" />Guest</div>
                     </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Invitation Expiry */}
+              <div>
+                <Label>Invitation Expires In</Label>
+                <Select value={inviteExpiryHours} onValueChange={setInviteExpiryHours} disabled={inviting}>
+                  <SelectTrigger className="min-h-[44px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="12">12 Hours</SelectItem>
+                    <SelectItem value="24">24 Hours</SelectItem>
+                    <SelectItem value="72">3 Days</SelectItem>
+                    <SelectItem value="168">7 Days</SelectItem>
+                    <SelectItem value="720">30 Days</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -989,96 +1010,95 @@ export default function MembersPage() {
               </div>
 
               {/* Generated link & code display */}
-              {generatedLink && (
-                <div className="space-y-3">
-                  <div className="bg-muted rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-2 font-medium">Share this link:</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-xs break-all text-foreground">{generatedLink}</code>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(generatedLink);
-                          setLinkCopied(true);
-                          setTimeout(() => setLinkCopied(false), 2000);
-                        }}
-                        className="flex-shrink-0 p-1.5 rounded hover:bg-accent transition-colors"
-                      >
-                        {linkCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
                   {generatedShortCode && (
-                    <div className="bg-[#135bec]/5 border border-[#135bec]/10 rounded-lg p-3">
+                    <div className="bg-[#135bec]/5 border border-[#135bec]/10 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-xs text-[#135bec] font-semibold flex items-center gap-1.5">
                           <Key className="w-3.5 h-3.5" /> Mobile Invite Code
                         </p>
-                        <Badge variant="outline" className="bg-white text-[10px] py-0 border-[#135bec]/20 text-[#135bec]">NEW</Badge>
+                        <Badge variant="outline" className="bg-white text-[10px] py-0 border-[#135bec]/20 text-[#135bec]">READY</Badge>
                       </div>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 text-lg font-mono font-bold tracking-widest text-[#135bec]">{generatedShortCode}</code>
+                        <code className="flex-1 text-2xl font-mono font-bold tracking-[0.2em] text-[#135bec] text-center bg-white/50 py-2 rounded border border-[#135bec]/5">{generatedShortCode}</code>
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(generatedShortCode);
                             setCodeCopied(true);
                             setTimeout(() => setCodeCopied(false), 2000);
                           }}
-                          className="flex-shrink-0 p-1.5 rounded bg-[#135bec]/10 hover:bg-[#135bec]/20 transition-colors"
+                          className="flex-shrink-0 p-2.5 rounded bg-[#135bec] text-white hover:bg-[#135bec]/90 transition-colors shadow-sm"
+                          title="Copy code"
                         >
-                          {codeCopied ? <Check className="w-4 h-4 text-[#135bec]" /> : <Copy className="w-4 h-4 text-[#135bec]" />}
+                          {codeCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                         </button>
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-2">Mobile users can enter this code in their dashboard to join instantly.</p>
+                      <p className="text-[10px] text-muted-foreground mt-3 text-center">Mobile users can enter this code in their dashboard to join instantly.</p>
                     </div>
                   )}
+
+                  <div className="bg-muted rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground mb-2 font-medium">Or share link:</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-[10px] break-all text-muted-foreground truncate">{generatedLink}</code>
+                      <button
+                        onClick={() => {
+                          if (generatedLink) {
+                            navigator.clipboard.writeText(generatedLink);
+                            setLinkCopied(true);
+                            setTimeout(() => setLinkCopied(false), 2000);
+                          }
+                        }}
+                        className="flex-shrink-0 p-1.5 rounded hover:bg-accent transition-colors"
+                      >
+                        {linkCopied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={resetInviteModal}
-                disabled={inviting}
-                className="flex-1 min-h-[44px]"
-              >
-                {generatedLink ? 'Done' : 'Cancel'}
-              </Button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetInviteModal}
+                    disabled={inviting}
+                    className="flex-1 min-h-[44px]"
+                  >
+                    {generatedLink ? 'Done' : 'Cancel'}
+                  </Button>
 
-              {inviteTab === 'email' ? (
-                <Button
-                  onClick={handleInviteMember as any}
-                  disabled={inviting || !inviteEmail.trim()}
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]"
-                >
-                  {inviting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Inviting...</> : 'Send Invite'}
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleGenerateLink}
-                  disabled={inviting || !!generatedLink}
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]"
-                >
-                  {inviting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : generatedLink ? 'Link Ready ✓' : 'Generate Link'}
-                </Button>
-              )}
+                  {inviteTab === 'email' ? (
+                    <Button
+                      onClick={handleInviteMember as any}
+                      disabled={inviting || !inviteEmail.trim()}
+                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]"
+                    >
+                      {inviting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Inviting...</> : 'Send Invite'}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleGenerateLink}
+                      disabled={inviting || !!generatedLink}
+                      className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]"
+                    >
+                      {inviting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : generatedLink ? 'Code Ready ✓' : 'Generate Invite Code'}
+                    </Button>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Upgrade Modal */}
+          <UpgradeModal
+            isOpen={showUpgradeModal}
+            onClose={() => setShowUpgradeModal(false)}
+            reason="member"
+            currentCount={members.length}
+            maxAllowed={5}
+            workspaceName="Workspace"
+            whatsappNumber={whatsappNumber}
+          />
         </div>
-      )}
-
-      {/* Upgrade Modal */}
-      <UpgradeModal
-        isOpen={showUpgradeModal}
-        onClose={() => setShowUpgradeModal(false)}
-        reason="member"
-        currentCount={members.length}
-        maxAllowed={5}
-        workspaceName="Workspace"
-        whatsappNumber={whatsappNumber}
-      />
-    </div>
-  );
-}
+      );
+    }
