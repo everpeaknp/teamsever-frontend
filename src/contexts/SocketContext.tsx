@@ -333,21 +333,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const notification = data?.notification;
         if (!notification?._id) return;
 
-        // Workspace scoping guard: while inside a workspace route, ignore
-        // notifications from other workspaces for sidebar/badge realtime.
-        if (typeof window !== 'undefined') {
-          const match = window.location.pathname.match(/\/workspace\/([^/]+)/);
-          const activeWorkspaceId = match?.[1];
-          const notificationWorkspaceId = notification?.data?.workspaceId;
-          if (
-            activeWorkspaceId &&
-            notificationWorkspaceId &&
-            notificationWorkspaceId !== activeWorkspaceId
-          ) {
-            return;
-          }
-        }
-
         // Dedupe across socket + FCM paths.
         if (processedNotificationIds.has(notification._id)) return;
         processedNotificationIds.add(notification._id);
