@@ -11,8 +11,8 @@ import {
 import { Circle, Clock, CheckCircle2, XCircle } from 'lucide-react';
 
 interface TaskStatusBadgeProps {
-  status: 'todo' | 'inprogress' | 'done' | 'cancelled';
-  onStatusChange?: (status: 'todo' | 'inprogress' | 'done' | 'cancelled') => void;
+  status: 'todo' | 'inprogress' | 'review' | 'done' | 'cancelled';
+  onStatusChange?: (status: 'todo' | 'inprogress' | 'review' | 'done' | 'cancelled') => void;
   disabled?: boolean;
   asSelect?: boolean;
 }
@@ -32,6 +32,11 @@ const statusConfig = {
     label: 'Done',
     color: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400',
     icon: CheckCircle2,
+  },
+  review: {
+    label: 'In Review',
+    color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400',
+    icon: Clock,
   },
   cancelled: {
     label: 'Cancelled',

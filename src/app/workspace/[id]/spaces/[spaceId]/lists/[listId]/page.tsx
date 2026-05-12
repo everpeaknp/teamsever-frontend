@@ -23,6 +23,8 @@ import {
   UserPlus,
   Users,
   Clock3,
+  Check,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -49,6 +51,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { useTaskStore } from '@/store/useTaskStore';
@@ -82,11 +92,13 @@ export default function ListView() {
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [openAssigneePicker, setOpenAssigneePicker] = useState(false);
   const [newTaskData, setNewTaskData] = useState({
     title: '',
     description: '',
     priority: 'medium' as Task['priority'],
     status: 'todo' as Task['status'],
+    assignee: undefined as string | undefined,
     deadline: undefined as Date | undefined,
   });
   const [isReadOnly, setIsReadOnly] = useState(false);
@@ -369,6 +381,7 @@ export default function ListView() {
         description: '',
         priority: 'medium',
         status: 'todo',
+        assignee: undefined,
         deadline: undefined,
       });
       
@@ -814,6 +827,92 @@ export default function ListView() {
                             </SelectContent>
                           </Select>
                         </div>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="assignee">Assignee (Optional)</Label>
+                        <Popover open={openAssigneePicker} onOpenChange={setOpenAssigneePicker}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={openAssigneePicker}
+                              className="w-full justify-between font-normal hover:bg-slate-50"
+                            >
+                              <div className="flex items-center gap-2 overflow-hidden">
+                                {newTaskData.assignee ? (
+                                  <>
+                                    {(() => {
+                                      const member = workspace?.members?.find((m: any) => {
+                                        const uid = typeof m.user === 'object' ? m.user._id : (m.user || m._id);
+                                        return uid === newTaskData.assignee;
+                                      });
+                                      if (!member) return <span className="text-muted-foreground">Assign to...</span>;
+                                      const userData = (typeof member.user === 'object' ? member.user : member) as any;
+                                      return (
+                                        <>
+                                          <UserAvatar user={userData} className="h-4 w-4" />
+                                          <span className="truncate">{userData.name || 'Selected Member'}</span>
+                                        </>
+                                      );
+                                    })()}
+                                  </>
+                                ) : (
+                                  <span className="text-muted-foreground">Assign to...</span>
+                                )}
+                              </div>
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search members..." />
+                              <CommandEmpty>No member found.</CommandEmpty>
+                              <CommandGroup className="max-h-60 overflow-y-auto">
+                                <CommandItem
+                                  value="unassigned"
+                                  onSelect={() => {
+                                    setNewTaskData({ ...newTaskData, assignee: undefined });
+                                    setOpenAssigneePicker(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      !newTaskData.assignee ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  Unassigned
+                                </CommandItem>
+                                {workspace?.members?.map((member: any) => {
+                                  const user = typeof member.user === 'object' ? member.user : member;
+                                  const memberId = user._id || member.user;
+                                  return (
+                                    <CommandItem
+                                      key={memberId}
+                                      value={user.name}
+                                      onSelect={() => {
+                                        setNewTaskData({ ...newTaskData, assignee: memberId });
+                                        setOpenAssigneePicker(false);
+                                      }}
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          newTaskData.assignee === memberId ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      <div className="flex items-center gap-2">
+                                        <UserAvatar user={user} className="h-4 w-4" />
+                                        <span>{user.name}</span>
+                                      </div>
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       <div>
                         <Label htmlFor="deadline">Deadline (Optional)</Label>

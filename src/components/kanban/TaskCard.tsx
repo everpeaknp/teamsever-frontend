@@ -88,9 +88,10 @@ export function TaskCard({ task, handleDragStart, canDrag, spaceMembers }: TaskC
               {task.title}
             </p>
             <UserAvatar 
-              user={task.createdBy} 
+              user={task.assignee && typeof task.assignee === 'object' ? task.assignee : task.createdBy} 
               className="w-5 h-5 border border-background shadow-sm flex-shrink-0" 
               fallbackClassName="text-[7px]"
+              title={task.assignee && typeof task.assignee === 'object' ? `Assignee: ${task.assignee.name}` : `Creator: ${task.createdBy.name}`}
             />
           </div>
           

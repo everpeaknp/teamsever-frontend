@@ -33,16 +33,31 @@ import {
   Paperclip,
   MessageSquare,
   Activity as ActivityIcon,
+  Check,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 interface Task {
   _id: string;
   title: string;
   description?: string;
-  status: 'todo' | 'in-progress' | 'done';
+  status: 'todo' | 'inprogress' | 'review' | 'done' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   assignee?: {
     _id: string;
@@ -67,6 +82,13 @@ interface Task {
   comments?: Comment[];
   activity?: Activity[];
   attachments?: Attachment[];
+  createdBy: {
+    _id: string;
+    name: string;
+    email: string;
+    profilePicture?: string;
+    avatar?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
@@ -132,6 +154,7 @@ export function TaskDetailSidebar() {
   const [deadline, setDeadline] = useState('');
   const [assigneeId, setAssigneeId] = useState('null');
   const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
+  const [openAssignee, setOpenAssignee] = useState(false);
   const [commentText, setCommentText] = useState('');
 
   // Debounce timer
@@ -155,7 +178,15 @@ export function TaskDetailSidebar() {
       setStartDate(taskData.startDate ? new Date(taskData.startDate).toISOString().split('T')[0] : '');
       setDueDate(taskData.dueDate ? new Date(taskData.dueDate).toISOString().split('T')[0] : '');
       setDeadline(taskData.deadline ? new Date(taskData.deadline).toISOString().split('T')[0] : '');
-      setAssigneeId(taskData.assignee?._id || 'null');
+      
+      // Ensure assignee is handled as a string ID for the Select component
+      if (taskData.assignee && typeof taskData.assignee === 'object' && taskData.assignee._id) {
+        setAssigneeId(taskData.assignee._id);
+      } else if (typeof taskData.assignee === 'string') {
+        setAssigneeId(taskData.assignee);
+      } else {
+        setAssigneeId('null');
+      }
     } catch (err: any) {
       console.error('Failed to fetch task:', err);
       setError(err.response?.data?.message || 'Failed to load task');
@@ -382,10 +413,14 @@ export function TaskDetailSidebar() {
     switch (s) {
       case 'todo':
         return 'text-gray-600 bg-gray-100';
-      case 'in-progress':
+      case 'inprogress':
         return 'text-blue-600 bg-blue-100';
+      case 'review':
+        return 'text-purple-600 bg-purple-100';
       case 'done':
         return 'text-green-600 bg-green-100';
+      case 'cancelled':
+        return 'text-red-600 bg-red-100';
     }
   };
 
@@ -434,8 +469,10 @@ export function TaskDetailSidebar() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="inprogress">In Progress</SelectItem>
+                    <SelectItem value="review">In Review</SelectItem>
                     <SelectItem value="done">Done</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -470,19 +507,77 @@ export function TaskDetailSidebar() {
                       <User className="w-3 h-3" />
                       Assignee
                     </Label>
-                    <Select value={assigneeId} onValueChange={handleAssigneeChange}>
-                      <SelectTrigger className="h-8 border-none p-0 focus:ring-0 bg-transparent hover:bg-slate-50">
-                        <SelectValue placeholder="Unassigned" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="null">Unassigned</SelectItem>
-                        {workspaceMembers.map((member) => (
-                          <SelectItem key={member._id} value={member._id}>
-                            {member.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={openAssignee} onOpenChange={setOpenAssignee}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          role="combobox"
+                          aria-expanded={openAssignee}
+                          className="h-8 w-full justify-between border-none p-0 px-2 font-normal hover:bg-slate-50 focus-visible:ring-0"
+                        >
+                          <div className="flex items-center gap-2 overflow-hidden">
+                            {assigneeId && assigneeId !== 'null' ? (
+                              <>
+                                <UserAvatar 
+                                  user={workspaceMembers.find(m => m._id === assigneeId)} 
+                                  className="h-5 w-5"
+                                />
+                                <span className="truncate">
+                                  {workspaceMembers.find(m => m._id === assigneeId)?.name}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground font-medium">Unassigned</span>
+                            )}
+                          </div>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[200px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Search members..." />
+                          <CommandEmpty>No member found.</CommandEmpty>
+                          <CommandGroup className="max-h-60 overflow-y-auto">
+                            <CommandItem
+                              value="unassigned"
+                              onSelect={() => {
+                                handleAssigneeChange('null');
+                                setOpenAssignee(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  assigneeId === 'null' ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              Unassigned
+                            </CommandItem>
+                            {workspaceMembers.map((member) => (
+                              <CommandItem
+                                key={member._id}
+                                value={member.name}
+                                onSelect={() => {
+                                  handleAssigneeChange(member._id);
+                                  setOpenAssignee(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    assigneeId === member._id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex items-center gap-2">
+                                  <UserAvatar user={member} className="h-5 w-5" />
+                                  <span>{member.name}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   <div className="space-y-1">
@@ -530,6 +625,17 @@ export function TaskDetailSidebar() {
                       Time Spent
                     </Label>
                     <p className="text-sm font-medium h-8 flex items-center">{formatTimeSpent(task.timeSpent)}</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs text-gray-500 flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      Created By
+                    </Label>
+                    <div className="flex items-center gap-2 h-8">
+                      <UserAvatar user={task.createdBy} className="w-5 h-5" />
+                      <span className="text-sm font-medium">{task.createdBy.name}</span>
+                    </div>
                   </div>
                 </div>
 

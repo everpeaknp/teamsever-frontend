@@ -24,7 +24,7 @@ interface BoardColumnProps {
 
 const statusColors: Record<string, string> = {
   todo: 'border-slate-400',
-  'in-progress': 'border-blue-500',
+  inprogress: 'border-blue-500',
   done: 'border-green-500',
 };
 
