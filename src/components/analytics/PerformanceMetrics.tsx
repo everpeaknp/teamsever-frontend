@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/axios';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Trophy, Target, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -145,6 +145,13 @@ export function PerformanceMetrics({ workspaceId, userId }: PerformanceMetricsPr
             <TrendingUp className="w-5 h-5 text-primary" />
             Team Performance
           </CardTitle>
+          <div className="mt-2 p-3 bg-muted/30 rounded-lg border border-dashed border-primary/20">
+            <h5 className="text-[10px] font-bold uppercase tracking-wider text-primary mb-1">Evaluation Methodology</h5>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Performance is calculated using raw data: <strong>Success Rate</strong> measures tasks completed on or before their deadline. 
+              <strong>Tasks Done</strong> represents total workspace contribution. No hidden algorithms are used—just pure work transparency.
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
           {teamMetrics.length === 0 ? (
@@ -162,12 +169,11 @@ export function PerformanceMetrics({ workspaceId, userId }: PerformanceMetricsPr
                 >
                   <div className="flex items-start gap-4">
                     {/* Avatar */}
-                    <Avatar className="w-12 h-12 flex-shrink-0">
-                      <AvatarImage src={member.user.avatar} alt={member.user.name} />
-                      <AvatarFallback className="bg-primary text-white">
-                        {member.user.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
+                    {/* Avatar */}
+                    <UserAvatar 
+                      user={member.user} 
+                      className="w-12 h-12 flex-shrink-0" 
+                    />
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">

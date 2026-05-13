@@ -10,6 +10,8 @@ import { useEffect } from 'react';
 import { api } from '@/lib/axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
+import { useProfileModalStore } from '@/store/useProfileModalStore';
+
 // Dynamic imports so these heavy components are excluded from pages that don't need them
 const AppSidebar = dynamic(
   () => import('@/components/sidebar/AppSidebar').then(mod => mod.AppSidebar),
@@ -38,8 +40,13 @@ const GitHubWebhookModal = dynamic(
   () => import('@/components/modals/GitHubWebhookModal').then(mod => mod.GitHubWebhookModal),
   { ssr: false }
 );
+const UserProfileModal = dynamic(
+  () => import('@/components/modals/UserProfileModal').then(mod => mod.UserProfileModal),
+  { ssr: false }
+);
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
+  const { isOpen, userId, closeProfile } = useProfileModalStore();
   const pathname = usePathname();
 
   const isAuthPage =
@@ -124,6 +131,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <PageLoadingIndicator />
       <TaskDetailSidebar />
       <GitHubWebhookModal />
+      <UserProfileModal isOpen={isOpen} userId={userId} onClose={closeProfile} />
       <Toaster position="top-right" richColors />
       {showShell && <GlobalTimer />}
 

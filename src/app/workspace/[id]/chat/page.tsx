@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { ChatWindow, ChatSidebar } from '@/components/chat';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/useChatStore';
+import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { Loader2, Hash, Lock, Crown, Sparkles, User, Send } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { toast } from 'sonner';

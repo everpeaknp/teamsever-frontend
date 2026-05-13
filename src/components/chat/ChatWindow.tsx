@@ -5,6 +5,7 @@ import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settin
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
+import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -68,6 +69,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     setActiveRoom,
     clearUnread
   } = useChatStore();
+  const { openProfile } = useProfileModalStore();
   
   // Get or create room
   useEffect(() => {
@@ -543,6 +545,17 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           )}
         </div>
         <div className="flex items-center gap-2 ml-2">
+          {type === 'direct' && userId && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-2 bg-white/5 border-white/10 hover:bg-white/10 text-white/70 hover:text-white transition-all hidden sm:flex"
+              onClick={() => openProfile(userId)}
+            >
+              <User className="w-3.5 h-3.5" />
+              View Profile
+            </Button>
+          )}
           {type === 'workspace' && channelId && !title.includes('General') && !title.includes('Commit Log') && isAdmin && (
             <button 
               onClick={() => setIsEditModalOpen(true)}
@@ -769,7 +782,11 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                   </div>
 
                   {showAvatar ? (
-                    <UserAvatar user={message.sender} className="h-8 w-8 flex-shrink-0" />
+                    <UserAvatar 
+                      user={message.sender} 
+                      className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" 
+                      onClick={() => openProfile(message.sender._id)}
+                    />
                   ) : (
                     <div className="w-8 flex-shrink-0" />
                   )}
@@ -787,13 +804,20 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                 )}
               >
                 {showAvatar && (
-                  <UserAvatar user={message.sender} className="h-8 w-8 flex-shrink-0" />
+                  <UserAvatar 
+                    user={message.sender} 
+                    className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" 
+                    onClick={() => openProfile(message.sender._id)}
+                  />
                 )}
 
                 <div className="flex flex-col max-w-[85%]">
                   {showAvatar && (
                     <div className="flex items-center gap-2 mb-1.5 opacity-90">
-                      <span className="font-bold text-xs text-foreground">
+                      <span 
+                        className="font-bold text-xs text-foreground cursor-pointer hover:text-primary transition-colors"
+                        onClick={() => openProfile(message.sender._id)}
+                      >
                         {message.sender.name}
                       </span>
                       <span className="text-[10px] text-muted-foreground font-medium">

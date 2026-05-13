@@ -38,6 +38,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -62,6 +63,8 @@ import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { useTaskStore } from '@/store/useTaskStore';
+import { useProfileModalStore } from '@/store/useProfileModalStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useHighlight } from '@/hooks/useHighlight';
 import { useActivityStore } from '@/store/useActivityStore';
 import { ListMemberManagement } from '@/components/ListMemberManagement';
@@ -787,50 +790,50 @@ export default function ListView() {
                           rows={3}
                         />
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="priority">Priority</Label>
-                          <Select
-                            value={newTaskData.priority}
-                            onValueChange={(value: Task['priority']) =>
-                              setNewTaskData({ ...newTaskData, priority: value })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="low">Low</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="urgent">Urgent</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="priority">Priority</Label>
+                            <Select
+                              value={newTaskData.priority}
+                              onValueChange={(value: Task['priority']) =>
+                                setNewTaskData({ ...newTaskData, priority: value })
+                              }
+                            >
+                              <SelectTrigger id="priority">
+                                <SelectValue placeholder="Priority" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="urgent">Urgent</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label htmlFor="status">Status</Label>
+                            <Select
+                              value={newTaskData.status}
+                              onValueChange={(value: Task['status']) =>
+                                setNewTaskData({ ...newTaskData, status: value })
+                              }
+                            >
+                              <SelectTrigger id="status">
+                                <SelectValue placeholder="Status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="todo">To Do</SelectItem>
+                                <SelectItem value="inprogress">In Progress</SelectItem>
+                                <SelectItem value="review">Review</SelectItem>
+                                <SelectItem value="done">Done</SelectItem>
+                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <div>
-                          <Label htmlFor="status">Status</Label>
-                          <Select
-                            value={newTaskData.status}
-                            onValueChange={(value: Task['status']) =>
-                              setNewTaskData({ ...newTaskData, status: value })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="todo">To Do</SelectItem>
-                              <SelectItem value="inprogress">In Progress</SelectItem>
-                              <SelectItem value="review">Review</SelectItem>
-                              <SelectItem value="done">Done</SelectItem>
-                              <SelectItem value="cancelled">Cancelled</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
 
-                      <div>
-                        <Label htmlFor="assignee">Assignee (Optional)</Label>
+                        <div>
+                          <Label htmlFor="assignee">Assignee (Optional)</Label>
                         <Popover open={openAssigneePicker} onOpenChange={setOpenAssigneePicker}>
                           <PopoverTrigger asChild>
                             <Button
@@ -1212,6 +1215,7 @@ function TaskRow({
   const assignee = typeof task.assignee === 'object' ? task.assignee : null;
 
   const { openTask } = useTaskSidebarStore();
+  const { openProfile } = useProfileModalStore();
   
   return (
     <div 
@@ -1295,35 +1299,49 @@ function TaskRow({
       </DropdownMenu>
 
       {/* Assignee */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild disabled={!canEdit}>
-          <button className="hover:opacity-80 transition-opacity">
-            {assignee ? (
-              <UserAvatar user={assignee as any} className="w-8 h-8" />
-            ) : (
-              <div className="w-8 h-8 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-                <Plus className="w-4 h-4 text-muted-foreground" />
-              </div>
+      <div className="flex items-center gap-1">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={!canEdit}>
+            <button className="hover:opacity-80 transition-opacity">
+              {assignee ? (
+                <UserAvatar user={assignee as any} className="w-8 h-8" />
+              ) : (
+                <div className="w-8 h-8 rounded-full border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                  <Plus className="w-4 h-4 text-muted-foreground" />
+                </div>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {assignee && (
+              <>
+                <DropdownMenuItem onClick={(e) => {
+                  e.stopPropagation();
+                  openProfile((assignee as any)._id);
+                }}>
+                  <UserIcon className="w-4 h-4 mr-2" />
+                  View Profile
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
             )}
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          {spaceMembers.map((member) => {
-            const user = typeof member.user === 'object' ? member.user : null;
-            if (!user) return null;
-            
-            return (
-              <DropdownMenuItem
-                key={user._id}
-                onClick={() => onAssigneeChange(task._id, user._id)}
-              >
-                <UserAvatar user={user as any} className="w-6 h-6 mr-2" />
-                {user.name}
-              </DropdownMenuItem>
-            );
-          })}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            {spaceMembers.map((member) => {
+              const user = typeof member.user === 'object' ? member.user : null;
+              if (!user) return null;
+              
+              return (
+                <DropdownMenuItem
+                  key={user._id}
+                  onClick={() => onAssigneeChange(task._id, user._id)}
+                >
+                  <UserAvatar user={user as any} className="w-6 h-6 mr-2" />
+                  {user.name}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       {/* Actions */}
       {!isReadOnly && canDelete && (

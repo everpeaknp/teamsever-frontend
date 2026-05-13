@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Activity, 
@@ -413,12 +413,10 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
                       return (
                         <div key={activity._id} className="flex gap-3 group">
                           {/* Avatar */}
-                          <Avatar className="h-10 w-10 flex-shrink-0">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                              {getInitials(user.name)}
-                            </AvatarFallback>
-                          </Avatar>
+                          <UserAvatar 
+                            user={user} 
+                            className="h-10 w-10 flex-shrink-0" 
+                          />
 
                           {/* Content */}
                           <div className="flex-1 min-w-0">

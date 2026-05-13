@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -64,10 +64,10 @@ export function TeamAvailability({ members }: TeamAvailabilityProps) {
               <div key={member._id || user?._id || `${userName}-${index}`} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <Avatar className="w-10 h-10">
-                      {userAvatar && <AvatarImage src={userAvatar} />}
-                      <AvatarFallback>{getInitials(userName)}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar 
+                      user={user} 
+                      className="w-10 h-10" 
+                    />
                     <div className={`absolute bottom-0 right-0 w-3 h-3 border-2 border-white dark:border-slate-800 rounded-full ${
                       member.status === 'active' ? 'bg-emerald-500' : 
                       member.status === 'break' ? 'bg-amber-500' : 'bg-slate-300'

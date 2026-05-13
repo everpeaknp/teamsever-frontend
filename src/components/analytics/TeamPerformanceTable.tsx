@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -155,10 +155,10 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
                   <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <Avatar className="w-8 h-8">
-                          {member.avatar && <AvatarImage src={member.avatar} />}
-                          <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                        </Avatar>
+                        <UserAvatar 
+                          user={{ name: member.name, avatar: member.avatar, _id: member.id }} 
+                          className="w-8 h-8" 
+                        />
                         <div>
                           <p className="text-sm font-bold">{member.name}</p>
                           <p className="text-[10px] text-muted-foreground capitalize">{member.role}</p>

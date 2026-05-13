@@ -747,6 +747,46 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
               )}
             </div>
 
+            {/* TIME TRACKING (Admin Only) */}
+            {(isAdmin() || isOwner()) && (
+              <div className="relative group">
+                <Link
+                  href={`/workspace/${workspaceId}/time-tracking`}
+                  className={cn(
+                    'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
+                    pathname.startsWith(`/workspace/${workspaceId}/time-tracking`)
+                      ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
+                      : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
+                  )}
+                  title="Time Tracking"
+                >
+                  <div className="relative">
+                    <Clock className="w-5 h-5 relative z-10" />
+                    {pathname.startsWith(`/workspace/${workspaceId}/time-tracking`) && (
+                      <motion.div
+                        layoutId="active-glow"
+                        className="absolute inset-0 blur-md opacity-40 z-0"
+                        style={{ backgroundColor: themeColor }}
+                      />
+                    )}
+                  </div>
+                  <span className="text-[10px] font-semibold tracking-wide">
+                    Time
+                  </span>
+                </Link>
+
+                {/* Smooth Indicator Pill */}
+                {pathname.startsWith(`/workspace/${workspaceId}/time-tracking`) && (
+                  <motion.div
+                    layoutId="sidebar-indicator"
+                    className="absolute -left-1 top-2 bottom-2 w-1 rounded-r-full z-20 shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                    style={{ backgroundColor: themeColor }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  />
+                )}
+              </div>
+            )}
+
           </div>
         </div>
         }

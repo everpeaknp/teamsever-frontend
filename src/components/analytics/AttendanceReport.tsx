@@ -11,9 +11,11 @@ import { api } from '@/lib/axios';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/store/useAuthStore';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 interface AttendanceEntry {
   id: string;
+  user: any; // Full user object from backend
   userName: string;
   userEmail: string;
   date: string;
@@ -294,9 +296,10 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
                     <TableRow key={entry.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                            {entry.userName ? entry.userName.charAt(0) : '?'}
-                          </div>
+                          <UserAvatar 
+                            user={entry.user} 
+                            className="w-9 h-9 border border-white/10" 
+                          />
                           <div className="flex flex-col">
                             <span className="font-medium">{entry.userName}</span>
                             <span className="text-xs text-muted-foreground">{entry.userEmail}</span>

@@ -16,7 +16,10 @@ import {
   CheckCircle2,
   X,
   Bell,
+  Image as ImageIcon,
+  Camera,
 } from 'lucide-react';
+import { ContributionHeatmap } from '@/components/analytics';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/axios';
 import { auth, githubProvider } from '@/lib/firebase';
@@ -96,7 +99,10 @@ export default function AccountSettingsPage() {
   const [timezone, setTimezone] = useState('America/Los_Angeles');
   const [passwordStrength, setPasswordStrength] = useState({ strength: 0, label: 'Weak', color: 'bg-red-500' });
   const [isLinkingGithub, setIsLinkingGithub] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const defaultNotificationPrefs = {
     githubCommits: true,
@@ -168,6 +174,7 @@ export default function AccountSettingsPage() {
         });
         
         setAvatarPreview(userData.profilePicture || userData.avatar || null);
+        setCoverPreview(userData.coverPhoto || null);
         setTwoFactorEnabled(userData.twoFactorEnabled || false);
         setLanguage(userData.language || 'en-US');
         setTimezone(userData.timezone || 'America/Los_Angeles');
@@ -220,6 +227,33 @@ export default function AccountSettingsPage() {
     }
   };
 
+  // Handle cover upload
+  const handleCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB for cover
+        toast.error('File size must be less than 2MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverPreview(reader.result as string);
+        setCoverFile(file);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle cover removal
+  const handleCoverRemove = () => {
+    setCoverPreview(null);
+    setCoverFile(null);
+    if (coverInputRef.current) {
+      coverInputRef.current.value = '';
+    }
+  };
+
   // Save profile
   const onSaveProfile = async (data: ProfileFormData) => {
     setIsSaving(true);
@@ -238,6 +272,12 @@ export default function AccountSettingsPage() {
         formData.append('file', avatarFile);
       } else if (!avatarPreview) {
         formData.append('removeAvatar', 'true');
+      }
+
+      if (coverFile) {
+        formData.append('coverPhoto', coverFile);
+      } else if (!coverPreview) {
+        formData.append('removeCoverPhoto', 'true');
       }
 
       const response = await api.patch('/users/profile', formData, {
@@ -394,7 +434,9 @@ export default function AccountSettingsPage() {
       githubUsername: (currentUser as any).githubUsername || '',
     });
     setAvatarPreview((currentUser as any).avatar || null);
+    setCoverPreview((currentUser as any).coverPhoto || null);
     setAvatarFile(null);
+    setCoverFile(null);
     setTwoFactorEnabled((currentUser as any).twoFactorEnabled || false);
     setLanguage((currentUser as any).language || 'en-US');
     setTimezone((currentUser as any).timezone || 'America/Los_Angeles');
@@ -493,6 +535,51 @@ export default function AccountSettingsPage() {
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       Update your personal details and how others see you on the platform.
                     </p>
+                  </div>
+
+                  <div className="relative h-48 group">
+                    <div className="w-full h-full bg-slate-100 dark:bg-[#111] overflow-hidden">
+                      {coverPreview ? (
+                        <img 
+                          src={coverPreview} 
+                          alt="Cover" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300 dark:text-slate-800">
+                          <ImageIcon className="w-12 h-12" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => coverInputRef.current?.click()}
+                        className="bg-white/90 text-slate-900 hover:bg-white"
+                      >
+                        <Camera className="w-4 h-4 mr-2" />
+                        Change Cover
+                      </Button>
+                      {coverPreview && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={handleCoverRemove}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                    <input
+                      ref={coverInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCoverUpload}
+                      className="hidden"
+                    />
                   </div>
 
                   <form onSubmit={profileForm.handleSubmit(onSaveProfile)} className="p-6 space-y-6">
@@ -676,6 +763,8 @@ export default function AccountSettingsPage() {
                     </div>
                   </form>
                 </section>
+
+                <ContributionHeatmap userId="me" />
               </>
             )}
 
