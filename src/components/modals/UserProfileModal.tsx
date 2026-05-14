@@ -117,7 +117,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[1100px] p-0 overflow-hidden border-none bg-[#0a0a0a] shadow-2xl rounded-2xl ring-1 ring-white/10">
+      <DialogContent className="max-w-[1100px] p-0 overflow-hidden border-none bg-white dark:bg-[#0a0a0a] shadow-2xl rounded-2xl ring-1 ring-slate-200 dark:ring-white/10">
         <DialogHeader className="sr-only">
           <DialogTitle>{user?.name || 'User Profile'}</DialogTitle>
           <DialogDescription>
@@ -134,7 +134,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
             {/* Close Button */}
             <button 
               onClick={onClose}
-              className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/20 hover:bg-black/40 text-white/70 hover:text-white transition-all backdrop-blur-md"
+              className="absolute top-4 right-4 z-50 p-2 rounded-full bg-slate-200/50 dark:bg-black/20 hover:bg-slate-300/50 dark:hover:bg-black/40 text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-all backdrop-blur-md"
             >
               <X className="w-4 h-4" />
             </button>
@@ -156,7 +156,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
             
             <div className="px-8 pb-8 -mt-16 relative z-10">
               <div className="flex flex-col md:flex-row items-end gap-6 mb-8">
-                <div className="p-1.5 bg-[#0a0a0a] rounded-[2.5rem] ring-1 ring-white/10 shadow-2xl">
+                <div className="p-1.5 bg-white dark:bg-[#0a0a0a] rounded-[2.5rem] ring-1 ring-slate-200 dark:ring-white/10 shadow-2xl">
                   <UserAvatar 
                     user={user} 
                     className="w-32 h-32 rounded-[2rem] border-none text-4xl font-bold shadow-inner" 
@@ -164,22 +164,22 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                 </div>
                 <div className="flex-1 pb-2">
                   <div className="flex items-center gap-3 mb-1">
-                    <h2 className="text-3xl font-black text-white tracking-tight">{user.name}</h2>
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{user.name}</h2>
                     {user.githubUsername && (
-                      <Badge variant="secondary" className="bg-white/5 hover:bg-white/10 text-white/60 border-white/10 text-[10px] gap-1.5 py-0.5 px-2.5 h-6 transition-colors">
+                      <Badge variant="secondary" className="bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 border-slate-200 dark:border-white/10 text-[10px] gap-1.5 py-0.5 px-2.5 h-6 transition-colors">
                         <Github className="w-3.5 h-3.5" />
                         {user.githubUsername}
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-slate-400 font-semibold text-sm">
+                  <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400 font-semibold text-sm">
                     <span className="flex items-center gap-1.5">
                       <Briefcase className="w-3.5 h-3.5" />
                       {user.jobTitle || 'Team Member'}
                     </span>
                     {user.department && (
                       <>
-                        <span className="text-white/10">•</span>
+                        <span className="text-slate-300 dark:text-white/10">•</span>
                         <span>{user.department}</span>
                       </>
                     )}
@@ -203,32 +203,32 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Left Column: Info Card */}
                 <div className="lg:col-span-4 space-y-6">
-                  <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-5 border border-white/[0.05] space-y-5">
+                  <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-5 border border-slate-200 dark:border-white/[0.05] space-y-5">
                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Contact & Info</h4>
                     <div className="space-y-4">
                       <div className="flex items-center gap-3 text-sm text-slate-300">
-                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center">
                           <Mail className="w-4 h-4 text-primary/70" />
                         </div>
                         <span className="truncate font-medium">{user.email}</span>
                       </div>
                       {user.timezone && (
                         <div className="flex items-center gap-3 text-sm text-slate-300">
-                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center">
                             <Clock className="w-4 h-4 text-blue-400/70" />
                           </div>
                           <span className="font-medium">{user.timezone}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-3 text-sm text-slate-300">
-                        <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center">
                           <Calendar className="w-4 h-4 text-emerald-400/70" />
                         </div>
                         <span className="font-medium">Joined {format(new Date(user.createdAt), 'MMM yyyy')}</span>
                       </div>
                       {user.website && (
                         <div className="flex items-center gap-3 text-sm text-slate-300">
-                          <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 flex items-center justify-center">
                             <LinkIcon className="w-4 h-4 text-purple-400/70" />
                           </div>
                           <a href={user.website} target="_blank" rel="noopener noreferrer" className="font-medium hover:text-primary transition-colors truncate">
@@ -240,9 +240,9 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                   </div>
 
                   {user.bio && (
-                    <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-5 border border-white/[0.05]">
+                    <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-5 border border-slate-200 dark:border-white/[0.05]">
                       <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-3">Biography</h4>
-                      <p className="text-sm text-slate-300 leading-relaxed font-medium">
+                      <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
                         {user.bio}
                       </p>
                     </div>
@@ -253,47 +253,47 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                 <div className="lg:col-span-8 space-y-6">
                   {/* Performance Stats Cards */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-white/[0.05] flex flex-col gap-1">
+                    <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-slate-200 dark:border-white/[0.05] flex flex-col gap-1">
                       <div className="flex items-center gap-2 text-emerald-400/80 mb-1">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span className="text-[10px] font-black uppercase tracking-wider">Tasks Done</span>
                       </div>
-                      <span className="text-2xl font-black text-white">{stats?.tasksDone || 0}</span>
+                      <span className="text-2xl font-black text-slate-900 dark:text-white">{stats?.tasksDone || 0}</span>
                     </div>
                     
-                    <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-white/[0.05] flex flex-col gap-1">
+                    <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-slate-200 dark:border-white/[0.05] flex flex-col gap-1">
                       <div className="flex items-center gap-2 text-blue-400/80 mb-1">
                         <Timer className="w-3.5 h-3.5" />
                         <span className="text-[10px] font-black uppercase tracking-wider">Completion</span>
                       </div>
-                      <span className="text-2xl font-black text-white">
+                      <span className="text-2xl font-black text-slate-900 dark:text-white">
                         {stats?.completionRate !== null && stats?.completionRate !== undefined 
                           ? `${stats.completionRate}%` 
                           : '--'}
                       </span>
                     </div>
 
-                    <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-white/[0.05] flex flex-col gap-1">
+                    <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-slate-200 dark:border-white/[0.05] flex flex-col gap-1">
                       <div className="flex items-center gap-2 text-orange-400/80 mb-1">
                         <TrendingUp className="w-3.5 h-3.5" />
                         <span className="text-[10px] font-black uppercase tracking-wider">High Prio</span>
                       </div>
-                      <span className="text-2xl font-black text-white">{stats?.priorityDistribution.high || 0}</span>
+                      <span className="text-2xl font-black text-slate-900 dark:text-white">{stats?.priorityDistribution.high || 0}</span>
                     </div>
 
-                    <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-white/[0.05] flex flex-col gap-1">
+                    <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-slate-200 dark:border-white/[0.05] flex flex-col gap-1">
                       <div className="flex items-center gap-2 text-red-400/80 mb-1">
                         <BarChart3 className="w-3.5 h-3.5" />
                         <span className="text-[10px] font-black uppercase tracking-wider">Urgent</span>
                       </div>
-                      <span className="text-2xl font-black text-white">{stats?.priorityDistribution.urgent || 0}</span>
+                      <span className="text-2xl font-black text-slate-900 dark:text-white">{stats?.priorityDistribution.urgent || 0}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Full Width Row: Activity Heatmap */}
                 <div className="col-span-1 lg:col-span-12">
-                  <div className="bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-white/[0.05] overflow-hidden">
+                  <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200 dark:border-white/[0.05] overflow-hidden">
                     <ContributionHeatmap userId={user._id} />
                   </div>
                 </div>
