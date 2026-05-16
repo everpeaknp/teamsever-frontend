@@ -36,6 +36,8 @@ import {
   Activity as ActivityIcon,
   Check,
   ChevronsUpDown,
+  ListTree,
+  Plus,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -92,6 +94,8 @@ interface Task {
   };
   createdAt: string;
   updatedAt: string;
+  subtasks?: any[];
+  parentTask?: { _id: string; title: string };
 }
 
 interface Comment {
@@ -157,6 +161,8 @@ export function TaskDetailSidebar() {
   const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
   const [openAssignee, setOpenAssignee] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [subtaskTitle, setSubtaskTitle] = useState('');
+  const { openTask } = useTaskSidebarStore();
 
   // Debounce timer
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
@@ -291,6 +297,43 @@ export function TaskDetailSidebar() {
     const newVal = val === 'null' ? null : val;
     setAssigneeId(val);
     autoSave('assignee', newVal);
+  };
+
+  // Handle subtask submit
+  const handleSubtaskSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!taskId || !subtaskTitle.trim() || saving) return;
+
+    try {
+      setSaving(true);
+      await api.post(`/tasks/${taskId}/subtasks`, { title: subtaskTitle });
+      setSubtaskTitle('');
+      await fetchTask(); // Refresh to show new subtask
+      toast.success('Subtask created');
+    } catch (err: any) {
+      console.error('Failed to create subtask:', err);
+      toast.error(err.response?.data?.message || 'Failed to create subtask');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle subtask status toggle
+  const toggleSubtaskStatus = async (subtask: any, e: React.MouseEvent) => {
+    e.stopPropagation(); // Don't open the subtask details
+    const newStatus = subtask.status === 'done' ? 'todo' : 'done';
+    
+    try {
+      setSaving(true);
+      await api.patch(`/tasks/${subtask._id}`, { status: newStatus });
+      await fetchTask(); // Refresh to show updated status
+      toast.success(`Subtask marked as ${newStatus}`);
+    } catch (err: any) {
+      console.error('Failed to toggle subtask status:', err);
+      toast.error('Failed to update subtask');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Handle comment submit
@@ -446,12 +489,23 @@ export function TaskDetailSidebar() {
             {/* Header with Breadcrumb */}
             <div className="border-b p-4 space-y-3">
               {/* Breadcrumb */}
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <span>{task.list.space?.workspace?.name || 'Workspace'}</span>
-                <ChevronRight className="w-3 h-3" />
-                <span>{task.list.space?.name || 'Space'}</span>
-                <ChevronRight className="w-3 h-3" />
-                <span className="text-gray-900 font-medium">{task.list.name}</span>
+              <div className="flex items-center gap-1 text-xs text-gray-500 overflow-hidden">
+                <span className="truncate">{task.list.space?.workspace?.name || 'Workspace'}</span>
+                <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{task.list.space?.name || 'Space'}</span>
+                <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{task.list.name}</span>
+                {task.parentTask && (
+                  <>
+                    <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                    <span 
+                      onClick={() => openTask(task.parentTask!._id)}
+                      className="text-purple-600 font-medium cursor-pointer hover:text-purple-500 transition-colors truncate max-w-[120px]"
+                    >
+                      {task.parentTask.title}
+                    </span>
+                  </>
+                )}
               </div>
 
               {/* Title */}
@@ -666,6 +720,77 @@ export function TaskDetailSidebar() {
                     placeholder="Add a description..."
                     style={{ height: 'auto' }}
                   />
+                </div>
+
+                <Separator />
+
+                {/* Subtasks Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold flex items-center gap-2">
+                      <ListTree className="w-4 h-4" />
+                      Subtasks ({task.subtasks?.length || 0})
+                    </Label>
+                  </div>
+
+                  {/* Subtask List */}
+                  <div className="space-y-1">
+                    {task.subtasks?.map((subtask) => (
+                      <div 
+                        key={subtask._id}
+                        onClick={() => openTask(subtask._id)}
+                        className="flex items-center gap-3 p-2 rounded-md hover:bg-purple-500/10 cursor-pointer group transition-all duration-200 border border-transparent hover:border-purple-500/20"
+                      >
+                        <div 
+                          onClick={(e) => toggleSubtaskStatus(subtask, e)}
+                          className={cn(
+                            "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all duration-200",
+                            subtask.status === 'done' 
+                              ? "bg-green-500 border-green-500 scale-110" 
+                              : "border-gray-500 hover:border-purple-500 hover:scale-110"
+                          )}
+                        >
+                          {subtask.status === 'done' && <Check className="w-3 h-3 text-white" />}
+                        </div>
+                        <span className={cn(
+                          "text-sm flex-1 transition-all duration-200",
+                          subtask.status === 'done' ? "line-through text-gray-500" : "text-gray-200 group-hover:text-white"
+                        )}>
+                          {subtask.title}
+                        </span>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          {subtask.assignee && (
+                            <UserAvatar user={subtask.assignee} className="w-5 h-5" />
+                          )}
+                          <Badge className={cn("text-[10px] px-1.5 h-4 border-none shadow-sm", getStatusColor(subtask.status))}>
+                            {subtask.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Inline Create Subtask */}
+                    <form onSubmit={handleSubtaskSubmit} className="flex items-center gap-2 mt-2 px-2 py-1 rounded-md bg-white/5 border border-transparent focus-within:border-purple-500/50 transition-all">
+                      <Plus className="w-4 h-4 text-gray-500" />
+                      <Input
+                        placeholder="Add a subtask..."
+                        value={subtaskTitle}
+                        onChange={(e) => setSubtaskTitle(e.target.value)}
+                        className="h-8 border-none bg-transparent p-0 focus-visible:ring-0 text-sm text-gray-200 placeholder:text-gray-500"
+                      />
+                      {subtaskTitle.trim() && (
+                        <Button 
+                          type="submit" 
+                          size="sm" 
+                          variant="ghost" 
+                          className="h-7 px-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
+                          disabled={saving}
+                        >
+                          Add
+                        </Button>
+                      )}
+                    </form>
+                  </div>
                 </div>
 
                 <Separator />
