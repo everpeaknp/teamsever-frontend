@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useSubscription } from '@/hooks/useSubscription';
 import { submitEsewaPayment } from '@/lib/esewa';
 import { Plan } from '@/types';
+import { getPlanFeatureLines } from '@/lib/planFeatures';
 
 
 interface PricingModalProps {
@@ -85,44 +86,8 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
     }
   };
 
-  const formatLimit = (value: number) => {
-    return value === -1 ? 'Unlimited' : value.toString();
-  };
-
   const isCurrentPlan = (planName: string) => {
     return planName.toLowerCase() === subscription?.plan?.name?.toLowerCase();
-  };
-
-  const getFeaturesList = (plan: Plan) => {
-    const features = [];
-    
-    const limits = [];
-    limits.push(`${formatLimit(plan.features.maxSpaces)} Space${plan.features.maxSpaces !== 1 ? 's' : ''}`);
-    limits.push(`${formatLimit(plan.features.maxFolders)} Folder${plan.features.maxFolders !== 1 ? 's' : ''}`);
-    limits.push(`${formatLimit(plan.features.maxLists)} List${plan.features.maxLists !== 1 ? 's' : ''}`);
-    limits.push(`${formatLimit(plan.features.maxTasks)} Task${plan.features.maxTasks !== 1 ? 's' : ''}`);
-    features.push(limits.join(', '));
-    
-    features.push(`${formatLimit(plan.features.maxWorkspaces)} Workspace${plan.features.maxWorkspaces !== 1 ? 's' : ''}`);
-    features.push(`${formatLimit(plan.features.maxMembers)} Member${plan.features.maxMembers !== 1 ? 's' : ''}`);
-    features.push(`${formatLimit(plan.features.maxAdmins)} Admin${plan.features.maxAdmins !== 1 ? 's' : ''}`);
-    
-    if (plan.features.hasAccessControl) {
-      features.push(`${plan.features.accessControlTier.charAt(0).toUpperCase() + plan.features.accessControlTier.slice(1)} Access Control`);
-    }
-    
-    if (plan.features.hasGroupChat) {
-      const messageLimit = plan.features.messageLimit === -1 ? 'Unlimited' : plan.features.messageLimit;
-      features.push(`Group Chat (${messageLimit} messages/month)`);
-    }
-    
-    if (plan.features.announcementCooldown === 0) {
-      features.push('No Announcement Cooldown');
-    } else {
-      features.push(`${plan.features.announcementCooldown}h Announcement Cooldown`);
-    }
-    
-    return features;
   };
 
   return (
@@ -148,7 +113,7 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
                     const isCurrent = isCurrentPlan(plan.name);
                     const isFree = plan.price === 0;
                     const isProcessing = processingPlanId === plan._id;
-                    const features = getFeaturesList(plan);
+                    const features = getPlanFeatureLines(plan);
 
                     return (
                       <div
@@ -182,18 +147,17 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
 
                         <ul className="space-y-3 mb-6 flex-grow">
                           {features.map((feature, index) => {
-                            const isGroupChat = feature.includes('Group Chat');
-                            const isChatDisabled = !plan.features.hasGroupChat;
-                            
+                            const isDisabled = feature.includes('Disabled');
+
                             return (
                               <li key={index} className="flex items-start gap-2">
-                                {isChatDisabled && isGroupChat ? (
+                                {isDisabled ? (
                                   <X className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                                 ) : (
                                   <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                                 )}
-                                <span className={`text-sm ${isChatDisabled && isGroupChat ? 'text-muted-foreground line-through' : ''}`}>
-                                  {isChatDisabled && isGroupChat ? 'Group Chat (Disabled)' : feature}
+                                <span className={`text-sm ${isDisabled ? 'text-muted-foreground line-through' : ''}`}>
+                                  {feature}
                                 </span>
                               </li>
                             );

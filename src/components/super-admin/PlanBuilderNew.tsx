@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CurrencyDisplay } from "@/components/currency/CurrencyDisplay";
 import { toast } from "sonner";
-import { PlusIcon, Pencil1Icon, TrashIcon, ArchiveIcon, IdCardIcon, ComponentInstanceIcon, ListBulletIcon, FileIcon, CheckboxIcon, LockClosedIcon, PersonIcon, TableIcon, ChatBubbleIcon, EnvelopeClosedIcon, FileTextIcon, BellIcon } from "@radix-ui/react-icons";
+import { PlusIcon, Pencil1Icon, TrashIcon, ArchiveIcon } from "@radix-ui/react-icons";
 import { Loader2 } from "lucide-react";
 import { Plan } from "@/types";
+import { getPlanFeatureLines } from "@/lib/planFeatures";
 
 
 export default function PlanBuilderNew() {
@@ -178,101 +179,13 @@ export default function PlanBuilderNew() {
                   {plan.description}
                 </p>
                 
-                {/* All Features */}
                 <div className="space-y-1.5 text-xs">
-                  {/* Core Limits */}
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <ArchiveIcon className="w-3 h-3 flex-shrink-0" />
-                    <span>{plan.features.maxWorkspaces === -1 ? 'Unlimited' : plan.features.maxWorkspaces} Workspace{plan.features.maxWorkspaces !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <IdCardIcon className="w-3 h-3 flex-shrink-0" />
-                    <span>{plan.features.maxAdmins === -1 ? 'Unlimited' : plan.features.maxAdmins} Admin{plan.features.maxAdmins !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <ComponentInstanceIcon className="w-3 h-3 flex-shrink-0" />
-                    <span>{plan.features.maxSpaces === -1 ? 'Unlimited' : plan.features.maxSpaces} Space{plan.features.maxSpaces !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <ListBulletIcon className="w-3 h-3 flex-shrink-0" />
-                    <span>{plan.features.maxLists === -1 ? 'Unlimited' : plan.features.maxLists} List{plan.features.maxLists !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <FileIcon className="w-3 h-3 flex-shrink-0" />
-                    <span>{plan.features.maxFolders === -1 ? 'Unlimited' : plan.features.maxFolders} Folder{plan.features.maxFolders !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <CheckboxIcon className="w-3 h-3 flex-shrink-0" />
-                    <span>{plan.features.maxTasks === -1 ? 'Unlimited' : plan.features.maxTasks} Task{plan.features.maxTasks !== 1 ? 's' : ''}</span>
-                  </div>
-                  
-                  {/* Access Control */}
-                  {plan.features.hasAccessControl && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <LockClosedIcon className="w-3 h-3 flex-shrink-0" />
-                      <span>{plan.features.accessControlTier.charAt(0).toUpperCase() + plan.features.accessControlTier.slice(1)} Access Control</span>
+                  {getPlanFeatureLines(plan).map((feature, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-muted-foreground">
+                      <ArchiveIcon className="w-3 h-3 flex-shrink-0" />
+                      <span>{feature}</span>
                     </div>
-                  )}
-                  
-                  {/* Custom Roles */}
-                  {plan.features.canUseCustomRoles && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <PersonIcon className="w-3 h-3 flex-shrink-0" />
-                      <span>{plan.features.maxCustomRoles === -1 ? 'Unlimited' : plan.features.maxCustomRoles} Custom Role{plan.features.maxCustomRoles !== 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                  
-                  {/* Tables */}
-                  {plan.features.canCreateTables && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <TableIcon className="w-3 h-3 flex-shrink-0" />
-                      <span>{plan.features.maxTablesCount === -1 ? 'Unlimited' : plan.features.maxTablesCount} Table{plan.features.maxTablesCount !== 1 ? 's' : ''} ({plan.features.maxRowsLimit === -1 ? '∞' : plan.features.maxRowsLimit} rows, {plan.features.maxColumnsLimit === -1 ? '∞' : plan.features.maxColumnsLimit} cols)</span>
-                    </div>
-                  )}
-                  
-                  {/* Communication */}
-                  {plan.features.hasGroupChat && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <ChatBubbleIcon className="w-3 h-3 flex-shrink-0" />
-                      <span>Group Chat ({plan.features.messageLimit === -1 ? 'Unlimited' : plan.features.messageLimit} msgs/mo)</span>
-                    </div>
-                  )}
-                  
-                  {plan.features.maxDirectMessagesPerUser !== undefined && plan.features.maxDirectMessagesPerUser !== 0 && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <EnvelopeClosedIcon className="w-3 h-3 flex-shrink-0" />
-                      <span>{plan.features.maxDirectMessagesPerUser === -1 ? 'Unlimited' : plan.features.maxDirectMessagesPerUser} DM{plan.features.maxDirectMessagesPerUser !== 1 ? 's' : ''}/user</span>
-                    </div>
-                  )}
-                  
-                  {/* Files & Documents */}
-                  {plan.features.maxFiles !== undefined && plan.features.maxFiles !== 0 && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <FileIcon className="w-3 h-3 flex-shrink-0" />
-                      <span>{plan.features.maxFiles === -1 ? 'Unlimited' : plan.features.maxFiles} File{plan.features.maxFiles !== 1 ? 's' : ''}/user</span>
-                    </div>
-                  )}
-                  
-                  {plan.features.maxDocuments !== undefined && plan.features.maxDocuments !== 0 && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <FileTextIcon className="w-3 h-3 flex-shrink-0" />
-                      <span>{plan.features.maxDocuments === -1 ? 'Unlimited' : plan.features.maxDocuments} Document{plan.features.maxDocuments !== 1 ? 's' : ''}/user</span>
-                    </div>
-                  )}
-
-                  {/* Private Groups */}
-                  {plan.features.canCreatePrivateChannels && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <LockClosedIcon className="w-3 h-3 flex-shrink-0" />
-                      <span>{plan.features.maxPrivateChannelsCount === -1 ? 'Unlimited' : plan.features.maxPrivateChannelsCount} Private Group{plan.features.maxPrivateChannelsCount !== 1 ? 's' : ''} (max {plan.features.maxMembersPerPrivateChannel === -1 ? '∞' : plan.features.maxMembersPerPrivateChannel} members)</span>
-                    </div>
-                  )}
-                  
-                  {/* Announcement Cooldown */}
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <BellIcon className="w-3 h-3 flex-shrink-0" />
-                    <span>{plan.features.announcementCooldown === 0 ? 'No' : `${plan.features.announcementCooldown}h`} Announcement Cooldown</span>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

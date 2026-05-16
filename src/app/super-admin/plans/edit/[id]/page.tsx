@@ -20,6 +20,12 @@ export default function EditPlanPage() {
   const router = useRouter();
   const params = useParams();
   const planId = params.id as string;
+  const parseIntInput = (raw: string, current: number, fallback = -1) => {
+    const trimmed = raw.trim();
+    if (trimmed === "") return fallback;
+    const parsed = Number.parseInt(trimmed, 10);
+    return Number.isNaN(parsed) ? current : parsed;
+  };
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -43,6 +49,8 @@ export default function EditPlanPage() {
     accessControlTier: 'basic' as 'basic' | 'pro' | 'advanced',
     canUseCustomRoles: false,
     maxCustomRoles: -1,
+    canUsePredefinedRoles: true,
+    maxPredefinedRoles: -1,
     canCreateTables: false,
     maxTablesCount: -1,
     maxRowsLimit: -1,
@@ -53,6 +61,11 @@ export default function EditPlanPage() {
     canCreatePrivateChannels: false,
     maxPrivateChannelsCount: -1,
     maxMembersPerPrivateChannel: -1,
+    canUseWebhooks: false,
+    canUseAdvancedAnalytics: false,
+    canUseAttendance: true,
+    canUseFileSharing: true,
+    canUseNotificationPreferences: true,
   });
 
   useEffect(() => {
@@ -99,6 +112,8 @@ export default function EditPlanPage() {
           accessControlTier: plan.features.accessControlTier,
           canUseCustomRoles: plan.features.canUseCustomRoles || false,
           maxCustomRoles: plan.features.maxCustomRoles ?? -1,
+          canUsePredefinedRoles: plan.features.canUsePredefinedRoles !== false,
+          maxPredefinedRoles: plan.features.maxPredefinedRoles ?? -1,
           canCreateTables: plan.features.canCreateTables || false,
           maxTablesCount: plan.features.maxTablesCount ?? -1,
           maxRowsLimit: plan.features.maxRowsLimit ?? -1,
@@ -109,6 +124,11 @@ export default function EditPlanPage() {
           canCreatePrivateChannels: plan.features.canCreatePrivateChannels || false,
           maxPrivateChannelsCount: plan.features.maxPrivateChannelsCount ?? -1,
           maxMembersPerPrivateChannel: plan.features.maxMembersPerPrivateChannel ?? -1,
+          canUseWebhooks: plan.features.canUseWebhooks || false,
+          canUseAdvancedAnalytics: plan.features.canUseAdvancedAnalytics || false,
+          canUseAttendance: plan.features.canUseAttendance !== false,
+          canUseFileSharing: plan.features.canUseFileSharing !== false,
+          canUseNotificationPreferences: plan.features.canUseNotificationPreferences !== false,
         });
       } else {
         toast.error('Failed to load plan');
@@ -147,6 +167,8 @@ export default function EditPlanPage() {
         accessControlTier: formData.accessControlTier,
         canUseCustomRoles: Boolean(formData.canUseCustomRoles),
         maxCustomRoles: Number(formData.maxCustomRoles) || -1,
+        canUsePredefinedRoles: Boolean(formData.canUsePredefinedRoles),
+        maxPredefinedRoles: Number(formData.maxPredefinedRoles) || -1,
         canCreateTables: Boolean(formData.canCreateTables),
         maxTablesCount: Number(formData.maxTablesCount) || -1,
         maxRowsLimit: Number(formData.maxRowsLimit) || -1,
@@ -157,6 +179,11 @@ export default function EditPlanPage() {
         canCreatePrivateChannels: Boolean(formData.canCreatePrivateChannels),
         maxPrivateChannelsCount: Number(formData.maxPrivateChannelsCount) || -1,
         maxMembersPerPrivateChannel: Number(formData.maxMembersPerPrivateChannel) || -1,
+        canUseWebhooks: Boolean(formData.canUseWebhooks),
+        canUseAdvancedAnalytics: Boolean(formData.canUseAdvancedAnalytics),
+        canUseAttendance: Boolean(formData.canUseAttendance),
+        canUseFileSharing: Boolean(formData.canUseFileSharing),
+        canUseNotificationPreferences: Boolean(formData.canUseNotificationPreferences),
       },
     };
 
@@ -315,7 +342,8 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     value={formData.maxWorkspaces}
-                    onChange={(e) => setFormData({ ...formData, maxWorkspaces: parseInt(e.target.value) })}
+                    min="-1"
+                    onChange={(e) => setFormData({ ...formData, maxWorkspaces: parseIntInput(e.target.value, formData.maxWorkspaces) })}
                     required
                   />
                 </div>
@@ -327,7 +355,8 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     value={formData.maxMembers}
-                    onChange={(e) => setFormData({ ...formData, maxMembers: parseInt(e.target.value) })}
+                    min="-1"
+                    onChange={(e) => setFormData({ ...formData, maxMembers: parseIntInput(e.target.value, formData.maxMembers) })}
                     required
                   />
                 </div>
@@ -339,7 +368,8 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     value={formData.maxAdmins}
-                    onChange={(e) => setFormData({ ...formData, maxAdmins: parseInt(e.target.value) })}
+                    min="-1"
+                    onChange={(e) => setFormData({ ...formData, maxAdmins: parseIntInput(e.target.value, formData.maxAdmins) })}
                     required
                   />
                 </div>
@@ -351,7 +381,8 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     value={formData.maxSpaces}
-                    onChange={(e) => setFormData({ ...formData, maxSpaces: parseInt(e.target.value) })}
+                    min="-1"
+                    onChange={(e) => setFormData({ ...formData, maxSpaces: parseIntInput(e.target.value, formData.maxSpaces) })}
                     required
                   />
                 </div>
@@ -363,7 +394,8 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     value={formData.maxLists}
-                    onChange={(e) => setFormData({ ...formData, maxLists: parseInt(e.target.value) })}
+                    min="-1"
+                    onChange={(e) => setFormData({ ...formData, maxLists: parseIntInput(e.target.value, formData.maxLists) })}
                     required
                   />
                 </div>
@@ -375,7 +407,8 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     value={formData.maxFolders}
-                    onChange={(e) => setFormData({ ...formData, maxFolders: parseInt(e.target.value) })}
+                    min="-1"
+                    onChange={(e) => setFormData({ ...formData, maxFolders: parseIntInput(e.target.value, formData.maxFolders) })}
                     required
                   />
                 </div>
@@ -387,7 +420,8 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     value={formData.maxTasks}
-                    onChange={(e) => setFormData({ ...formData, maxTasks: parseInt(e.target.value) })}
+                    min="-1"
+                    onChange={(e) => setFormData({ ...formData, maxTasks: parseIntInput(e.target.value, formData.maxTasks) })}
                     required
                   />
                 </div>
@@ -399,9 +433,9 @@ export default function EditPlanPage() {
                   <Input
                     type="number"
                     value={formData.announcementCooldown}
-                    onChange={(e) => setFormData({ ...formData, announcementCooldown: parseInt(e.target.value) })}
-                    required
                     min="0"
+                    onChange={(e) => setFormData({ ...formData, announcementCooldown: parseIntInput(e.target.value, formData.announcementCooldown, 0) })}
+                    required
                   />
                 </div>
               </div>
@@ -438,7 +472,8 @@ export default function EditPlanPage() {
                     <Input
                       type="number"
                       value={formData.messageLimit}
-                      onChange={(e) => setFormData({ ...formData, messageLimit: parseInt(e.target.value) || 0 })}
+                      min="-1"
+                      onChange={(e) => setFormData({ ...formData, messageLimit: parseIntInput(e.target.value, formData.messageLimit) })}
                       required
                     />
                   </div>
@@ -466,7 +501,7 @@ export default function EditPlanPage() {
                         <Input
                           type="number"
                           value={formData.maxPrivateChannelsCount}
-                          onChange={(e) => setFormData({ ...formData, maxPrivateChannelsCount: parseInt(e.target.value) || -1 })}
+                          onChange={(e) => setFormData({ ...formData, maxPrivateChannelsCount: parseIntInput(e.target.value, formData.maxPrivateChannelsCount) })}
                           className="h-8 text-xs"
                           placeholder="-1 for unlimited"
                         />
@@ -479,7 +514,7 @@ export default function EditPlanPage() {
                         <Input
                           type="number"
                           value={formData.maxMembersPerPrivateChannel}
-                          onChange={(e) => setFormData({ ...formData, maxMembersPerPrivateChannel: parseInt(e.target.value) || -1 })}
+                          onChange={(e) => setFormData({ ...formData, maxMembersPerPrivateChannel: parseIntInput(e.target.value, formData.maxMembersPerPrivateChannel) })}
                           className="h-8 text-xs"
                           placeholder="-1 for unlimited"
                         />
@@ -522,8 +557,8 @@ export default function EditPlanPage() {
           {/* Custom Roles */}
           <Card>
             <CardHeader>
-              <CardTitle>Custom Display Roles</CardTitle>
-              <CardDescription>Pro feature for custom member role titles</CardDescription>
+              <CardTitle>Roles & Permissions</CardTitle>
+              <CardDescription>Configure custom and predefined role limits (-1 for unlimited)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -569,6 +604,40 @@ export default function EditPlanPage() {
                   <p className="text-xs text-muted-foreground">
                     Set to -1 for unlimited, or specify a maximum number
                   </p>
+                </div>
+              )}
+
+              <Separator />
+
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <PersonIcon className="w-4 h-4" />
+                    <Label htmlFor="predefinedRoles" className="cursor-pointer">Enable Predefined Role Titles</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Allow selecting from predefined role titles (PM, COO, DEV, etc.)
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.canUsePredefinedRoles}
+                  onCheckedChange={(checked) => setFormData({ ...formData, canUsePredefinedRoles: checked })}
+                />
+              </div>
+
+              {formData.canUsePredefinedRoles && (
+                <div className="space-y-2 ml-4 pl-4 border-l-2">
+                  <Label className="flex items-center gap-2">
+                    <CounterClockwiseClockIcon className="w-4 h-4" />
+                    Max Predefined Roles per Workspace
+                  </Label>
+                  <Input
+                    type="number"
+                    value={formData.maxPredefinedRoles}
+                    onChange={(e) => setFormData({ ...formData, maxPredefinedRoles: parseIntInput(e.target.value, formData.maxPredefinedRoles) })}
+                    min="-1"
+                    required
+                  />
                 </div>
               )}
             </CardContent>
@@ -731,6 +800,50 @@ export default function EditPlanPage() {
                     min="-1"
                   />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Advanced Feature Access</CardTitle>
+              <CardDescription>Turn platform modules on/off for this plan</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <Label className="text-sm">Webhooks</Label>
+                <Switch
+                  checked={formData.canUseWebhooks}
+                  onCheckedChange={(checked) => setFormData({ ...formData, canUseWebhooks: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <Label className="text-sm">Advanced Analytics</Label>
+                <Switch
+                  checked={formData.canUseAdvancedAnalytics}
+                  onCheckedChange={(checked) => setFormData({ ...formData, canUseAdvancedAnalytics: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <Label className="text-sm">Attendance</Label>
+                <Switch
+                  checked={formData.canUseAttendance}
+                  onCheckedChange={(checked) => setFormData({ ...formData, canUseAttendance: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <Label className="text-sm">File Sharing</Label>
+                <Switch
+                  checked={formData.canUseFileSharing}
+                  onCheckedChange={(checked) => setFormData({ ...formData, canUseFileSharing: checked })}
+                />
+              </div>
+              <div className="flex items-center justify-between p-3 border rounded-lg md:col-span-2">
+                <Label className="text-sm">Notification Preferences</Label>
+                <Switch
+                  checked={formData.canUseNotificationPreferences}
+                  onCheckedChange={(checked) => setFormData({ ...formData, canUseNotificationPreferences: checked })}
+                />
               </div>
             </CardContent>
           </Card>

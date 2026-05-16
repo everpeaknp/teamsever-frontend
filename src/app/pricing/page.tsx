@@ -17,6 +17,7 @@ import { CurrencyDisplay } from '@/components/currency/CurrencyDisplay';
 import { CurrencySwitcherCompact } from '@/components/currency/CurrencySwitcher';
 import { PaymentSelectionModal } from '@/components/modals/PaymentSelectionModal';
 import { Plan } from '@/types';
+import { getPlanFeatureLines } from '@/lib/planFeatures';
 
 
 export default function PricingPage() {
@@ -74,115 +75,8 @@ export default function PricingPage() {
     setShowPaymentModal(true);
   };
 
-  const formatLimit = (value: number) => {
-    return value === -1 ? 'Unlimited' : value.toString();
-  };
-
   const isCurrentPlan = (planName: string) => {
     return planName.toLowerCase() === subscription?.plan?.name?.toLowerCase();
-  };
-
-  const getFeaturesList = (plan: Plan) => {
-    const features = [];
-    
-    // Core Limits
-    features.push({
-      category: 'Core Limits',
-      items: [
-        `${formatLimit(plan.features.maxWorkspaces)} Workspace${plan.features.maxWorkspaces !== 1 ? 's' : ''}`,
-        `${formatLimit(plan.features.maxMembers)} Member${plan.features.maxMembers !== 1 ? 's' : ''} per workspace`,
-        `${formatLimit(plan.features.maxSpaces)} Space${plan.features.maxSpaces !== 1 ? 's' : ''}`,
-        `${formatLimit(plan.features.maxLists)} List${plan.features.maxLists !== 1 ? 's' : ''}`,
-        `${formatLimit(plan.features.maxFolders)} Folder${plan.features.maxFolders !== 1 ? 's' : ''}`,
-        `${formatLimit(plan.features.maxTasks)} Task${plan.features.maxTasks !== 1 ? 's' : ''}`,
-      ]
-    });
-    
-    // Team Management
-    const teamItems = [`${formatLimit(plan.features.maxAdmins)} Admin${plan.features.maxAdmins !== 1 ? 's' : ''}`];
-    
-    // Add custom roles if available
-    if ((plan.features as any).maxCustomRoles !== undefined && (plan.features as any).maxCustomRoles !== 0) {
-      teamItems.push(`${formatLimit((plan.features as any).maxCustomRoles)} Custom Role${(plan.features as any).maxCustomRoles !== 1 ? 's' : ''}`);
-    }
-    
-    features.push({
-      category: 'Team Management',
-      items: teamItems
-    });
-    
-    // Advanced Features
-    const advancedItems = [];
-    
-    if (plan.features.hasAccessControl) {
-      advancedItems.push(`${plan.features.accessControlTier.charAt(0).toUpperCase() + plan.features.accessControlTier.slice(1)} Access Control`);
-    }
-    
-    // Add tables feature if available
-    if ((plan.features as any).maxTables !== undefined && (plan.features as any).maxTables !== 0) {
-      advancedItems.push(`${formatLimit((plan.features as any).maxTables)} Custom Table${(plan.features as any).maxTables !== 1 ? 's' : ''}`);
-      
-      if ((plan.features as any).maxColumnsLimit !== undefined) {
-        advancedItems.push(`${formatLimit((plan.features as any).maxColumnsLimit)} Column${(plan.features as any).maxColumnsLimit !== 1 ? 's' : ''} per table`);
-      }
-      
-      if ((plan.features as any).maxRowsLimit !== undefined) {
-        advancedItems.push(`${formatLimit((plan.features as any).maxRowsLimit)} Row${(plan.features as any).maxRowsLimit !== 1 ? 's' : ''} per table`);
-      }
-    }
-    
-    if (advancedItems.length > 0) {
-      features.push({
-        category: 'Advanced Features',
-        items: advancedItems
-      });
-    }
-    
-    // Communication
-    const commItems = [];
-    
-    if (plan.features.hasGroupChat) {
-      const messageLimit = plan.features.messageLimit === -1 ? 'Unlimited' : plan.features.messageLimit;
-      commItems.push(`Group Chat (${messageLimit} messages/month)`);
-    } else {
-      commItems.push('Group Chat (Disabled)');
-    }
-    
-    if (plan.features.announcementCooldown === 0) {
-      commItems.push('No Announcement Cooldown');
-    } else {
-      commItems.push(`${plan.features.announcementCooldown}h Announcement Cooldown`);
-    }
-    
-    // Add direct messages if available
-    if ((plan.features as any).maxDirectMessagesPerUser !== undefined && (plan.features as any).maxDirectMessagesPerUser !== 0) {
-      commItems.push(`${formatLimit((plan.features as any).maxDirectMessagesPerUser)} DM${(plan.features as any).maxDirectMessagesPerUser !== 1 ? 's' : ''} per user`);
-    }
-    
-    features.push({
-      category: 'Communication',
-      items: commItems
-    });
-    
-    // Content Storage
-    const storageItems = [];
-    
-    if ((plan.features as any).maxFiles !== undefined && (plan.features as any).maxFiles !== 0) {
-      storageItems.push(`${formatLimit((plan.features as any).maxFiles)} File${(plan.features as any).maxFiles !== 1 ? 's' : ''} per user`);
-    }
-    
-    if ((plan.features as any).maxDocuments !== undefined && (plan.features as any).maxDocuments !== 0) {
-      storageItems.push(`${formatLimit((plan.features as any).maxDocuments)} Document${(plan.features as any).maxDocuments !== 1 ? 's' : ''} per user`);
-    }
-    
-    if (storageItems.length > 0) {
-      features.push({
-        category: 'Content Storage',
-        items: storageItems
-      });
-    }
-    
-    return features;
   };
 
   return (
@@ -257,7 +151,7 @@ export default function PricingPage() {
                 const isCurrent = isCurrentPlan(plan.name);
                 const isFree = plan.price === 0;
                 const isProcessing = processingPlanId === plan._id;
-                const features = getFeaturesList(plan);
+                const features = getPlanFeatureLines(plan);
 
                 return (
                   <div
@@ -297,32 +191,29 @@ export default function PricingPage() {
                       </p>
                     </div>
 
-                    <ul className="space-y-4 mb-8 flex-grow">
-                      {features.map((featureGroup, groupIndex) => (
-                        <li key={groupIndex} className="space-y-2">
-                          <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide">
-                            {featureGroup.category}
-                          </div>
-                          <ul className="space-y-2 pl-2">
-                            {featureGroup.items.map((item, itemIndex) => {
-                              const isDisabled = item.includes('(Disabled)');
-                              
-                              return (
-                                <li key={itemIndex} className="flex items-start gap-2">
-                                  {isDisabled ? (
-                                    <X className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                                  ) : (
-                                    <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                                  )}
-                                  <span className={`text-sm ${isDisabled ? 'text-gray-500 dark:text-gray-500 line-through' : 'text-gray-700 dark:text-gray-300'}`}>
-                                    {item.replace(' (Disabled)', '')}
-                                  </span>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </li>
-                      ))}
+                    <ul className="space-y-2 mb-8 flex-grow">
+                      {features.map((item, itemIndex) => {
+                        const isDisabled = item.includes('Disabled');
+
+                        return (
+                          <li key={itemIndex} className="flex items-start gap-2">
+                            {isDisabled ? (
+                              <X className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                            ) : (
+                              <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                            )}
+                            <span
+                              className={`text-sm ${
+                                isDisabled
+                                  ? 'text-gray-500 dark:text-gray-500 line-through'
+                                  : 'text-gray-700 dark:text-gray-300'
+                              }`}
+                            >
+                              {item}
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
 
                     <div className="mt-auto">

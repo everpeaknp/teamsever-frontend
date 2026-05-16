@@ -15,6 +15,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { Plan } from '@/types';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getPlanFeatureLines } from '@/lib/planFeatures';
 
 
 // Plans Page Loading Skeleton
@@ -133,73 +134,8 @@ export default function PlansPage() {
     }
   };
 
-  const formatLimit = (value: number) => {
-    return value === -1 ? 'Unlimited' : value.toString();
-  };
-
   const isCurrentPlan = (planName: string) => {
     return planName.toLowerCase() === currentPlanName?.toLowerCase();
-  };
-
-  const getFeaturesList = (plan: Plan) => {
-    const features: string[] = [];
-    
-    // Core Limits - Combine similar features
-    features.push(`${formatLimit(plan.features.maxWorkspaces)} Workspace${plan.features.maxWorkspaces !== 1 ? 's' : ''}`);
-    features.push(`${formatLimit(plan.features.maxSpaces)} Space${plan.features.maxSpaces !== 1 ? 's' : ''}, ${formatLimit(plan.features.maxLists)} List${plan.features.maxLists !== 1 ? 's' : ''}, ${formatLimit(plan.features.maxFolders)} Folder${plan.features.maxFolders !== 1 ? 's' : ''}`);
-    features.push(`${formatLimit(plan.features.maxTasks)} Task${plan.features.maxTasks !== 1 ? 's' : ''}`);
-    
-    // Team Management
-    features.push(`${formatLimit(plan.features.maxAdmins)} Admin${plan.features.maxAdmins !== 1 ? 's' : ''}`);
-    
-    // Custom roles if available
-    if ((plan.features as any).canUseCustomRoles) {
-      const maxRoles = (plan.features as any).maxCustomRoles;
-      if (maxRoles !== 0) {
-        features.push(`${formatLimit(maxRoles)} Custom Role${maxRoles !== 1 ? 's' : ''}`);
-      }
-    }
-    
-    // Access Control
-    if (plan.features.hasAccessControl) {
-      features.push(`${plan.features.accessControlTier.charAt(0).toUpperCase() + plan.features.accessControlTier.slice(1)} Access Control`);
-    }
-    
-    // Tables feature
-    if ((plan.features as any).canCreateTables) {
-      const maxTables = (plan.features as any).maxTablesCount;
-      if (maxTables !== 0) {
-        const maxRows = (plan.features as any).maxRowsLimit;
-        const maxCols = (plan.features as any).maxColumnsLimit;
-        features.push(`${formatLimit(maxTables)} Table${maxTables !== 1 ? 's' : ''} (${formatLimit(maxRows)} rows, ${formatLimit(maxCols)} cols)`);
-      }
-    }
-    
-    // Communication - Combine features
-    if (plan.features.hasGroupChat) {
-      const messageLimit = plan.features.messageLimit === -1 ? 'Unlimited' : plan.features.messageLimit;
-      features.push(`Group Chat (${messageLimit} msgs/month)`);
-    }
-    
-    const dmLimit = (plan.features as any).maxDirectMessagesPerUser;
-    if (dmLimit !== undefined && dmLimit !== 0) {
-      features.push(`${formatLimit(dmLimit)} DM${dmLimit !== 1 ? 's' : ''} per user`);
-    }
-    
-    if (plan.features.announcementCooldown === 0) {
-      features.push('No Announcement Cooldown');
-    } else {
-      features.push(`${plan.features.announcementCooldown}h Announcement Cooldown`);
-    }
-    
-    // Content Storage - Combine features
-    const maxFiles = (plan.features as any).maxFiles;
-    const maxDocs = (plan.features as any).maxDocuments;
-    if (maxFiles !== undefined && maxFiles !== 0 && maxDocs !== undefined && maxDocs !== 0) {
-      features.push(`${formatLimit(maxFiles)} File${maxFiles !== 1 ? 's' : ''}, ${formatLimit(maxDocs)} Document${maxDocs !== 1 ? 's' : ''} per user`);
-    }
-    
-    return features;
   };
 
   if (loading) {
@@ -292,7 +228,7 @@ export default function PlansPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((plan) => {
             const isCurrent = isCurrentPlan(plan.name);
-            const features = getFeaturesList(plan);
+            const features = getPlanFeatureLines(plan);
 
             // Get active price based on billing cycle
             const activePrice = billingCycle === 'monthly' 
