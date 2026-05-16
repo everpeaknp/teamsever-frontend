@@ -530,8 +530,30 @@ export default function EditPlanPage() {
           <Card>
             <CardHeader>
               <CardTitle>Access Control</CardTitle>
+              <CardDescription>Enable first, then choose which permission tier applies</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <LockOpen1Icon className="w-4 h-4" />
+                    <Label className="cursor-pointer">Enable Access Control</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    When disabled, pricing/plan pages will show Access Control as unavailable
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.hasAccessControl}
+                  onCheckedChange={(checked) =>
+                    setFormData({
+                      ...formData,
+                      hasAccessControl: checked,
+                    })
+                  }
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <LockClosedIcon className="w-4 h-4" />
@@ -539,9 +561,10 @@ export default function EditPlanPage() {
                 </Label>
                 <Select 
                   value={formData.accessControlTier} 
-                  onValueChange={(value: 'basic' | 'pro' | 'advanced') => setFormData({ ...formData, accessControlTier: value })}
+                  onValueChange={(value: 'basic' | 'pro' | 'advanced') => setFormData({ ...formData, accessControlTier: value, hasAccessControl: true })}
+                  disabled={!formData.hasAccessControl}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger disabled={!formData.hasAccessControl}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -550,6 +573,11 @@ export default function EditPlanPage() {
                     <SelectItem value="advanced">Advanced - Full control: "Full Access", "Can Edit", or "View Only"</SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  {formData.hasAccessControl
+                    ? 'Controls which permission levels can be assigned to list members'
+                    : 'Turn on "Enable Access Control" to apply a tier.'}
+                </p>
               </div>
             </CardContent>
           </Card>
