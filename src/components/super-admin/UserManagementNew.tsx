@@ -11,6 +11,19 @@ import { toast } from "sonner";
 import { CurrencyDisplay } from "@/components/currency/CurrencyDisplay";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plan } from "@/types";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { GearIcon } from "@radix-ui/react-icons";
 
 interface AdminUser {
   _id: string;
@@ -41,7 +54,8 @@ export default function UserManagementNew() {
   const [selectedPlan, setSelectedPlan] = useState<string>("");
   const [assignMemberCount, setAssignMemberCount] = useState<number>(1);
   const [assignBillingCycle, setAssignBillingCycle] = useState<"monthly" | "annual">("monthly");
-  const [featureOverrides, setFeatureOverrides] = useState<Record<string, number>>({});
+  const [featureOverrides, setFeatureOverrides] = useState<Record<string, any>>({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (selectedPlan) {
@@ -61,9 +75,14 @@ export default function UserManagementNew() {
           maxFiles: plan.features.maxFiles ?? 0,
           maxDocuments: plan.features.maxDocuments ?? 0,
           maxDirectMessagesPerUser: plan.features.maxDirectMessagesPerUser ?? 0,
-          canCreatePrivateChannels: plan.features.canCreatePrivateChannels ? 1 : 0,
+          canCreatePrivateChannels: plan.features.canCreatePrivateChannels ?? false,
           maxPrivateChannelsCount: plan.features.maxPrivateChannelsCount ?? 0,
           maxMembersPerPrivateChannel: plan.features.maxMembersPerPrivateChannel ?? 0,
+          canUseWebhooks: plan.features.canUseWebhooks ?? false,
+          canUseAdvancedAnalytics: plan.features.canUseAdvancedAnalytics ?? false,
+          canUseAttendance: plan.features.canUseAttendance ?? false,
+          canUseFileSharing: plan.features.canUseFileSharing ?? false,
+          canUseNotificationPreferences: plan.features.canUseNotificationPreferences ?? false,
         });
       }
     }
@@ -150,6 +169,7 @@ export default function UserManagementNew() {
         setAssignMemberCount(1);
         setAssignBillingCycle("monthly");
         setFeatureOverrides({});
+        setIsModalOpen(false);
       } else {
         toast.error("Failed to update subscription");
       }
@@ -417,125 +437,20 @@ export default function UserManagementNew() {
                       )}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      {selectedUser?._id === user._id && !user.subscription.isPaid ? (
-                        <div className="flex items-center gap-2">
-                           <Select value={selectedPlan} onValueChange={setSelectedPlan}>
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder="Select Plan" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {plans.map((plan) => {
-                                const price = plan.pricePerMemberMonthly || plan.basePrice || plan.price;
-                                const baseCurrency = plan.baseCurrency || 'NPR';
-                                return (
-                                  <SelectItem key={plan._id} value={plan._id}>
-                                    {plan.name} - <CurrencyDisplay 
-                                      amount={price} 
-                                      baseCurrency={baseCurrency} 
-                                      showCurrencyCode={false} 
-                                    />
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-
-                          {/* New: Member Count & Billing Cycle */}
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min="1"
-                              max="1000"
-                              value={assignMemberCount}
-                              onChange={(e) => setAssignMemberCount(parseInt(e.target.value) || 1)}
-                              className="w-16 h-9 px-2 text-sm border font-medium rounded-md focus:outline-none focus:ring-1 focus:ring-purple-500 text-center"
-                              placeholder="Seats"
-                            />
-                            <Select 
-                              value={assignBillingCycle} 
-                              onValueChange={(v: any) => setAssignBillingCycle(v)}
-                            >
-                              <SelectTrigger className="w-[100px] h-9 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="monthly">Monthly</SelectItem>
-                                <SelectItem value="annual">Annual</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="space-y-4 pt-4 border-t">
-                            <h4 className="text-sm font-semibold">Custom Limits (-1 for unlimited)</h4>
-                            <div className="grid grid-cols-2 gap-4">
-                              {[
-                                { key: 'maxWorkspaces', label: 'Max Workspaces' },
-                                { key: 'maxMembers', label: 'Max Members' },
-                                { key: 'maxAdmins', label: 'Max Admins' },
-                                { key: 'maxSpaces', label: 'Max Spaces' },
-                                { key: 'maxLists', label: 'Max Lists' },
-                                { key: 'maxFolders', label: 'Max Folders' },
-                                { key: 'maxTasks', label: 'Max Tasks' },
-                                { key: 'maxTablesCount', label: 'Max Tables' },
-                                { key: 'maxRowsLimit', label: 'Max Rows' },
-                                { key: 'maxColumnsLimit', label: 'Max Columns' },
-                                { key: 'maxFiles', label: 'Max Files' },
-                                { key: 'maxDocuments', label: 'Max Docs' },
-                                { key: 'maxDirectMessagesPerUser', label: 'Max DMs' },
-                                { key: 'canCreatePrivateChannels', label: 'Private Groups (0/1)' },
-                                { key: 'maxPrivateChannelsCount', label: 'Max Private Groups' },
-                                { key: 'maxMembersPerPrivateChannel', label: 'Max Members/Group' },
-                              ].map((f) => (
-                                <div key={f.key} className="space-y-1.5">
-                                  <label className="text-xs font-medium text-muted-foreground">{f.label}</label>
-                                  <input
-                                    type="number"
-                                    className="w-full px-2 py-1 text-xs border rounded bg-background"
-                                    value={featureOverrides[f.key] ?? 0}
-                                    onChange={(e) => {
-                                      const val = parseInt(e.target.value);
-                                      setFeatureOverrides(prev => ({
-                                        ...prev,
-                                        [f.key]: isNaN(val) ? 0 : val
-                                      }));
-                                    }}
-                                  />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                          <Button
-                            size="sm"
-                            onClick={() => togglePaidStatus(user._id, user.subscription.isPaid)}
-                          >
-                            Confirm
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedUser(null);
-                              setSelectedPlan("");
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant={user.subscription.isPaid ? "destructive" : "default"}
-                          onClick={() => {
-                            if (user.subscription.isPaid) {
-                              togglePaidStatus(user._id, user.subscription.isPaid);
-                            } else {
-                              setSelectedUser(user);
-                            }
-                          }}
-                        >
-                          {user.subscription.isPaid ? "Remove" : "Grant Access"}
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant={user.subscription.isPaid ? "destructive" : "default"}
+                        onClick={() => {
+                          if (user.subscription.isPaid) {
+                            togglePaidStatus(user._id, user.subscription.isPaid);
+                          } else {
+                            setSelectedUser(user);
+                            setIsModalOpen(true);
+                          }
+                        }}
+                      >
+                        {user.subscription.isPaid ? "Remove" : "Grant Access"}
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -694,6 +609,159 @@ export default function UserManagementNew() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Grant Access Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle>Grant Subscription Access</DialogTitle>
+            <DialogDescription>
+              Configure plan and limits for {selectedUser?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 p-6 pt-2">
+            <div className="space-y-6 pb-4">
+              {/* Plan Selection */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Subscription Plan</Label>
+                  <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Plan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {plans.map((plan) => (
+                        <SelectItem key={plan._id} value={plan._id}>
+                          {plan.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Billing Cycle</Label>
+                  <Select 
+                    value={assignBillingCycle} 
+                    onValueChange={(v: any) => setAssignBillingCycle(v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="annual">Annual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Member Seats</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={assignMemberCount}
+                  onChange={(e) => setAssignMemberCount(parseInt(e.target.value) || 1)}
+                />
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                  <GearIcon /> Custom Feature Limits
+                </h4>
+                
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                  {/* Numeric Limits */}
+                  {[
+                    { key: 'maxWorkspaces', label: 'Workspaces' },
+                    { key: 'maxMembers', label: 'Members/Workspace' },
+                    { key: 'maxAdmins', label: 'Admins' },
+                    { key: 'maxSpaces', label: 'Spaces' },
+                    { key: 'maxLists', label: 'Lists' },
+                    { key: 'maxFolders', label: 'Folders' },
+                    { key: 'maxTasks', label: 'Tasks' },
+                    { key: 'maxTablesCount', label: 'Custom Tables' },
+                    { key: 'maxRowsLimit', label: 'Rows per Table' },
+                    { key: 'maxFiles', label: 'Files' },
+                    { key: 'maxDocuments', label: 'Documents' },
+                    { key: 'maxDirectMessagesPerUser', label: 'DMs per User' },
+                  ].map((f) => {
+                    const isUnlimited = featureOverrides[f.key] === -1;
+                    return (
+                      <div key={f.key} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs">{f.label}</Label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground">Unlimited</span>
+                            <Switch 
+                              checked={isUnlimited}
+                              onCheckedChange={(checked) => {
+                                setFeatureOverrides(prev => ({
+                                  ...prev,
+                                  [f.key]: checked ? -1 : 0
+                                }));
+                              }}
+                            />
+                          </div>
+                        </div>
+                        {!isUnlimited && (
+                          <Input
+                            type="number"
+                            className="h-8 text-xs"
+                            value={featureOverrides[f.key] ?? 0}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value);
+                              setFeatureOverrides(prev => ({
+                                ...prev,
+                                [f.key]: isNaN(val) ? 0 : val
+                              }));
+                            }}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4 mt-8 border-t pt-4">
+                  {/* Boolean Toggles */}
+                  {[
+                    { key: 'canUseWebhooks', label: 'Webhooks' },
+                    { key: 'canUseAttendance', label: 'Attendance' },
+                    { key: 'canCreatePrivateChannels', label: 'Private Channels' },
+                    { key: 'canUseFileSharing', label: 'File Sharing' },
+                    { key: 'canUseAdvancedAnalytics', label: 'Advanced Analytics' },
+                  ].map((f) => (
+                    <div key={f.key} className="flex items-center justify-between space-x-2 py-1">
+                      <Label className="text-xs font-normal">{f.label}</Label>
+                      <Switch 
+                        checked={!!featureOverrides[f.key]}
+                        onCheckedChange={(checked) => {
+                          setFeatureOverrides(prev => ({
+                            ...prev,
+                            [f.key]: checked
+                          }));
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-6 border-t bg-muted/30">
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button 
+              onClick={() => selectedUser && togglePaidStatus(selectedUser._id, false)}
+              disabled={!selectedPlan}
+            >
+              Confirm & Grant Access
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

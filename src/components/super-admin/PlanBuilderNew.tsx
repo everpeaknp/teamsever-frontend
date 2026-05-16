@@ -8,10 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CurrencyDisplay } from "@/components/currency/CurrencyDisplay";
 import { toast } from "sonner";
-import { PlusIcon, Pencil1Icon, TrashIcon, ArchiveIcon } from "@radix-ui/react-icons";
+import { PlusIcon, Pencil1Icon, TrashIcon, ArchiveIcon, ChevronDownIcon, ChevronUpIcon } from "@radix-ui/react-icons";
 import { Loader2 } from "lucide-react";
 import { Plan } from "@/types";
 import { getPlanFeatureLines } from "@/lib/planFeatures";
+import { 
+  Collapsible, 
+  CollapsibleContent, 
+  CollapsibleTrigger 
+} from "@/components/ui/collapsible";
 
 
 export default function PlanBuilderNew() {
@@ -19,6 +24,11 @@ export default function PlanBuilderNew() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [expandedPlans, setExpandedPlans] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (planId: string) => {
+    setExpandedPlans(prev => ({ ...prev, [planId]: !prev[planId] }));
+  };
 
   useEffect(() => {
     fetchPlans();
@@ -175,18 +185,44 @@ export default function PlanBuilderNew() {
               </CardHeader>
               
               <CardContent className="pt-0">
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
                   {plan.description}
                 </p>
                 
-                <div className="space-y-1.5 text-xs">
-                  {getPlanFeatureLines(plan).map((feature, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-muted-foreground">
-                      <ArchiveIcon className="w-3 h-3 flex-shrink-0" />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
+                <Collapsible open={expandedPlans[plan._id]} onOpenChange={() => toggleExpand(plan._id)}>
+                  <div className="space-y-1.5 text-xs">
+                    {/* Key features always shown */}
+                    {getPlanFeatureLines(plan).slice(0, 5).map((feature, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-muted-foreground">
+                        <ArchiveIcon className="w-3 h-3 flex-shrink-0 text-primary/50" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                    
+                    <CollapsibleContent className="space-y-1.5 mt-1.5">
+                      {getPlanFeatureLines(plan).slice(5).map((feature, idx) => (
+                        <div key={idx + 5} className="flex items-center gap-2 text-muted-foreground">
+                          <ArchiveIcon className="w-3 h-3 flex-shrink-0 text-primary/50" />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </CollapsibleContent>
+                  </div>
+
+                  <CollapsibleTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full mt-3 h-8 text-[10px] uppercase tracking-wider font-bold text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {expandedPlans[plan._id] ? (
+                        <>Hide Details <ChevronUpIcon className="ml-1 w-3 h-3" /></>
+                      ) : (
+                        <>Show All Details <ChevronDownIcon className="ml-1 w-3 h-3" /></>
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                </Collapsible>
               </CardContent>
             </Card>
           );

@@ -11,9 +11,11 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArchiveIcon, IdCardIcon, CubeIcon, ListBulletIcon, FileIcon, CheckboxIcon, BellIcon, ChatBubbleIcon, LockClosedIcon, PersonIcon, CounterClockwiseClockIcon, TableIcon, FileTextIcon, LockOpen1Icon } from "@radix-ui/react-icons";
+import { ArchiveIcon, IdCardIcon, CubeIcon, ListBulletIcon, FileIcon, CheckboxIcon, BellIcon, ChatBubbleIcon, LockClosedIcon, PersonIcon, CounterClockwiseClockIcon, TableIcon, FileTextIcon, LockOpen1Icon, ChevronDownIcon } from "@radix-ui/react-icons";
 import { Shield, ArrowLeft, Loader2 } from "lucide-react";
 import { Plan } from "@/types";
+import { CurrencyDisplay } from "@/components/currency/CurrencyDisplay";
+import { getPlanFeatureLines } from "@/lib/planFeatures";
 
 
 export default function EditPlanPage() {
@@ -166,19 +168,19 @@ export default function EditPlanPage() {
         announcementCooldown: Number(formData.announcementCooldown),
         accessControlTier: formData.accessControlTier,
         canUseCustomRoles: Boolean(formData.canUseCustomRoles),
-        maxCustomRoles: Number(formData.maxCustomRoles) || -1,
+        maxCustomRoles: Number(formData.maxCustomRoles),
         canUsePredefinedRoles: Boolean(formData.canUsePredefinedRoles),
-        maxPredefinedRoles: Number(formData.maxPredefinedRoles) || -1,
+        maxPredefinedRoles: Number(formData.maxPredefinedRoles),
         canCreateTables: Boolean(formData.canCreateTables),
-        maxTablesCount: Number(formData.maxTablesCount) || -1,
-        maxRowsLimit: Number(formData.maxRowsLimit) || -1,
-        maxColumnsLimit: Number(formData.maxColumnsLimit) || -1,
-        maxFiles: Number(formData.maxFiles) || -1,
-        maxDocuments: Number(formData.maxDocuments) || -1,
-        maxDirectMessagesPerUser: Number(formData.maxDirectMessagesPerUser) || -1,
+        maxTablesCount: Number(formData.maxTablesCount),
+        maxRowsLimit: Number(formData.maxRowsLimit),
+        maxColumnsLimit: Number(formData.maxColumnsLimit),
+        maxFiles: Number(formData.maxFiles),
+        maxDocuments: Number(formData.maxDocuments),
+        maxDirectMessagesPerUser: Number(formData.maxDirectMessagesPerUser),
         canCreatePrivateChannels: Boolean(formData.canCreatePrivateChannels),
-        maxPrivateChannelsCount: Number(formData.maxPrivateChannelsCount) || -1,
-        maxMembersPerPrivateChannel: Number(formData.maxMembersPerPrivateChannel) || -1,
+        maxPrivateChannelsCount: Number(formData.maxPrivateChannelsCount),
+        maxMembersPerPrivateChannel: Number(formData.maxMembersPerPrivateChannel),
         canUseWebhooks: Boolean(formData.canUseWebhooks),
         canUseAdvancedAnalytics: Boolean(formData.canUseAdvancedAnalytics),
         canUseAttendance: Boolean(formData.canUseAttendance),
@@ -217,6 +219,86 @@ export default function EditPlanPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Helper for the live preview
+  const previewPlan: Plan = {
+    _id: planId,
+    name: formData.name || "Plan Name",
+    description: formData.description || "Plan description goes here...",
+    price: formData.pricePerMemberMonthly,
+    basePrice: formData.pricePerMemberMonthly,
+    baseCurrency: formData.baseCurrency,
+    pricePerMemberMonthly: formData.pricePerMemberMonthly,
+    pricePerMemberAnnual: formData.pricePerMemberAnnual,
+    isActive: true,
+    features: {
+      maxWorkspaces: formData.maxWorkspaces,
+      maxMembers: formData.maxMembers,
+      maxAdmins: formData.maxAdmins,
+      maxSpaces: formData.maxSpaces,
+      maxLists: formData.maxLists,
+      maxFolders: formData.maxFolders,
+      maxTasks: formData.maxTasks,
+      hasAccessControl: formData.hasAccessControl,
+      hasGroupChat: formData.hasGroupChat,
+      messageLimit: formData.messageLimit,
+      announcementCooldown: formData.announcementCooldown,
+      accessControlTier: formData.accessControlTier,
+      canUseCustomRoles: formData.canUseCustomRoles,
+      maxCustomRoles: formData.maxCustomRoles,
+      canUsePredefinedRoles: formData.canUsePredefinedRoles,
+      maxPredefinedRoles: formData.maxPredefinedRoles,
+      canCreateTables: formData.canCreateTables,
+      maxTablesCount: formData.maxTablesCount,
+      maxRowsLimit: formData.maxRowsLimit,
+      maxColumnsLimit: formData.maxColumnsLimit,
+      maxFiles: formData.maxFiles,
+      maxDocuments: formData.maxDocuments,
+      maxDirectMessagesPerUser: formData.maxDirectMessagesPerUser,
+      canCreatePrivateChannels: formData.canCreatePrivateChannels,
+      maxPrivateChannelsCount: formData.maxPrivateChannelsCount,
+      maxMembersPerPrivateChannel: formData.maxMembersPerPrivateChannel,
+      canUseWebhooks: formData.canUseWebhooks,
+      canUseAdvancedAnalytics: formData.canUseAdvancedAnalytics,
+      canUseAttendance: formData.canUseAttendance,
+      canUseFileSharing: formData.canUseFileSharing,
+      canUseNotificationPreferences: formData.canUseNotificationPreferences,
+    }
+  };
+
+  const LimitInput = ({ label, icon, field, value }: { label: string, icon: any, field: string, value: number }) => {
+    const isUnlimited = value === -1;
+    const Icon = icon;
+    
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="flex items-center gap-2">
+            <Icon className="w-4 h-4" />
+            {label}
+          </Label>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground">Unlimited</span>
+            <Switch 
+              checked={isUnlimited}
+              onCheckedChange={(checked) => {
+                setFormData({ ...formData, [field]: checked ? -1 : 0 });
+              }}
+            />
+          </div>
+        </div>
+        {!isUnlimited && (
+          <Input
+            type="number"
+            value={value}
+            min="0"
+            onChange={(e) => setFormData({ ...formData, [field]: parseIntInput(e.target.value, value, 0) })}
+            required
+          />
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -333,98 +415,15 @@ export default function EditPlanPage() {
               <CardDescription>Set limits for workspaces, members, and content (-1 for unlimited)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <ArchiveIcon className="w-4 h-4" />
-                    Max Workspaces
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.maxWorkspaces}
-                    min="-1"
-                    onChange={(e) => setFormData({ ...formData, maxWorkspaces: parseIntInput(e.target.value, formData.maxWorkspaces) })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <PersonIcon className="w-4 h-4" />
-                    Max Members per Workspace
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.maxMembers}
-                    min="-1"
-                    onChange={(e) => setFormData({ ...formData, maxMembers: parseIntInput(e.target.value, formData.maxMembers) })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Shield className="w-4 h-4" />
-                    Max Admins
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.maxAdmins}
-                    min="-1"
-                    onChange={(e) => setFormData({ ...formData, maxAdmins: parseIntInput(e.target.value, formData.maxAdmins) })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <CubeIcon className="w-4 h-4" />
-                    Max Spaces
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.maxSpaces}
-                    min="-1"
-                    onChange={(e) => setFormData({ ...formData, maxSpaces: parseIntInput(e.target.value, formData.maxSpaces) })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <ListBulletIcon className="w-4 h-4" />
-                    Max Lists
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.maxLists}
-                    min="-1"
-                    onChange={(e) => setFormData({ ...formData, maxLists: parseIntInput(e.target.value, formData.maxLists) })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <FileIcon className="w-4 h-4" />
-                    Max Folders
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.maxFolders}
-                    min="-1"
-                    onChange={(e) => setFormData({ ...formData, maxFolders: parseIntInput(e.target.value, formData.maxFolders) })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <CheckboxIcon className="w-4 h-4" />
-                    Max Tasks
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.maxTasks}
-                    min="-1"
-                    onChange={(e) => setFormData({ ...formData, maxTasks: parseIntInput(e.target.value, formData.maxTasks) })}
-                    required
-                  />
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                <LimitInput label="Max Workspaces" icon={ArchiveIcon} field="maxWorkspaces" value={formData.maxWorkspaces} />
+                <LimitInput label="Max Members" icon={PersonIcon} field="maxMembers" value={formData.maxMembers} />
+                <LimitInput label="Max Admins" icon={Shield} field="maxAdmins" value={formData.maxAdmins} />
+                <LimitInput label="Max Spaces" icon={CubeIcon} field="maxSpaces" value={formData.maxSpaces} />
+                <LimitInput label="Max Lists" icon={ListBulletIcon} field="maxLists" value={formData.maxLists} />
+                <LimitInput label="Max Folders" icon={FileIcon} field="maxFolders" value={formData.maxFolders} />
+                <LimitInput label="Max Tasks" icon={CheckboxIcon} field="maxTasks" value={formData.maxTasks} />
+                
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <BellIcon className="w-4 h-4" />
@@ -492,33 +491,9 @@ export default function EditPlanPage() {
                   </div>
 
                   {formData.canCreatePrivateChannels && (
-                    <div className="grid grid-cols-2 gap-4 pt-2">
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2 text-xs">
-                          <LockClosedIcon className="w-3 h-3" />
-                          Max Private Groups
-                        </Label>
-                        <Input
-                          type="number"
-                          value={formData.maxPrivateChannelsCount}
-                          onChange={(e) => setFormData({ ...formData, maxPrivateChannelsCount: parseIntInput(e.target.value, formData.maxPrivateChannelsCount) })}
-                          className="h-8 text-xs"
-                          placeholder="-1 for unlimited"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2 text-xs">
-                          <PersonIcon className="w-3 h-3" />
-                          Max Members Per Group
-                        </Label>
-                        <Input
-                          type="number"
-                          value={formData.maxMembersPerPrivateChannel}
-                          onChange={(e) => setFormData({ ...formData, maxMembersPerPrivateChannel: parseIntInput(e.target.value, formData.maxMembersPerPrivateChannel) })}
-                          className="h-8 text-xs"
-                          placeholder="-1 for unlimited"
-                        />
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 pt-2">
+                      <LimitInput label="Max Private Groups" icon={LockClosedIcon} field="maxPrivateChannelsCount" value={formData.maxPrivateChannelsCount} />
+                      <LimitInput label="Max Members Per Group" icon={PersonIcon} field="maxMembersPerPrivateChannel" value={formData.maxMembersPerPrivateChannel} />
                     </div>
                   )}
                 </div>
@@ -607,31 +582,7 @@ export default function EditPlanPage() {
               
               {formData.canUseCustomRoles && (
                 <div className="space-y-2 ml-4 pl-4 border-l-2">
-                  <Label className="flex items-center gap-2">
-                    <CounterClockwiseClockIcon className="w-4 h-4" />
-                    Max Custom Roles per Workspace
-                  </Label>
-                  <Input
-                    type="number"
-                    placeholder="-1 for unlimited"
-                    value={formData.maxCustomRoles}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === '' || val === '-' || val === '-1') {
-                        setFormData({ ...formData, maxCustomRoles: val === '' ? -1 : parseInt(val) || -1 });
-                      } else {
-                        const num = parseInt(val);
-                        if (!isNaN(num)) {
-                          setFormData({ ...formData, maxCustomRoles: num });
-                        }
-                      }
-                    }}
-                    min="-1"
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Set to -1 for unlimited, or specify a maximum number
-                  </p>
+                  <LimitInput label="Max Custom Roles" icon={CounterClockwiseClockIcon} field="maxCustomRoles" value={formData.maxCustomRoles} />
                 </div>
               )}
 
@@ -655,17 +606,7 @@ export default function EditPlanPage() {
 
               {formData.canUsePredefinedRoles && (
                 <div className="space-y-2 ml-4 pl-4 border-l-2">
-                  <Label className="flex items-center gap-2">
-                    <CounterClockwiseClockIcon className="w-4 h-4" />
-                    Max Predefined Roles per Workspace
-                  </Label>
-                  <Input
-                    type="number"
-                    value={formData.maxPredefinedRoles}
-                    onChange={(e) => setFormData({ ...formData, maxPredefinedRoles: parseIntInput(e.target.value, formData.maxPredefinedRoles) })}
-                    min="-1"
-                    required
-                  />
+                  <LimitInput label="Max Predefined Roles" icon={CounterClockwiseClockIcon} field="maxPredefinedRoles" value={formData.maxPredefinedRoles} />
                 </div>
               )}
             </CardContent>
@@ -696,61 +637,10 @@ export default function EditPlanPage() {
               
               {formData.canCreateTables && (
                 <div className="space-y-4 ml-4 pl-4 border-l-2">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Max Tables per Space</Label>
-                      <Input
-                        type="number"
-                        placeholder="-1 for unlimited"
-                        value={formData.maxTablesCount}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === '' || val === '-' || val === '-1') {
-                            setFormData({ ...formData, maxTablesCount: val === '' ? -1 : parseInt(val) || -1 });
-                          } else {
-                            const num = parseInt(val);
-                            if (!isNaN(num)) setFormData({ ...formData, maxTablesCount: num });
-                          }
-                        }}
-                        min="-1"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Max Rows per Table</Label>
-                      <Input
-                        type="number"
-                        placeholder="-1 for unlimited"
-                        value={formData.maxRowsLimit}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === '' || val === '-' || val === '-1') {
-                            setFormData({ ...formData, maxRowsLimit: val === '' ? -1 : parseInt(val) || -1 });
-                          } else {
-                            const num = parseInt(val);
-                            if (!isNaN(num)) setFormData({ ...formData, maxRowsLimit: num });
-                          }
-                        }}
-                        min="-1"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Max Columns per Table</Label>
-                      <Input
-                        type="number"
-                        placeholder="-1 for unlimited"
-                        value={formData.maxColumnsLimit}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          if (val === '' || val === '-' || val === '-1') {
-                            setFormData({ ...formData, maxColumnsLimit: val === '' ? -1 : parseInt(val) || -1 });
-                          } else {
-                            const num = parseInt(val);
-                            if (!isNaN(num)) setFormData({ ...formData, maxColumnsLimit: num });
-                          }
-                        }}
-                        min="-1"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    <LimitInput label="Max Tables" icon={TableIcon} field="maxTablesCount" value={formData.maxTablesCount} />
+                    <LimitInput label="Max Rows" icon={TableIcon} field="maxRowsLimit" value={formData.maxRowsLimit} />
+                    <LimitInput label="Max Columns" icon={TableIcon} field="maxColumnsLimit" value={formData.maxColumnsLimit} />
                   </div>
                 </div>
               )}
@@ -764,70 +654,10 @@ export default function EditPlanPage() {
               <CardDescription>Set limits for files, documents, and direct messages (-1 for unlimited)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <FileIcon className="w-4 h-4" />
-                    Max Files
-                  </Label>
-                  <Input
-                    type="number"
-                    placeholder="-1 for unlimited"
-                    value={formData.maxFiles}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === '' || val === '-' || val === '-1') {
-                        setFormData({ ...formData, maxFiles: val === '' ? -1 : parseInt(val) || -1 });
-                      } else {
-                        const num = parseInt(val);
-                        if (!isNaN(num)) setFormData({ ...formData, maxFiles: num });
-                      }
-                    }}
-                    min="-1"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <FileTextIcon className="w-4 h-4" />
-                    Max Documents
-                  </Label>
-                  <Input
-                    type="number"
-                    placeholder="-1 for unlimited"
-                    value={formData.maxDocuments}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === '' || val === '-' || val === '-1') {
-                        setFormData({ ...formData, maxDocuments: val === '' ? -1 : parseInt(val) || -1 });
-                      } else {
-                        const num = parseInt(val);
-                        if (!isNaN(num)) setFormData({ ...formData, maxDocuments: num });
-                      }
-                    }}
-                    min="-1"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <ChatBubbleIcon className="w-4 h-4" />
-                    Max DMs Per User
-                  </Label>
-                  <Input
-                    type="number"
-                    placeholder="-1 for unlimited"
-                    value={formData.maxDirectMessagesPerUser}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val === '' || val === '-' || val === '-1') {
-                        setFormData({ ...formData, maxDirectMessagesPerUser: val === '' ? -1 : parseInt(val) || -1 });
-                      } else {
-                        const num = parseInt(val);
-                        if (!isNaN(num)) setFormData({ ...formData, maxDirectMessagesPerUser: num });
-                      }
-                    }}
-                    min="-1"
-                  />
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <LimitInput label="Max Files" icon={FileIcon} field="maxFiles" value={formData.maxFiles} />
+                <LimitInput label="Max Documents" icon={FileTextIcon} field="maxDocuments" value={formData.maxDocuments} />
+                <LimitInput label="Max DMs" icon={ChatBubbleIcon} field="maxDirectMessagesPerUser" value={formData.maxDirectMessagesPerUser} />
               </div>
             </CardContent>
           </Card>
@@ -894,37 +724,71 @@ export default function EditPlanPage() {
         </form>
 
         <aside className="xl:sticky xl:top-6 h-fit">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Quick Summary</CardTitle>
-              <CardDescription>Live preview while you edit this plan</CardDescription>
+          <Card className="overflow-hidden border-2 border-primary/20 shadow-xl">
+            <CardHeader className="bg-primary/5 pb-4">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Live Plan Preview
+              </CardTitle>
+              <CardDescription>How this will look to users</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Plan</span>
-                <span className="font-medium">{formData.name || "Untitled"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Currency</span>
-                <span className="font-medium">{formData.baseCurrency}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Monthly/member</span>
-                <span className="font-medium">
-                  {formData.baseCurrency === "NPR" ? "NPR" : "$"} {formData.pricePerMemberMonthly || 0}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Annual/member</span>
-                <span className="font-medium">
-                  {formData.baseCurrency === "NPR" ? "NPR" : "$"} {formData.pricePerMemberAnnual || 0}
-                </span>
-              </div>
-              <Separator />
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <p>- Use `-1` for unlimited on limits.</p>
-                <p>- Keep only essential toggles enabled per plan tier.</p>
-                <p>- Changes apply immediately after update.</p>
+            <CardContent className="p-4">
+              {/* Simulated Plan Card */}
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-bold text-lg">{previewPlan.name}</h3>
+                      <div className="flex items-baseline gap-1 mt-1">
+                        <CurrencyDisplay 
+                          amount={previewPlan.pricePerMemberMonthly || 0} 
+                          baseCurrency={previewPlan.baseCurrency}
+                          className="text-2xl font-bold text-primary"
+                        />
+                        <span className="text-xs text-muted-foreground">/member/mo</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-4">
+                  <p className="text-xs text-muted-foreground line-clamp-3 italic">
+                    "{previewPlan.description}"
+                  </p>
+                  <div className="space-y-1.5 text-[10px]">
+                    {getPlanFeatureLines(previewPlan).slice(0, 8).map((feature, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-muted-foreground">
+                        <ArchiveIcon className="w-2.5 h-2.5 flex-shrink-0 text-primary/50" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                    <div className="pt-1 flex items-center gap-1 text-primary font-medium text-[9px] uppercase">
+                      <ChevronDownIcon className="w-3 h-3" /> 
+                      Plus {Math.max(0, getPlanFeatureLines(previewPlan).length - 8)} more features
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="mt-6 space-y-4">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Plan Highlights
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 rounded bg-muted/50 border text-[10px]">
+                    <div className="text-muted-foreground mb-0.5">Annual Discount</div>
+                    <div className="font-bold">
+                      {formData.pricePerMemberAnnual < (formData.pricePerMemberMonthly * 12) ? (
+                        <span className="text-green-600">
+                          Save {Math.round((1 - formData.pricePerMemberAnnual / (formData.pricePerMemberMonthly * 12)) * 100)}%
+                        </span>
+                      ) : "None"}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-muted/50 border text-[10px]">
+                    <div className="text-muted-foreground mb-0.5">Access Tier</div>
+                    <div className="font-bold capitalize">{formData.hasAccessControl ? formData.accessControlTier : "Disabled"}</div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
