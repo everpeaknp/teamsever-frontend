@@ -232,9 +232,8 @@ export default function EditPlanPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-background">
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
+      <div className="max-w-7xl mx-auto p-4 md:p-6">
+        <div className="flex items-center gap-3 mb-5">
           <Button
             variant="ghost"
             size="icon"
@@ -243,12 +242,13 @@ export default function EditPlanPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Edit Plan: {formData.name}</h1>
-            <p className="text-muted-foreground">Update plan features and limits</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Edit Plan: {formData.name}</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Update plan features and limits</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Basic Information */}
           <Card>
             <CardHeader>
@@ -877,13 +877,14 @@ export default function EditPlanPage() {
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 sticky bottom-0 bg-gray-50 py-4 border-t">
-            <Button type="submit" className="flex-1" disabled={submitting}>
+          <div className="flex flex-col sm:flex-row gap-3 sticky bottom-0 bg-gray-50/95 dark:bg-background/95 backdrop-blur py-3 border-t">
+            <Button type="submit" className="sm:flex-1 h-11" disabled={submitting}>
               {submitting ? 'Updating...' : 'Update Plan'}
             </Button>
             <Button 
               type="button" 
               variant="outline" 
+              className="h-11"
               onClick={() => router.push('/super-admin?tab=plans')}
               disabled={submitting}
             >
@@ -891,6 +892,44 @@ export default function EditPlanPage() {
             </Button>
           </div>
         </form>
+
+        <aside className="xl:sticky xl:top-6 h-fit">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Quick Summary</CardTitle>
+              <CardDescription>Live preview while you edit this plan</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Plan</span>
+                <span className="font-medium">{formData.name || "Untitled"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Currency</span>
+                <span className="font-medium">{formData.baseCurrency}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Monthly/member</span>
+                <span className="font-medium">
+                  {formData.baseCurrency === "NPR" ? "NPR" : "$"} {formData.pricePerMemberMonthly || 0}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Annual/member</span>
+                <span className="font-medium">
+                  {formData.baseCurrency === "NPR" ? "NPR" : "$"} {formData.pricePerMemberAnnual || 0}
+                </span>
+              </div>
+              <Separator />
+              <div className="space-y-2 text-xs text-muted-foreground">
+                <p>- Use `-1` for unlimited on limits.</p>
+                <p>- Keep only essential toggles enabled per plan tier.</p>
+                <p>- Changes apply immediately after update.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </aside>
+        </div>
       </div>
     </div>
   );

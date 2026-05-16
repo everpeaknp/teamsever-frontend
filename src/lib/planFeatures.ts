@@ -17,10 +17,11 @@ export function getPlanFeatureLines(plan: Plan): string[] {
   lines.push(`${formatLimit(f.maxLists)} Lists`);
   lines.push(`${formatLimit(f.maxTasks)} Tasks`);
 
+  const accessTier = (f.accessControlTier || "basic").charAt(0).toUpperCase() + (f.accessControlTier || "basic").slice(1);
   lines.push(
     f.hasAccessControl
-      ? `${(f.accessControlTier || "basic").charAt(0).toUpperCase()}${(f.accessControlTier || "basic").slice(1)} Access Control`
-      : "Access Control (Disabled)"
+      ? `${accessTier} Access Control`
+      : `Access Control Disabled (Selected Tier: ${accessTier})`
   );
 
   if (f.canUseCustomRoles) {

@@ -258,55 +258,57 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
         // 1. Sync Inbox (DMs)
         try {
           const dmWorkspaceId = (workspaceId && workspaceId !== 'undefined') ? workspaceId : '';
-          const response = await api.get(`/dm${dmWorkspaceId ? `?workspaceId=${dmWorkspaceId}` : ''}`);
-          const conversations = response.data.data || [];
-          const apiInboxUnread = conversations.reduce(
-            (sum: number, conv: any) => sum + Number(conv?.unreadCount || 0),
-            0
-          );
-          setInboxUnreadFallback(apiInboxUnread);
-          
-          const apiConvIds = new Set(conversations.map((c: any) => c._id));
-          const currentRooms = useChatStore.getState().rooms;
+          if (dmWorkspaceId) {
+            const response = await api.get(`/dm?workspaceId=${dmWorkspaceId}`);
+            const conversations = response.data.data || [];
+            const apiInboxUnread = conversations.reduce(
+              (sum: number, conv: any) => sum + Number(conv?.unreadCount || 0),
+              0
+            );
+            setInboxUnreadFallback(apiInboxUnread);
+            
+            const apiConvIds = new Set(conversations.map((c: any) => c._id));
+            const currentRooms = useChatStore.getState().rooms;
 
-          // CRITICAL: Clear unread counts for any 'direct' rooms in this workspace 
-          // that are NOT returned by the API (zombie/stale counts)
-          Object.values(currentRooms).forEach(room => {
-            if (room.type === 'direct' && room.workspaceId === dmWorkspaceId && !apiConvIds.has(room.roomId)) {
-              if (room.unreadCount > 0) {
-                useChatStore.getState().clearUnread(room.roomId);
-              }
-            }
-          });
-          
-          conversations.forEach((conv: any) => {
-            // Ensure room exists for every conversation (not only unread > 0)
-            const participants = (conv.participants || [])
-              .map((p: any) => (typeof p === 'string' ? p : p?._id))
-              .filter(Boolean);
-            const convWorkspaceId =
-              (typeof conv.workspace === 'string'
-                ? conv.workspace
-                : conv.workspace?._id?.toString?.()) || dmWorkspaceId || undefined;
-            createRoom(conv._id, 'direct', convWorkspaceId, participants);
-
-            // Apply authoritative unread count from API
-            const rooms = useChatStore.getState().rooms;
-            if (rooms[conv._id]) {
-              useChatStore.setState({
-                rooms: {
-                  ...rooms,
-                  [conv._id]: {
-                    ...rooms[conv._id],
-                    type: 'direct',
-                    workspaceId: convWorkspaceId,
-                    unreadCount: Number(conv.unreadCount || 0),
-                    participants: participants.length > 0 ? participants : rooms[conv._id].participants,
-                  }
+            // CRITICAL: Clear unread counts for any 'direct' rooms in this workspace 
+            // that are NOT returned by the API (zombie/stale counts)
+            Object.values(currentRooms).forEach(room => {
+              if (room.type === 'direct' && room.workspaceId === dmWorkspaceId && !apiConvIds.has(room.roomId)) {
+                if (room.unreadCount > 0) {
+                  useChatStore.getState().clearUnread(room.roomId);
                 }
-              });
-            }
-          });
+              }
+            });
+            
+            conversations.forEach((conv: any) => {
+              // Ensure room exists for every conversation (not only unread > 0)
+              const participants = (conv.participants || [])
+                .map((p: any) => (typeof p === 'string' ? p : p?._id))
+                .filter(Boolean);
+              const convWorkspaceId =
+                (typeof conv.workspace === 'string'
+                  ? conv.workspace
+                  : conv.workspace?._id?.toString?.()) || dmWorkspaceId || undefined;
+              createRoom(conv._id, 'direct', convWorkspaceId, participants);
+
+              // Apply authoritative unread count from API
+              const rooms = useChatStore.getState().rooms;
+              if (rooms[conv._id]) {
+                useChatStore.setState({
+                  rooms: {
+                    ...rooms,
+                    [conv._id]: {
+                      ...rooms[conv._id],
+                      type: 'direct',
+                      workspaceId: convWorkspaceId,
+                      unreadCount: Number(conv.unreadCount || 0),
+                      participants: participants.length > 0 ? participants : rooms[conv._id].participants,
+                    }
+                  }
+                });
+              }
+            });
+          }
         } catch (error) {
           console.error('[AppSidebar] Failed to sync inbox unread:', error);
         }

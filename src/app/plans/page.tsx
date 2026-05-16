@@ -295,7 +295,7 @@ export default function PlansPage() {
                 {/* Features List */}
                 <ul className="space-y-2 mb-6 flex-grow">
                   {features.map((feature, index) => {
-                    const isDisabled = feature.includes('(Disabled)') || feature.includes('Group Chat (0');
+                    const isDisabled = feature.includes('Disabled');
                     
                     return (
                       <li key={index} className="flex items-start gap-2 text-sm">
@@ -305,7 +305,7 @@ export default function PlansPage() {
                           <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                         )}
                         <span className={isDisabled ? 'text-muted-foreground line-through' : ''}>
-                          {feature.replace(' (Disabled)', '')}
+                          {feature}
                         </span>
                       </li>
                     );
