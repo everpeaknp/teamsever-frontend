@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, Circle, Clock, AlertCircle, List as ListIcon, Loader2 } from 'lucide-react';
 import { Task } from '@/types';
 import Link from 'next/link';
+import { useWorkspaceStore } from '@/store/useWorkspaceStore';
 import { api } from '@/lib/axios';
 
 interface YourTasksProps {
@@ -24,7 +25,8 @@ interface ListMembership {
 
 export function YourTasks({ tasks, userId, workspaceId }: YourTasksProps) {
   const [myLists, setMyLists] = useState<ListMembership[]>([]);
-  const [loadingLists, setLoadingLists] = useState(true);
+  const { hierarchy } = useWorkspaceStore();
+  const [loadingLists, setLoadingLists] = useState(false);
 
   const myTasks = useMemo(() => {
     return tasks.filter(task => {
@@ -33,63 +35,47 @@ export function YourTasks({ tasks, userId, workspaceId }: YourTasksProps) {
     });
   }, [tasks, userId]);
 
-  // Fetch lists where user is a member
+  // Derive myLists from hierarchy
   useEffect(() => {
-    const fetchMyLists = async () => {
-      try {
-        setLoadingLists(true);
-        // Get all spaces in workspace
-        const spacesRes = await api.get(`/workspaces/${workspaceId}/spaces`);
-        const spaces = spacesRes.data.data || [];
-
-        const userLists: ListMembership[] = [];
-
-        // Check each space for lists where user is a member
-        for (const space of spaces) {
-          try {
-            const listsRes = await api.get(`/spaces/${space._id}/lists`);
-            const lists = listsRes.data.data || [];
-
-            for (const list of lists) {
-              try {
-                // Check if user is a list member
-                const membersRes = await api.get(`/lists/${list._id}/list-members`);
-                const members = membersRes.data.data || [];
-                
-                const isMember = members.some((m: any) => 
-                  m._id === userId && m.hasOverride === true
-                );
-
-                if (isMember) {
-                  userLists.push({
-                    _id: list._id,
-                    name: list.name,
-                    space: space._id,
-                    taskCount: list.taskCount || 0,
-                    completedCount: list.completedCount || 0,
-                  });
-                }
-              } catch (err) {
-                console.error(`Failed to fetch members for list ${list._id}:`, err);
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to fetch lists for space ${space._id}:`, err);
-          }
-        }
-
-        setMyLists(userLists);
-      } catch (error) {
-        console.error('Failed to fetch user lists:', error);
-      } finally {
-        setLoadingLists(false);
-      }
-    };
-
-    if (userId && workspaceId) {
-      fetchMyLists();
+    if (!hierarchy) {
+      setMyLists([]);
+      return;
     }
-  }, [userId, workspaceId]);
+
+    const userLists: ListMembership[] = [];
+
+    hierarchy.spaces.forEach((space: any) => {
+      // Check standalone lists
+      space.lists.forEach((list: any) => {
+        if (list.isMember) {
+          userLists.push({
+            _id: list._id,
+            name: list.name,
+            space: space._id,
+            taskCount: list.taskCount || 0,
+            completedCount: list.completedCount || 0,
+          });
+        }
+      });
+
+      // Check folders
+      space.folders.forEach((folder: any) => {
+        folder.lists.forEach((list: any) => {
+          if (list.isMember) {
+            userLists.push({
+              _id: list._id,
+              name: list.name,
+              space: space._id,
+              taskCount: list.taskCount || 0,
+              completedCount: list.completedCount || 0,
+            });
+          }
+        });
+      });
+    });
+
+    setMyLists(userLists);
+  }, [hierarchy, userId]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

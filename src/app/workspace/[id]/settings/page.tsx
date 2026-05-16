@@ -25,7 +25,7 @@ export default function GeneralSettingsPage() {
   const router = useRouter();
   const params = useParams();
   const workspaceId = params.id as string;
-  const { isOwner } = usePermissions();
+  const { can } = usePermissions();
 
   const [workspaceName, setWorkspaceName] = useState('');
   const [workspaceLogo, setWorkspaceLogo] = useState<string | null>(null);
@@ -138,13 +138,15 @@ export default function GeneralSettingsPage() {
     );
   }
 
-  if (!isOwner()) {
+
+  
+  if (!can('view_settings')) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center px-4">
         <SettingsIcon className="w-12 h-12 text-muted-foreground mb-4" />
         <h2 className="text-xl font-bold">Access Denied</h2>
         <p className="text-muted-foreground max-w-sm">
-          Only the workspace owner can manage general settings and branding.
+          You do not have permission to manage general settings and branding.
         </p>
         <Button variant="outline" className="mt-6" onClick={() => router.back()}>
           Go Back
@@ -162,7 +164,7 @@ export default function GeneralSettingsPage() {
               onClick={() => router.back()}
               className="p-2 hover:bg-accent rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+              <ArrowLeft className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
             </button>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-foreground">Workspace Settings</h1>
@@ -192,7 +194,7 @@ export default function GeneralSettingsPage() {
         {/* Branding Section */}
         <section className="bg-card rounded-xl shadow-sm border border-border p-6 overflow-hidden relative">
           <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-            <ImageIcon className="w-24 h-24" />
+            <ImageIcon className="w-24 h-24" strokeWidth={1.5} />
           </div>
           
           <h3 className="text-lg font-semibold mb-6">Workspace Branding</h3>
@@ -216,7 +218,7 @@ export default function GeneralSettingsPage() {
               </div>
               
               <label className="absolute -bottom-2 -right-2 p-2 bg-primary text-primary-foreground rounded-full shadow-lg cursor-pointer hover:scale-110 transition-transform">
-                <Upload className="w-4 h-4" />
+                <Upload className="w-4 h-4" strokeWidth={1.5} />
                 <input 
                   type="file" 
                   className="hidden" 
@@ -259,65 +261,67 @@ export default function GeneralSettingsPage() {
             </div>
             
             <Button type="submit" disabled={saving || !workspaceName.trim()} className="min-h-[44px]">
-              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" strokeWidth={1.5} /> : <Save className="w-4 h-4 mr-2" strokeWidth={1.5} />}
               Save Changes
             </Button>
           </form>
         </section>
 
         {/* Danger Zone Section */}
-        <section className="bg-card rounded-xl shadow-sm border border-destructive/20 p-6">
-          <div className="flex items-center gap-2 text-destructive mb-6">
-            <AlertTriangle className="w-5 h-5" />
-            <h3 className="text-lg font-semibold">Danger Zone</h3>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-destructive/5 border border-destructive/10">
-              <div className="space-y-1">
-                <h4 className="font-bold text-destructive">Delete Workspace</h4>
-                <p className="text-sm text-muted-foreground max-w-lg">
-                  Once you delete a workspace, there is no going back. All spaces, lists, tasks, and data will be permanently removed.
-                </p>
-              </div>
-              <Button 
-                variant="destructive" 
-                onClick={() => setIsDeletingSession(!isDeletingSession)}
-                className="min-h-[44px]"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete Workspace
-              </Button>
+        {can('delete_workspace') && (
+          <section className="bg-card rounded-xl shadow-sm border border-destructive/20 p-6">
+            <div className="flex items-center gap-2 text-destructive mb-6">
+              <AlertTriangle className="w-5 h-5" strokeWidth={1.5} />
+              <h3 className="text-lg font-semibold">Danger Zone</h3>
             </div>
-
-            {isDeletingSession && (
-              <motion.div 
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 rounded-lg border border-destructive/20 bg-destructive/5 space-y-4 mt-4"
-              >
-                <p className="text-sm font-medium">To confirm deletion, please type <span className="font-bold underline">"{workspaceName}"</span> below:</p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Input 
-                    value={deleteConfirm}
-                    onChange={(e) => setDeleteConfirm(e.target.value)}
-                    placeholder={workspaceName}
-                    className="flex-1 min-h-[44px]"
-                  />
-                  <Button 
-                    variant="destructive" 
-                    disabled={deleteConfirm !== workspaceName || isFinalDeleting}
-                    onClick={handleDeleteWorkspace}
-                    className="px-8 min-h-[44px]"
-                  >
-                    {isFinalDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Confirm Delete
-                  </Button>
+            
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg bg-destructive/5 border border-destructive/10">
+                <div className="space-y-1">
+                  <h4 className="font-bold text-destructive">Delete Workspace</h4>
+                  <p className="text-sm text-muted-foreground max-w-lg">
+                    Once you delete a workspace, there is no going back. All spaces, lists, tasks, and data will be permanently removed.
+                  </p>
                 </div>
-              </motion.div>
-            )}
-          </div>
-        </section>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setIsDeletingSession(!isDeletingSession)}
+                  className="min-h-[44px]"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" strokeWidth={1.5} />
+                  Delete Workspace
+                </Button>
+              </div>
+
+              {isDeletingSession && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-lg border border-destructive/20 bg-destructive/5 space-y-4 mt-4"
+                >
+                  <p className="text-sm font-medium">To confirm deletion, please type <span className="font-bold underline">"{workspaceName}"</span> below:</p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Input 
+                      value={deleteConfirm}
+                      onChange={(e) => setDeleteConfirm(e.target.value)}
+                      placeholder={workspaceName}
+                      className="flex-1 min-h-[44px]"
+                    />
+                    <Button 
+                      variant="destructive" 
+                      disabled={deleteConfirm !== workspaceName || isFinalDeleting}
+                      onClick={handleDeleteWorkspace}
+                      className="px-8 min-h-[44px]"
+                    >
+                      {isFinalDeleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" strokeWidth={1.5} />}
+                      Confirm Delete
+                    </Button>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );

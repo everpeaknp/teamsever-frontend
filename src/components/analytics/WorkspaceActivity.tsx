@@ -37,7 +37,7 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
   const [skip, setSkip] = useState(0);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const INITIAL_LIMIT = 7;
+  const INITIAL_LIMIT = 20;
   const LOAD_MORE_LIMIT = 10;
 
   useEffect(() => {

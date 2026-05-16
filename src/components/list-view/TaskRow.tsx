@@ -3,6 +3,7 @@
 import { Task, User } from '@/types';
 import { Flag, MoreVertical, Calendar } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { useTaskSidebarStore } from '@/store/useTaskSidebarStore';
 import { format, isPast, isToday } from 'date-fns';
 
@@ -95,6 +96,19 @@ export default function TaskRow({ task, isSelected, onSelect, onUpdate }: TaskRo
               </AvatarFallback>
             </Avatar>
             <span className="text-sm text-gray-700">{getAssigneeName()}</span>
+            {(task.assignee as any).customRole && (
+              <Badge 
+                variant="outline" 
+                className="text-[9px] py-0 px-1 h-3.5"
+                style={{ 
+                  backgroundColor: (task.assignee as any).customRole.color + '20',
+                  color: (task.assignee as any).customRole.color,
+                  borderColor: (task.assignee as any).customRole.color + '40'
+                }}
+              >
+                {(task.assignee as any).customRole.label}
+              </Badge>
+            )}
           </div>
         ) : (
           <span className="text-sm text-gray-400">Unassigned</span>

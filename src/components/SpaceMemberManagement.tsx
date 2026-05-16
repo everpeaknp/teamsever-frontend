@@ -210,9 +210,28 @@ export function SpaceMemberManagement({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="capitalize">
-                          {member.workspaceRole}
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="secondary" className="capitalize w-fit">
+                            {member.workspaceRole}
+                          </Badge>
+                          {(member as any).customRole ? (
+                            <Badge 
+                              variant="outline" 
+                              className="text-[10px] py-0 px-1.5 h-4 w-fit"
+                              style={{ 
+                                backgroundColor: (member as any).customRole.color + '20',
+                                color: (member as any).customRole.color,
+                                borderColor: (member as any).customRole.color + '40'
+                              }}
+                            >
+                              {(member as any).customRole.label}
+                            </Badge>
+                          ) : (member as any).customRoleTitle && (
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-4 w-fit bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800">
+                              {(member as any).customRoleTitle}
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Select

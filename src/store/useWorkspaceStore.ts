@@ -11,6 +11,8 @@ export interface List {
   status?: string;
   type: 'list';
   taskCount?: number; // Added from hierarchy endpoint
+  completedCount?: number; // Added from hierarchy endpoint
+  isMember?: boolean; // Added from hierarchy endpoint
   createdAt?: string;
 }
 

@@ -85,7 +85,7 @@ export default function PermissionsSettings() {
               onClick={() => router.push(`/workspace/${workspaceId}/settings`)}
               className="p-2 hover:bg-accent rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+              <ArrowLeft className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
             </button>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-foreground">Workspace Settings</h1>
@@ -118,7 +118,7 @@ export default function PermissionsSettings() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-primary" />
+                <Shield className="w-5 h-5 text-primary" strokeWidth={1.5} />
               </div>
               <div>
                 <h3 className="text-foreground font-semibold">
@@ -135,7 +135,7 @@ export default function PermissionsSettings() {
             </div>
             {accessControlTier !== 'advanced' && (
               <Button onClick={() => handleUpgrade('Advanced Access Control')} className="gap-2">
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-4 h-4" strokeWidth={1.5} />
                 Upgrade
               </Button>
             )}
@@ -145,7 +145,7 @@ export default function PermissionsSettings() {
         <section className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center">
-              <Edit className="w-5 h-5 text-blue-500" />
+              <Edit className="w-5 h-5 text-blue-500" strokeWidth={1.5} />
             </div>
             <div>
               <h3 className="text-foreground font-semibold">List Member Permissions</h3>
@@ -156,7 +156,7 @@ export default function PermissionsSettings() {
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-lg">
               <div className="flex items-center gap-3">
-                <Crown className="w-5 h-5 text-purple-500" />
+                <Crown className="w-5 h-5 text-purple-500" strokeWidth={1.5} />
                 <div>
                   <h4 className="text-foreground font-medium">Full Access</h4>
                   <p className="text-sm text-muted-foreground">Create, edit, and delete tasks</p>
@@ -169,7 +169,7 @@ export default function PermissionsSettings() {
 
             <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-lg">
               <div className="flex items-center gap-3">
-                <Edit className="w-5 h-5 text-blue-500" />
+                <Edit className="w-5 h-5 text-blue-500" strokeWidth={1.5} />
                 <div>
                   <h4 className="text-foreground font-medium">Can Edit</h4>
                   <p className="text-sm text-muted-foreground">Can change task status only</p>
@@ -182,7 +182,7 @@ export default function PermissionsSettings() {
 
             <div className="flex items-center justify-between p-4 bg-muted/30 border border-border rounded-lg">
               <div className="flex items-center gap-3">
-                <Eye className="w-5 h-5 text-slate-500" />
+                <Eye className="w-5 h-5 text-slate-500" strokeWidth={1.5} />
                 <div>
                   <h4 className="text-foreground font-medium">View Only</h4>
                   <p className="text-sm text-muted-foreground">Can view tasks but cannot edit</p>

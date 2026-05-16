@@ -1,5 +1,15 @@
 // Pro/Enterprise Features Types
 
+export interface ICustomRole {
+  _id: string;
+  name: string;
+  label: string;
+  color: string;
+  permissions: string[];
+  description?: string;
+  workspace: string;
+}
+
 export interface IWorkspaceMember {
   _id: string;
   user: string | {
@@ -9,6 +19,7 @@ export interface IWorkspaceMember {
     avatar?: string;
   };
   role: 'owner' | 'admin' | 'member' | 'guest';
+  customRole?: string | ICustomRole | null;
   status?: 'active' | 'inactive';
   customRoleTitle?: string | null;
 }

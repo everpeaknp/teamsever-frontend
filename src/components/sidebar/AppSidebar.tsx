@@ -266,6 +266,19 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
           );
           setInboxUnreadFallback(apiInboxUnread);
           
+          const apiConvIds = new Set(conversations.map((c: any) => c._id));
+          const currentRooms = useChatStore.getState().rooms;
+
+          // CRITICAL: Clear unread counts for any 'direct' rooms in this workspace 
+          // that are NOT returned by the API (zombie/stale counts)
+          Object.values(currentRooms).forEach(room => {
+            if (room.type === 'direct' && room.workspaceId === dmWorkspaceId && !apiConvIds.has(room.roomId)) {
+              if (room.unreadCount > 0) {
+                useChatStore.getState().clearUnread(room.roomId);
+              }
+            }
+          });
+          
           conversations.forEach((conv: any) => {
             // Ensure room exists for every conversation (not only unread > 0)
             const participants = (conv.participants || [])
@@ -646,7 +659,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                 title="Dashboard"
               >
                 <div className="relative">
-                  <BarChart3 className="w-5 h-5 relative z-10" />
+                  <BarChart3 className="w-5 h-5 relative z-10" strokeWidth={1.5} />
                   {pathname === `/workspace/${workspaceId}/analytics` && (
                     <motion.div
                       layoutId="active-glow"
@@ -684,7 +697,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                 title="Add Members"
               >
                 <div className="relative">
-                  <UserPlus className="w-5 h-5 relative z-10" />
+                  <UserPlus className="w-5 h-5 relative z-10" strokeWidth={1.5} />
                   {isMembersPage && (
                     <motion.div
                       layoutId="active-glow"
@@ -722,7 +735,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                 title="Settings"
               >
                 <div className="relative">
-                  <SettingsIcon className="w-5 h-5 relative z-10" />
+                  <SettingsIcon className="w-5 h-5 relative z-10" strokeWidth={1.5} />
                   {isSettingsPage && (
                     <motion.div
                       layoutId="active-glow"
@@ -761,7 +774,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                   title="Time Tracking"
                 >
                   <div className="relative">
-                    <Clock className="w-5 h-5 relative z-10" />
+                    <Clock className="w-5 h-5 relative z-10" strokeWidth={1.5} />
                     {pathname.startsWith(`/workspace/${workspaceId}/time-tracking`) && (
                       <motion.div
                         layoutId="active-glow"

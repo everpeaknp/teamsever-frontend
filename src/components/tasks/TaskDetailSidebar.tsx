@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -525,6 +526,19 @@ export function TaskDetailSidebar() {
                                 <span className="truncate">
                                   {workspaceMembers.find(m => m._id === assigneeId)?.name}
                                 </span>
+                                {workspaceMembers.find(m => m._id === assigneeId)?.customRole && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-[10px] h-4 px-1.5 ml-1"
+                                    style={{ 
+                                      backgroundColor: workspaceMembers.find(m => m._id === assigneeId).customRole.color + '20',
+                                      color: workspaceMembers.find(m => m._id === assigneeId).customRole.color,
+                                      borderColor: workspaceMembers.find(m => m._id === assigneeId).customRole.color + '40'
+                                    }}
+                                  >
+                                    {workspaceMembers.find(m => m._id === assigneeId).customRole.label}
+                                  </Badge>
+                                )}
                               </>
                             ) : (
                               <span className="text-muted-foreground font-medium">Unassigned</span>

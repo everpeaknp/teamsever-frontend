@@ -24,6 +24,7 @@ import {
   Check,
   FolderOpen,
   Key,
+  Settings2,
 } from 'lucide-react';
 import {
   Table,
@@ -45,13 +46,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TableSkeleton } from '@/components/skeletons/PageSkeleton';
+import { ICustomRole } from '@/types/pro-features';
 
 interface Member {
   _id: string;
   name: string;
   email: string;
-  role: 'owner' | 'admin' | 'member' | 'guest';
+  role: 'owner' | 'admin' | 'operations_manager' | 'project_manager' | 'qa' | 'developer' | 'member' | 'guest';
   isOwner: boolean;
+  customRole?: ICustomRole | null;
   customRoleTitle?: string;
 }
 
@@ -92,16 +95,34 @@ export default function MembersPage() {
   const [savingCustomRole, setSavingCustomRole] = useState(false);
   const [maxCustomRoles, setMaxCustomRoles] = useState<number>(0);
   const [currentCustomRoleCount, setCurrentCustomRoleCount] = useState<number>(0);
+  const [availableCustomRoles, setAvailableCustomRoles] = useState<ICustomRole[]>([]);
 
   // Subscription state
-  const { canInviteMember } = useSubscription();
+  const { canInviteMember: globalCanInviteMember } = useSubscription();
   const { whatsappNumber } = useSystemSettings();
 
   useEffect(() => {
     fetchMembers();
     fetchSpaces();
+    fetchCustomRoles();
     checkCustomRoleEntitlement();
   }, [workspaceId]);
+
+  const [maxMembers, setMaxMembers] = useState<number>(5);
+
+  const canInviteMember = (currentCount: number) => {
+    if (maxMembers === -1) return true; // Unlimited
+    return currentCount < maxMembers;
+  };
+
+  const fetchCustomRoles = async () => {
+    try {
+      const res = await api.get(`/workspaces/${workspaceId}/custom-roles`);
+      setAvailableCustomRoles(res.data.data);
+    } catch (error) {
+      console.error('Failed to fetch custom roles:', error);
+    }
+  };
 
   const fetchSpaces = async () => {
     try {
@@ -194,6 +215,9 @@ export default function MembersPage() {
       const maxCustomRolesLimit = resolvedFeatures?.maxCustomRoles ?? planFeatures?.maxCustomRoles ?? 0;
       setMaxCustomRoles(maxCustomRolesLimit);
       
+      const maxMembersLimit = resolvedFeatures?.maxMembers ?? planFeatures?.maxMembers ?? 5;
+      setMaxMembers(maxMembersLimit);
+      
       console.log('[Members Page] Max Custom Roles:', maxCustomRolesLimit);
       console.log('[Members Page] Resolved Features maxCustomRoles:', resolvedFeatures?.maxCustomRoles);
       console.log('[Members Page] Plan Features maxCustomRoles:', planFeatures?.maxCustomRoles);
@@ -210,13 +234,16 @@ export default function MembersPage() {
   };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
+    const isCustom = newRole.startsWith('custom:');
+    const roleId = isCustom ? newRole.split(':')[1] : null;
+
     // Check if changing to admin and limit is reached
-    if (newRole === 'admin') {
+    if (!isCustom && newRole === 'admin') {
       const currentMember = members.find(m => m._id === userId);
       if (currentMember && currentMember.role !== 'admin') {
         // This would be a new admin
         if (maxAdmins !== -1 && currentAdminCount >= maxAdmins) {
-          toast.error(`You've reached your admin limit (${maxAdmins}). Upgrade your plan to add more admins and expand your team's management capabilities.`);
+          toast.error(`You've reached your admin limit (${maxAdmins}). Upgrade your plan to add more admins.`);
           setShowUpgradeModal(true);
           return;
         }
@@ -227,25 +254,21 @@ export default function MembersPage() {
       setUpdating(userId);
       setError(null);
 
-      await api.patch(`/workspaces/${workspaceId}/members/${userId}`, {
-        role: newRole,
-      });
+      if (isCustom) {
+        // Assign Custom Role
+        await api.patch(`/workspaces/${workspaceId}/members/${userId}/custom-role`, {
+          customRoleId: roleId
+        });
+      } else {
+        // Assign Standard Role
+        await api.patch(`/workspaces/${workspaceId}/members/${userId}`, {
+          role: newRole,
+          customRole: null // Clear custom role if standard role is selected
+        });
+      }
 
-      // Update local state
-      setMembers(
-        members.map((member) =>
-          member._id === userId ? { ...member, role: newRole as any } : member
-        )
-      );
-      
-      // Recalculate admin count
-      const updatedMembers = members.map((member) =>
-        member._id === userId ? { ...member, role: newRole as any } : member
-      );
-      const newAdminCount = updatedMembers.filter(m => m.role === 'admin').length;
-      setCurrentAdminCount(newAdminCount);
-      
-      toast.success('Member role updated successfully');
+      toast.success(isCustom ? 'Custom role assigned' : 'Member role updated');
+      fetchMembers(); // Refresh to get the fully populated customRole object
     } catch (error: any) {
       console.error('Failed to update role:', error);
       const errorMessage = error.response?.data?.message || 'Failed to update role';
@@ -284,10 +307,13 @@ export default function MembersPage() {
   // Wrapper to handle IWorkspaceMember updates
   const handleWorkspaceMemberUpdate = (memberId: string, updates: Partial<import('@/types/pro-features').IWorkspaceMember>) => {
     // Convert IWorkspaceMember updates to Member updates
-    const memberUpdates: Partial<Member> = {
-      ...updates,
+    const { customRole, ...rest } = updates;
+    const memberUpdates = {
+      ...rest,
       customRoleTitle: updates.customRoleTitle === null ? undefined : updates.customRoleTitle,
-    };
+      // Only include customRole if it's an object, not a string ID
+      ...(typeof customRole === 'object' && { customRole: customRole as any })
+    } as any;
     handleMemberUpdate(memberId, memberUpdates);
   };
 
@@ -487,16 +513,47 @@ export default function MembersPage() {
     }
   };
 
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'owner':
+        return 'Owner';
+      case 'admin':
+        return 'Admin';
+      case 'operations_manager':
+        return 'Operations Manager';
+      case 'project_manager':
+        return 'Project Manager';
+      case 'qa':
+        return 'QA';
+      case 'developer':
+        return 'Developer';
+      case 'member':
+        return 'Member';
+      case 'guest':
+        return 'Guest';
+      default:
+        return role.charAt(0).toUpperCase() + role.slice(1);
+    }
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'owner':
-        return <Crown className="w-4 h-4 text-yellow-500" />;
+        return <Crown className="w-4 h-4 text-yellow-500" strokeWidth={1.5} />;
       case 'admin':
-        return <Shield className="w-4 h-4 text-blue-500" />;
+        return <Shield className="w-4 h-4 text-blue-500" strokeWidth={1.5} />;
+      case 'operations_manager':
+        return <Settings2 className="w-4 h-4 text-orange-500" strokeWidth={1.5} />;
+      case 'project_manager':
+        return <FolderOpen className="w-4 h-4 text-purple-500" strokeWidth={1.5} />;
+      case 'qa':
+        return <Check className="w-4 h-4 text-amber-500" strokeWidth={1.5} />;
+      case 'developer':
+        return <Key className="w-4 h-4 text-green-500" strokeWidth={1.5} />;
       case 'member':
-        return <UserIcon className="w-4 h-4 text-green-500" />;
+        return <UserIcon className="w-4 h-4 text-emerald-500" strokeWidth={1.5} />;
       case 'guest':
-        return <Eye className="w-4 h-4 text-gray-500" />;
+        return <Eye className="w-4 h-4 text-gray-500" strokeWidth={1.5} />;
       default:
         return null;
     }
@@ -508,8 +565,16 @@ export default function MembersPage() {
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       case 'admin':
         return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'operations_manager':
+        return 'bg-orange-100 text-orange-800 border-orange-300';
+      case 'project_manager':
+        return 'bg-purple-100 text-purple-800 border-purple-300';
+      case 'qa':
+        return 'bg-amber-100 text-amber-800 border-amber-300';
+      case 'developer':
+        return 'bg-blue-100 text-blue-800 border-blue-300'; // Similar to admin but lighter? Or use green
       case 'member':
-        return 'bg-green-100 text-green-800 border-green-300';
+        return 'bg-emerald-100 text-emerald-800 border-emerald-300';
       case 'guest':
         return 'bg-gray-100 text-gray-800 border-gray-300';
       default:
@@ -541,7 +606,7 @@ export default function MembersPage() {
                 onClick={() => router.back()}
                 className="p-2 hover:bg-accent rounded-lg transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+                <ArrowLeft className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
               </button>
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-foreground">Workspace Members</h1>
@@ -549,13 +614,25 @@ export default function MembersPage() {
               </div>
             </div>
             {can('invite_member') && (
-              <Button
-                onClick={() => setShowInviteModal(true)}
-                className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto min-h-[44px]"
-              >
-                <UserPlus className="w-4 h-4" />
-                Invite Member
-              </Button>
+              <div className="flex gap-2 w-full sm:w-auto">
+                {can('MANAGE_CUSTOM_ROLES') && (
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/workspace/${workspaceId}/settings/roles`)}
+                    className="flex items-center gap-2 min-h-[44px]"
+                  >
+                    <Settings2 className="w-4 h-4" strokeWidth={1.5} />
+                    Manage Roles
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setShowInviteModal(true)}
+                  className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 flex-1 sm:flex-initial min-h-[44px]"
+                >
+                  <UserPlus className="w-4 h-4" strokeWidth={1.5} />
+                  Invite Member
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -597,7 +674,7 @@ export default function MembersPage() {
                     <div className="flex items-center gap-2">
                       {member.name}
                       {member.isOwner && (
-                        <Crown className="w-4 h-4 text-yellow-500" />
+                        <Crown className="w-4 h-4 text-yellow-500" strokeWidth={1.5} />
                       )}
                     </div>
                   </TableCell>
@@ -607,28 +684,43 @@ export default function MembersPage() {
 
                   {/* Role */}
                   <TableCell>
-                    {isOwner() && !member.isOwner ? (
+                    {can('change_member_role') && !member.isOwner ? (
                       updating === member._id ? (
                         <div className="flex items-center gap-2 px-3 py-2 border rounded-md">
-                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5} />
                           <span>Updating...</span>
                         </div>
                       ) : (
                         <RoleSelector
                           value={member.role}
-                          customRoleTitle={member.customRoleTitle}
+                          customRole={member.customRole}
+                          availableCustomRoles={availableCustomRoles}
                           onChange={(value) => handleRoleChange(member._id, value)}
-                          onAddCustomRole={() => handleOpenCustomRoleModal(member._id, member.customRoleTitle)}
+                          onAddCustomRole={() => handleOpenCustomRoleModal(member._id, member.customRole?.label)}
+                          onAssignCustomRole={(roleId) => handleRoleChange(member._id, `custom:${roleId}`)}
                           canUseCustomRoles={canUseCustomRoles}
                         />
                       )
                     ) : (
-                      member.customRoleTitle ? (
+                      member.customRole ? (
+                        <Badge
+                          variant="outline"
+                          style={{ 
+                            backgroundColor: member.customRole.color + '15', 
+                            color: member.customRole.color, 
+                            borderColor: member.customRole.color + '40' 
+                          }}
+                          className="flex items-center gap-2 w-fit border"
+                        >
+                          <Shield className="w-4 h-4" strokeWidth={1.5} />
+                          {member.customRole.label}
+                        </Badge>
+                      ) : member.customRoleTitle ? (
                         <Badge
                           variant="outline"
                           className="flex items-center gap-2 w-fit bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-900/20 dark:text-purple-400"
                         >
-                          <UserIcon className="w-4 h-4" />
+                          <UserIcon className="w-4 h-4" strokeWidth={1.5} />
                           {member.customRoleTitle}
                         </Badge>
                       ) : (
@@ -639,7 +731,7 @@ export default function MembersPage() {
                           )}`}
                         >
                           {getRoleIcon(member.role)}
-                          {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                          {getRoleLabel(member.role)}
                         </Badge>
                       )
                     )}
@@ -647,14 +739,14 @@ export default function MembersPage() {
 
                   {/* Actions */}
                   <TableCell className="text-right">
-                    {can('remove_member') && isOwner() && !member.isOwner && (
+                    {can('remove_member') && !member.isOwner && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveMember(member._id)}
                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4" strokeWidth={1.5} />
                       </Button>
                     )}
                   </TableCell>
@@ -684,7 +776,7 @@ export default function MembersPage() {
               </div>
 
               <div className="flex items-center justify-between gap-2">
-                {isOwner() && !member.isOwner ? (
+                {can('change_member_role') && !member.isOwner ? (
                   updating === member._id ? (
                     <div className="flex items-center gap-2 px-3 py-2 border rounded-md flex-1">
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -693,9 +785,11 @@ export default function MembersPage() {
                   ) : (
                     <RoleSelector
                       value={member.role}
-                      customRoleTitle={member.customRoleTitle}
+                      customRole={member.customRole}
+                      availableCustomRoles={availableCustomRoles}
                       onChange={(value) => handleRoleChange(member._id, value)}
-                      onAddCustomRole={() => handleOpenCustomRoleModal(member._id, member.customRoleTitle)}
+                      onAddCustomRole={() => handleOpenCustomRoleModal(member._id, member.customRole?.label)}
+                      onAssignCustomRole={(roleId) => handleRoleChange(member._id, `custom:${roleId}`)}
                       canUseCustomRoles={canUseCustomRoles}
                       disabled={updating === member._id}
                     />
@@ -720,7 +814,7 @@ export default function MembersPage() {
                   )
                 )}
 
-                {can('remove_member') && isOwner() && !member.isOwner && (
+                {can('remove_member') && !member.isOwner && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -777,11 +871,47 @@ export default function MembersPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <UserIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+              <Settings2 className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-card-foreground">Operations Manager</h4>
+                <p className="text-sm text-muted-foreground">
+                  High-level oversight, manages settings, analytics, and member invites
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <FolderOpen className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-card-foreground">Project Manager</h4>
+                <p className="text-sm text-muted-foreground">
+                  Manages spaces, folders, lists, and full task control
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Key className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-card-foreground">Developer</h4>
+                <p className="text-sm text-muted-foreground">
+                  Full task collaboration, status changes, and time tracking
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Check className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-medium text-card-foreground">QA</h4>
+                <p className="text-sm text-muted-foreground">
+                  Bug reporting, task creation, and status verification
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <UserIcon className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-medium text-card-foreground">Member</h4>
                 <p className="text-sm text-muted-foreground">
-                  Can create and manage lists, tasks, and update spaces
+                  Collaborate on tasks and participate in workspace activity
                 </p>
               </div>
             </div>
@@ -790,7 +920,7 @@ export default function MembersPage() {
               <div>
                 <h4 className="font-medium text-card-foreground">Guest</h4>
                 <p className="text-sm text-muted-foreground">
-                  Read-only access to workspace content
+                  Read-only access to assigned workspace content
                 </p>
               </div>
             </div>
@@ -939,8 +1069,20 @@ export default function MembersPage() {
                     <SelectItem value="admin">
                       <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-blue-500" />Admin</div>
                     </SelectItem>
+                    <SelectItem value="operations_manager">
+                      <div className="flex items-center gap-2"><Settings2 className="w-4 h-4 text-orange-500" />Operations Manager</div>
+                    </SelectItem>
+                    <SelectItem value="project_manager">
+                      <div className="flex items-center gap-2"><FolderOpen className="w-4 h-4 text-purple-500" />Project Manager</div>
+                    </SelectItem>
+                    <SelectItem value="developer">
+                      <div className="flex items-center gap-2"><Key className="w-4 h-4 text-green-500" />Developer</div>
+                    </SelectItem>
+                    <SelectItem value="qa">
+                      <div className="flex items-center gap-2"><Check className="w-4 h-4 text-amber-500" />QA</div>
+                    </SelectItem>
                     <SelectItem value="member">
-                      <div className="flex items-center gap-2"><UserIcon className="w-4 h-4 text-green-500" />Member</div>
+                      <div className="flex items-center gap-2"><UserIcon className="w-4 h-4 text-emerald-500" />Member</div>
                     </SelectItem>
                     <SelectItem value="guest">
                       <div className="flex items-center gap-2"><Eye className="w-4 h-4 text-gray-500" />Guest</div>

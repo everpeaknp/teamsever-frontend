@@ -119,10 +119,10 @@ export const HierarchyItemComponent = React.memo(function HierarchyItemComponent
   const getIcon = () => {
     switch (item.type) {
       case 'space':
-        return <Folder className="h-4 w-4 text-slate-500 dark:text-slate-400" />;
+        return <Folder className="h-4 w-4 text-slate-500 dark:text-slate-400" strokeWidth={1.5} />;
       case 'folder':
         const folderColor = (item as any).color || '#6366f1';
-        return <Folder className="h-4 w-4" style={{ color: folderColor }} />;
+        return <Folder className="h-4 w-4" style={{ color: folderColor }} strokeWidth={1.5} />;
       case 'list':
         return null; // No icon for lists like in the Lively screenshot
       default:
@@ -266,6 +266,7 @@ const getRoute = () => {
                   "h-3.5 w-3.5 text-slate-400 dark:text-slate-500 transition-transform duration-200",
                   isExpanded && "rotate-90"
                 )}
+                strokeWidth={1.5}
               />
             )}
           </button>
@@ -288,7 +289,7 @@ const getRoute = () => {
 
           {/* Favorite Star */}
           {isFavorite && (
-            <Star className="h-3 w-3 text-amber-500 fill-amber-500 flex-shrink-0" />
+            <Star className="h-3 w-3 text-amber-500 fill-amber-500 flex-shrink-0" strokeWidth={1.5} />
           )}
 
           {/* Hover Actions */}
@@ -307,7 +308,7 @@ const getRoute = () => {
                   }}
                   title="Create folder"
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3 w-3" strokeWidth={1.5} />
                 </Button>
               )}
               
@@ -324,7 +325,7 @@ const getRoute = () => {
                   }}
                   title="Create list"
                 >
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3 w-3" strokeWidth={1.5} />
                 </Button>
               )}
 
@@ -340,7 +341,7 @@ const getRoute = () => {
                       e.stopPropagation();
                     }}
                   >
-                    <MoreHorizontal className="h-3 w-3" />
+                    <MoreHorizontal className="h-3 w-3" strokeWidth={1.5} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent 
@@ -354,7 +355,7 @@ const getRoute = () => {
                       handleToggleFavorite(e);
                     }}
                   >
-                    <Star className="h-4 w-4 mr-2" />
+                    <Star className="h-4 w-4 mr-2" strokeWidth={1.5} />
                     {isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                   </DropdownMenuItem>
                   
@@ -364,7 +365,7 @@ const getRoute = () => {
                       handleToggleMute(e);
                     }}
                   >
-                    {isMuted ? <Bell className="h-4 w-4 mr-2" /> : <BellOff className="h-4 w-4 mr-2" />}
+                    {isMuted ? <Bell className="h-4 w-4 mr-2" strokeWidth={1.5} /> : <BellOff className="h-4 w-4 mr-2" strokeWidth={1.5} />}
                     {isMuted ? 'Unmute channel' : 'Mute channel'}
                   </DropdownMenuItem>
                   
@@ -380,7 +381,7 @@ const getRoute = () => {
                             openModal('editSpace', item._id, 'space', item.name);
                           }}
                         >
-                          <MoreHorizontal className="h-4 w-4 mr-2" />
+                          <MoreHorizontal className="h-4 w-4 mr-2" strokeWidth={1.5} />
                           Rename space
                         </DropdownMenuItem>
                       )}
@@ -392,7 +393,7 @@ const getRoute = () => {
                             openModal('editFolder', item._id, 'folder', item.name);
                           }}
                         >
-                          <MoreHorizontal className="h-4 w-4 mr-2" />
+                          <MoreHorizontal className="h-4 w-4 mr-2" strokeWidth={1.5} />
                           Rename folder
                         </DropdownMenuItem>
                       )}
@@ -407,7 +408,7 @@ const getRoute = () => {
                               openModal('editList', item._id, parentType, item.name);
                             }}
                           >
-                            <MoreHorizontal className="h-4 w-4 mr-2" />
+                            <MoreHorizontal className="h-4 w-4 mr-2" strokeWidth={1.5} />
                             Rename list
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -420,7 +421,7 @@ const getRoute = () => {
                               openModal('deleteList', item._id, parentType, item.name, spaceId);
                             }}
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="h-4 w-4 mr-2" strokeWidth={1.5} />
                             Delete list
                           </DropdownMenuItem>
                         </>
@@ -435,7 +436,7 @@ const getRoute = () => {
                               openModal('deleteFolder', item._id, 'space', item.name, spaceId);
                             }}
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="h-4 w-4 mr-2" strokeWidth={1.5} />
                             Delete folder
                           </DropdownMenuItem>
                       )}
@@ -448,7 +449,7 @@ const getRoute = () => {
                               openModal('githubWebhook', item._id, 'space', item.name);
                             }}
                           >
-                            <Github className="h-4 w-4 mr-2" />
+                            <Github className="h-4 w-4 mr-2" strokeWidth={1.5} />
                             GitHub Webhook
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -459,7 +460,7 @@ const getRoute = () => {
                               openModal('deleteSpace', item._id, 'workspace', item.name, item._id);
                             }}
                           >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="h-4 w-4 mr-2" strokeWidth={1.5} />
                             Delete space
                           </DropdownMenuItem>
                         </>
@@ -479,7 +480,7 @@ const getRoute = () => {
                             openModal('folder', item._id, 'space', item.name);
                           }}
                         >
-                          <Plus className="h-4 w-4 mr-2" />
+                          <Plus className="h-4 w-4 mr-2" strokeWidth={1.5} />
                           New folder
                         </DropdownMenuItem>
                       )}
@@ -492,7 +493,7 @@ const getRoute = () => {
                             openModal('list', item._id, 'folder', item.name, spaceId);
                           }}
                         >
-                          <Plus className="h-4 w-4 mr-2" />
+                          <Plus className="h-4 w-4 mr-2" strokeWidth={1.5} />
                           New list
                         </DropdownMenuItem>
                       )}

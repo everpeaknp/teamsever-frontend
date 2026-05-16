@@ -277,7 +277,19 @@ export function ListMemberManagement({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-sm">{member.name}</p>
-                              {(member as any).customRoleTitle && (
+                              {(member as any).customRole ? (
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  style={{ 
+                                    backgroundColor: (member as any).customRole.color + '20',
+                                    color: (member as any).customRole.color,
+                                    borderColor: (member as any).customRole.color + '40'
+                                  }}
+                                >
+                                  {(member as any).customRole.label}
+                                </Badge>
+                              ) : (member as any).customRoleTitle && (
                                 <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800">
                                   {(member as any).customRoleTitle}
                                 </Badge>
@@ -369,7 +381,19 @@ export function ListMemberManagement({
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                               <p className="font-medium text-sm">{member.name}</p>
-                              {(member as any).customRoleTitle && (
+                              {(member as any).customRole ? (
+                                <Badge 
+                                  variant="outline" 
+                                  className="text-xs"
+                                  style={{ 
+                                    backgroundColor: (member as any).customRole.color + '20',
+                                    color: (member as any).customRole.color,
+                                    borderColor: (member as any).customRole.color + '40'
+                                  }}
+                                >
+                                  {(member as any).customRole.label}
+                                </Badge>
+                              ) : (member as any).customRoleTitle && (
                                 <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800">
                                   {(member as any).customRoleTitle}
                                 </Badge>

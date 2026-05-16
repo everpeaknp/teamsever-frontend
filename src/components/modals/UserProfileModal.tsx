@@ -91,7 +91,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
     try {
       setLoading(true);
       const [userRes, statsRes] = await Promise.all([
-        api.get(`/users/${userId}`),
+        api.get(`/users/${userId}${workspaceId ? `?workspaceId=${workspaceId}` : ''}`),
         api.get(`/performance/contributions/${userId}${workspaceId ? `?workspaceId=${workspaceId}` : ''}`)
       ]);
       setUser(userRes.data.data);
@@ -114,6 +114,8 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
   };
 
   if (!isOpen) return null;
+
+  const workspaceData = (user as any)?.workspaceData;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -163,8 +165,25 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                   />
                 </div>
                 <div className="flex-1 pb-2">
-                  <div className="flex items-center gap-3 mb-1">
+                  <div className="flex items-center gap-3 mb-1 flex-wrap">
                     <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{user.name}</h2>
+                    {workspaceData?.customRole ? (
+                      <Badge 
+                        variant="outline" 
+                        className="text-xs h-7 px-3"
+                        style={{ 
+                          backgroundColor: workspaceData.customRole.color + '20',
+                          color: workspaceData.customRole.color,
+                          borderColor: workspaceData.customRole.color + '40'
+                        }}
+                      >
+                        {workspaceData.customRole.label}
+                      </Badge>
+                    ) : workspaceData?.customRoleTitle && (
+                      <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 h-7 px-3">
+                        {workspaceData.customRoleTitle}
+                      </Badge>
+                    )}
                     {user.githubUsername && (
                       <Badge variant="secondary" className="bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-white/60 border-slate-200 dark:border-white/10 text-[10px] gap-1.5 py-0.5 px-2.5 h-6 transition-colors">
                         <Github className="w-3.5 h-3.5" />
@@ -176,6 +195,9 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                     <span className="flex items-center gap-1.5">
                       <Briefcase className="w-3.5 h-3.5" />
                       {user.jobTitle || 'Team Member'}
+                      {workspaceData?.role && (
+                        <span className="text-slate-400 dark:text-white/20 capitalize">({workspaceData.role})</span>
+                      )}
                     </span>
                     {user.department && (
                       <>

@@ -6,12 +6,16 @@ import { persist } from 'zustand/middleware';
  */
 const ROLE_HIERARCHY = {
   guest: 0,
-  member: 1,
-  admin: 2,
-  owner: 3,
+  qa: 1,
+  developer: 2,
+  member: 3,
+  project_manager: 4,
+  operations_manager: 5,
+  admin: 6,
+  owner: 7,
 } as const;
 
-type Role = 'guest' | 'member' | 'admin' | 'owner';
+type Role = 'guest' | 'qa' | 'developer' | 'member' | 'project_manager' | 'operations_manager' | 'admin' | 'owner';
 
 interface User {
   _id: string;
@@ -48,31 +52,33 @@ interface User {
 const PERMISSIONS = {
   // Workspace permissions
   delete_workspace: ['owner'],
-  update_workspace: ['owner', 'admin'],
-  invite_member: ['owner', 'admin'],
-  remove_member: ['owner', 'admin'],
-  change_member_role: ['owner'],
+  update_workspace: ['owner', 'admin', 'operations_manager'],
+  invite_member: ['owner', 'admin', 'operations_manager'],
+  remove_member: ['owner', 'admin', 'operations_manager'],
+  change_member_role: ['owner', 'admin', 'operations_manager'],
   
   // Space permissions
-  create_space: ['owner', 'admin'],
-  delete_space: ['owner', 'admin'],
-  update_space: ['owner', 'admin', 'member'],
+  create_space: ['owner', 'admin', 'operations_manager', 'project_manager'],
+  delete_space: ['owner', 'admin', 'operations_manager', 'project_manager'],
+  update_space: ['owner', 'admin', 'operations_manager', 'project_manager', 'member'],
   
   // List permissions
-  create_list: ['owner', 'admin', 'member'],
-  delete_list: ['owner', 'admin', 'member'],
-  update_list: ['owner', 'admin', 'member'],
+  create_list: ['owner', 'admin', 'operations_manager', 'project_manager', 'member'],
+  delete_list: ['owner', 'admin', 'operations_manager', 'project_manager'],
+  update_list: ['owner', 'admin', 'operations_manager', 'project_manager', 'member'],
   
   // Task permissions
-  create_task: ['owner', 'admin', 'member'],
-  delete_task: ['owner', 'admin', 'member'],
-  update_task: ['owner', 'admin', 'member'],
-  assign_task: ['owner', 'admin', 'member'],
+  create_task: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
+  delete_task: ['owner', 'admin', 'operations_manager', 'project_manager'],
+  update_task: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
+  assign_task: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'member'],
   
   // View permissions
-  view_workspace: ['owner', 'admin', 'member', 'guest'],
-  view_analytics: ['owner', 'admin'],
-  view_settings: ['owner', 'admin'],
+  view_workspace: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member', 'guest'],
+  view_analytics: ['owner', 'admin', 'operations_manager'],
+  view_settings: ['owner', 'admin', 'operations_manager'],
+  view_activity_log: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa'],
+  MANAGE_CUSTOM_ROLES: ['owner', 'admin', 'operations_manager'],
 } as const;
 
 type Permission = keyof typeof PERMISSIONS;

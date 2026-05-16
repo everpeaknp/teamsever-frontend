@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Plus, Loader2 } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { Task } from '@/types';
+import { toast } from 'sonner';
 
 interface InlineCreateTaskProps {
   status: string;
@@ -67,10 +68,9 @@ export default function InlineCreateTask({
     }
 
     try {
-      const response = await api.post('/tasks', {
+      const response = await api.post(`/lists/${listId}/tasks`, {
         title: trimmedTitle,
         status,
-        list: listId,
         space: spaceId,
         workspace: workspaceId,
         priority: 'medium',
@@ -85,16 +85,16 @@ export default function InlineCreateTask({
       setTitle('');
       setIsCreating(false);
     } catch (error: any) {
-      console.error('Failed to create task:', error);
+      console.error('Failed to create task:', error.response?.data || error);
+      
+      const backendMessage = error.response?.data?.message;
       
       // Check for task limit error
       if (error.response?.data?.code === 'TASK_LIMIT_REACHED') {
-        alert(error.response?.data?.message || 'Task limit reached. Please upgrade your plan to create more tasks.');
+        toast.error(backendMessage || 'Task limit reached. Please upgrade your plan.');
       } else {
-        alert(error.response?.data?.message || 'Failed to create task. Please try again.');
+        toast.error(backendMessage || 'Failed to create task. Please try again.');
       }
-      // TODO: Remove optimistic task on error
-      // You might want to pass an onError callback to handle this
     } finally {
       setIsSubmitting(false);
     }
