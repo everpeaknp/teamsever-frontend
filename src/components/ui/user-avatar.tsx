@@ -12,11 +12,38 @@ interface UserAvatarProps extends React.ComponentPropsWithoutRef<typeof Avatar> 
     _id?: string;
     id?: string;
   };
+  name?: string;
+  email?: string;
+  avatar?: string;
+  profilePicture?: string;
+  _id?: string;
+  id?: string;
   fallbackClassName?: string;
   disableProfileClick?: boolean;
 }
 
-export function UserAvatar({ user, className, fallbackClassName, disableProfileClick, ...props }: UserAvatarProps) {
+export function UserAvatar({
+  user,
+  name,
+  email,
+  avatar,
+  profilePicture,
+  _id,
+  id,
+  className,
+  fallbackClassName,
+  disableProfileClick,
+  ...props
+}: UserAvatarProps) {
+  const resolvedUser = user || {
+    name,
+    email,
+    avatar,
+    profilePicture,
+    _id,
+    id,
+  };
+
   const getInitials = (name?: string, email?: string) => {
     if (name) {
       return name
@@ -32,11 +59,11 @@ export function UserAvatar({ user, className, fallbackClassName, disableProfileC
     return '?';
   };
 
-  const initials = getInitials(user?.name, user?.email);
+  const initials = getInitials(resolvedUser?.name, resolvedUser?.email);
   const { openProfile } = useProfileModalStore();
 
   const handleClick = (e: React.MouseEvent) => {
-    const targetUserId = user?._id || user?.id;
+    const targetUserId = resolvedUser?._id || resolvedUser?.id;
     if (!disableProfileClick && targetUserId) {
       e.stopPropagation();
       openProfile(targetUserId);
@@ -47,16 +74,16 @@ export function UserAvatar({ user, className, fallbackClassName, disableProfileC
     <Avatar 
       className={cn(
         'transition-transform active:scale-95 duration-200', 
-        !disableProfileClick && (user?._id || user?.id) && 'cursor-pointer hover:ring-2 hover:ring-primary/20',
+        !disableProfileClick && (resolvedUser?._id || resolvedUser?.id) && 'cursor-pointer hover:ring-2 hover:ring-primary/20',
         className
       )} 
       onClick={handleClick}
       {...props}
     >
-      {(user?.profilePicture || user?.avatar) && (
+      {(resolvedUser?.profilePicture || resolvedUser?.avatar) && (
         <AvatarImage 
-          src={user.profilePicture || user.avatar} 
-          alt={user.name || user.email || 'User'} 
+          src={resolvedUser.profilePicture || resolvedUser.avatar} 
+          alt={resolvedUser.name || resolvedUser.email || 'User'} 
           className="object-cover"
         />
       )}

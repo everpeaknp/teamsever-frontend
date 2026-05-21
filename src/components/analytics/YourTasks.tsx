@@ -8,11 +8,13 @@ import { Task } from '@/types';
 import Link from 'next/link';
 import { useWorkspaceStore } from '@/store/useWorkspaceStore';
 import { api } from '@/lib/axios';
+import { toast } from 'sonner';
 
 interface YourTasksProps {
   tasks: Task[];
   userId: string;
   workspaceId: string;
+  mode?: 'all' | 'delayed-open';
 }
 
 interface ListMembership {
@@ -23,7 +25,7 @@ interface ListMembership {
   completedCount: number;
 }
 
-export function YourTasks({ tasks, userId, workspaceId }: YourTasksProps) {
+export function YourTasks({ tasks, userId, workspaceId, mode = 'all' }: YourTasksProps) {
   const [myLists, setMyLists] = useState<ListMembership[]>([]);
   const { hierarchy } = useWorkspaceStore();
   const [loadingLists, setLoadingLists] = useState(false);
@@ -34,6 +36,42 @@ export function YourTasks({ tasks, userId, workspaceId }: YourTasksProps) {
       return assigneeId === userId;
     });
   }, [tasks, userId]);
+
+  const validListToSpaceMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!hierarchy?.spaces) return map;
+
+    hierarchy.spaces.forEach((space: any) => {
+      const sid = String(space?._id || '');
+      if (!sid) return;
+
+      (space?.lists || []).forEach((list: any) => {
+        const lid = String(list?._id || '');
+        if (lid) map.set(lid, sid);
+      });
+
+      (space?.folders || []).forEach((folder: any) => {
+        (folder?.lists || []).forEach((list: any) => {
+          const lid = String(list?._id || '');
+          if (lid) map.set(lid, sid);
+        });
+      });
+    });
+
+    return map;
+  }, [hierarchy]);
+
+  const getTaskDestination = (task: Task) => {
+    const rawList = task.list as any;
+    const listId =
+      typeof rawList === 'string' ? rawList : String(rawList?._id || '');
+    if (!listId) return null;
+
+    const mappedSpaceId = validListToSpaceMap.get(listId);
+    if (!mappedSpaceId) return null;
+
+    return `/workspace/${workspaceId}/spaces/${mappedSpaceId}/lists/${listId}`;
+  };
 
   // Derive myLists from hierarchy
   useEffect(() => {
@@ -122,17 +160,19 @@ export function YourTasks({ tasks, userId, workspaceId }: YourTasksProps) {
       <div className="px-6 py-4 border-b">
         <h4 className="font-bold">Your Assigned Work</h4>
         <p className="text-xs text-muted-foreground mt-1">
-          {myTasks.length} tasks • {myLists.length} lists
+          {mode === 'delayed-open'
+            ? `${myTasks.length} delayed open tasks`
+            : `${myTasks.length} tasks • ${myLists.length} lists`}
         </p>
       </div>
       <CardContent className="p-6">
         <div className="space-y-6 max-h-[400px] overflow-y-auto">
           {/* Lists Section */}
-          {loadingLists ? (
+          {mode !== 'delayed-open' && loadingLists ? (
             <div className="flex items-center justify-center py-4">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
-          ) : myLists.length > 0 ? (
+          ) : mode !== 'delayed-open' && myLists.length > 0 ? (
             <div>
               <h5 className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-2">
                 <ListIcon className="w-3.5 h-3.5" />
@@ -176,15 +216,15 @@ export function YourTasks({ tasks, userId, workspaceId }: YourTasksProps) {
             <div>
               <h5 className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Your Tasks ({myTasks.length})
+                {mode === 'delayed-open' ? `Delayed Open Tasks (${myTasks.length})` : `Your Tasks (${myTasks.length})`}
               </h5>
               <div className="space-y-2">
-                {myTasks.map((task) => (
-                  <Link
-                    key={task._id}
-                    href={`/workspace/${workspaceId}/spaces/${task.space}/lists/${task.list}`}
-                    className="block p-3 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-                  >
+                {myTasks.map((task) => {
+                  const destination = getTaskDestination(task);
+                  const cardClass =
+                    'block p-3 rounded-lg border transition-colors';
+
+                  const content = (
                     <div className="flex items-start gap-3">
                       <div className="mt-0.5">
                         {getStatusIcon(task.status)}
@@ -203,8 +243,31 @@ export function YourTasks({ tasks, userId, workspaceId }: YourTasksProps) {
                         </div>
                       </div>
                     </div>
-                  </Link>
-                ))}
+                  );
+
+                  if (!destination) {
+                    return (
+                      <button
+                        key={task._id}
+                        type="button"
+                        className={`${cardClass} w-full text-left opacity-80 hover:bg-slate-50 dark:hover:bg-slate-800`}
+                        onClick={() => toast.error('This task is linked to a list that no longer exists.')}
+                      >
+                        {content}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={task._id}
+                      href={destination}
+                      className={`${cardClass} hover:bg-slate-50 dark:hover:bg-slate-800`}
+                    >
+                      {content}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -212,8 +275,14 @@ export function YourTasks({ tasks, userId, workspaceId }: YourTasksProps) {
           {/* Empty State */}
           {!loadingLists && myLists.length === 0 && myTasks.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              <p className="text-sm">No lists or tasks assigned to you</p>
-              <p className="text-xs mt-1">Ask an admin to add you to a list</p>
+              <p className="text-sm">
+                {mode === 'delayed-open'
+                  ? 'No delayed open tasks. Great job staying on track!'
+                  : 'No lists or tasks assigned to you'}
+              </p>
+              {mode !== 'delayed-open' && (
+                <p className="text-xs mt-1">Ask an admin to add you to a list</p>
+              )}
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/axios';
 import { Task, Space, List, Workspace, User } from '@/types';
@@ -111,15 +111,20 @@ export default function ListView() {
   const [listPermissionLevel, setListPermissionLevel] = useState<string | null>(null);
   const [spacePermissionLevel, setSpacePermissionLevel] = useState<string | null>(null);
   const [folderPermissionLevel, setFolderPermissionLevel] = useState<string | null>(null);
+  const [canMarkTaskDone, setCanMarkTaskDone] = useState(false);
   const [listMembers, setListMembers] = useState<any[]>([]);
   const [showSettingsSheet, setShowSettingsSheet] = useState(false);
   const [showListMemberManagement, setShowListMemberManagement] = useState(false);
   const [listSettings, setListSettings] = useState({ name: '', description: '' });
+  const activeFetchKeyRef = useRef<string | null>(null);
+  const inFlightFetchRef = useRef(false);
 
   useEffect(() => {
-    if (listId && spaceId && workspaceId) {
-      fetchData();
-    }
+    if (!listId || !spaceId || !workspaceId) return;
+    const fetchKey = `${workspaceId}:${spaceId}:${listId}`;
+    if (activeFetchKeyRef.current === fetchKey && inFlightFetchRef.current) return;
+    activeFetchKeyRef.current = fetchKey;
+    fetchData(fetchKey);
   }, [listId, spaceId, workspaceId]);
 
   useEffect(() => {
@@ -128,7 +133,7 @@ export default function ListView() {
     }
   }, [view, listId]);
 
-  const fetchData = async () => {
+  const fetchData = async (fetchKey?: string) => {
     // Guard checks BEFORE any async operations
     if (!listId) {
       console.error('[ListPage] listId is null or undefined!');
@@ -146,6 +151,10 @@ export default function ListView() {
     }
     
     try {
+      if (inFlightFetchRef.current && fetchKey && activeFetchKeyRef.current === fetchKey) {
+        return;
+      }
+      inFlightFetchRef.current = true;
       const [workspaceRes, spaceRes, listRes] = await Promise.all([
         api.get(`/workspaces/${workspaceId}`),
         api.get(`/spaces/${spaceId}`),
@@ -186,6 +195,7 @@ export default function ListView() {
         return memberId === userId;
       });
       const isAdmin = workspaceMember?.role === 'admin' || workspaceMember?.role === 'owner';
+      setCanMarkTaskDone(Boolean(workspaceMember?.canMarkTaskDone));
       
       // Set user role state
       if (isOwner) {
@@ -291,7 +301,27 @@ export default function ListView() {
       await fetchTasks(listId);
     } catch (error: any) {
       console.error('Failed to fetch data:', error);
+
+      const status = error?.response?.status;
+      const failedUrl = String(error?.config?.url || '');
+      const listRequestFailed =
+        failedUrl.includes(`/lists/${listId}`) || failedUrl.includes(`/lists/${listId}/`);
+
+      if (status === 404 && listRequestFailed) {
+        toast.error('This list no longer exists. Redirecting to space...');
+        router.replace(`/workspace/${workspaceId}/spaces/${spaceId}`);
+        return;
+      }
+
+      if (status === 403 && listRequestFailed) {
+        toast.error('You no longer have access to this list. Redirecting to space...');
+        router.replace(`/workspace/${workspaceId}/spaces/${spaceId}`);
+        return;
+      }
+
       toast.error('Failed to load list data');
+    } finally {
+      inFlightFetchRef.current = false;
     }
   };
 
@@ -994,6 +1024,11 @@ export default function ListView() {
           <KanbanBoard
             tasks={filteredTasks}
             onStatusChange={handleStatusChange}
+            canMarkDone={
+              userRole === 'owner' ||
+              userRole === 'admin' ||
+              canMarkTaskDone
+            }
             canChangeStatus={!isReadOnly && (
               userRole === 'owner' ||
               userRole === 'admin' ||

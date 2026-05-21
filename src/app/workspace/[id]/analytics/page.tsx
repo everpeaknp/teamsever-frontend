@@ -1,18 +1,21 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams, usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/axios';
 import {
     TrendingUp, Users, CheckCircle2, Rocket,
-    Calendar, BarChart3
+    BarChart3
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Task } from '@/types';
+import { useRef } from 'react';
+
+type AnalyticsView = 'workspace' | 'personal';
 
 // Dynamic imports for heavy chart components - reduces initial bundle size
 const CompletionTrendChart = dynamic(
@@ -83,22 +86,57 @@ const PerformanceMetrics = dynamic(
 
 export default function AnalyticsPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const router = useRouter();
     const workspaceId = params.id as string;
+    const focusMode = searchParams.get('focus');
+    const isDelayedFocus = focusMode === 'delayed-open';
+    const yourTasksRef = useRef<HTMLDivElement | null>(null);
+    const initialView: AnalyticsView = searchParams.get('view') === 'personal' ? 'personal' : 'workspace';
 
     const [tasks, setTasks] = useState<Task[]>([]);
     const [spaces, setSpaces] = useState<any[]>([]);
     const [members, setMembers] = useState<any[]>([]);
     const [workspace, setWorkspace] = useState<any>(null);
+    const [stats, setStats] = useState<any>(null);
     const [stickyNote, setStickyNote] = useState<any>(null);
+    const [announcements, setAnnouncements] = useState<any[]>([]);
+    const [recentActivity, setRecentActivity] = useState<any[]>([]);
+    const [performanceData, setPerformanceData] = useState<{ user?: any; team?: any[] } | null>(null);
     const [loading, setLoading] = useState(true);
     const [userId, setUserId] = useState<string>('');
     const [userStatus, setUserStatus] = useState<'active' | 'inactive'>('inactive');
     const [runningTimer, setRunningTimer] = useState<any>(null);
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [dateFilter] = useState('30'); 
+    const [canViewWorkspaceAnalytics, setCanViewWorkspaceAnalytics] = useState(false);
+    const [announcementPermissions, setAnnouncementPermissions] = useState({
+        canViewAnnouncements: true,
+        canCreateAnnouncements: false,
+        canDeleteAnnouncements: false,
+    });
+    const [availableViews, setAvailableViews] = useState<AnalyticsView[]>(['personal']);
+    const [selectedView, setSelectedView] = useState<AnalyticsView>(initialView);
+    const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
+    const [range, setRange] = useState<'7d' | '30d' | '90d' | 'all' | 'custom'>('30d');
+    const [customFrom, setCustomFrom] = useState('');
+    const [customTo, setCustomTo] = useState('');
+    const backgroundRefreshDoneRef = useRef<Set<string>>(new Set());
     
     const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
-    const CACHE_KEY = `analytics_cache_${workspaceId}`;
+    const CACHE_KEY = `analytics_cache_${workspaceId}_${selectedView}_${range}_${customFrom}_${customTo}`;
+
+    const getPresetDates = useCallback(() => {
+        if (range === 'all') return { from: '', to: '' };
+        if (range === 'custom') return { from: customFrom, to: customTo };
+        const now = new Date();
+        const from = new Date(now);
+        const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
+        from.setDate(now.getDate() - days);
+        return {
+            from: from.toISOString().slice(0, 10),
+            to: now.toISOString().slice(0, 10),
+        };
+    }, [range, customFrom, customTo]);
 
     // Define fetch function with useCallback so it can be passed to children safely
     const fetchAnalyticsData = useCallback(async (force = false) => {
@@ -114,27 +152,49 @@ export default function AnalyticsPage() {
                 
                 if (cachedData) {
                     try {
-                        const parsed = JSON.parse(cachedData);
+                const parsed = JSON.parse(cachedData);
                         const cacheAge = now - parsed.timestamp;
                         
                         if (cacheAge < CACHE_DURATION) {
                             console.log('[Analytics] Using cached data from sessionStorage');
+                            const cachedMembers = Array.isArray(parsed.members) ? parsed.members : [];
+                            const hasUsableMembers = cachedMembers.length > 0;
+                            if (!hasUsableMembers) {
+                                console.log('[Analytics] Cached payload missing members, fetching fresh data');
+                            } else {
                             setTasks(parsed.tasks || []);
                             setSpaces(parsed.spaces || []);
                             setMembers(parsed.members || []);
                             setWorkspace(parsed.workspace || null);
+                            setStats(parsed.stats || null);
                             setUserId(parsed.userId || '');
                             setUserStatus(parsed.userStatus || 'inactive');
                             setRunningTimer(parsed.runningTimer || null);
-                            setIsAdmin(parsed.isAdmin || false);
+                            setCanViewWorkspaceAnalytics(parsed.canViewWorkspaceAnalytics || false);
+                            setAnnouncementPermissions(parsed.announcementPermissions || {
+                                canViewAnnouncements: true,
+                                canCreateAnnouncements: false,
+                                canDeleteAnnouncements: false,
+                            });
+                            setAvailableViews(parsed.availableViews || ['personal']);
+                            const cachedView: AnalyticsView = parsed.selectedView === 'personal' ? 'personal' : 'workspace';
+                            if (cachedView !== selectedView) {
+                                setSelectedView(cachedView);
+                            }
+                            setAccessDeniedMessage(null);
                             setStickyNote(parsed.stickyNote || null);
+                            setAnnouncements(parsed.announcements || []);
+                            setRecentActivity(parsed.recentActivity || []);
+                            setPerformanceData(parsed.performance || null);
                             setLoading(false);
-                            // Keep UI fast from cache, but immediately refresh in background
-                            // so admin clock-in/out changes are reflected quickly.
-                            setTimeout(() => {
-                                fetchAnalyticsData(true);
-                            }, 0);
+                                if (!backgroundRefreshDoneRef.current.has(CACHE_KEY)) {
+                                    backgroundRefreshDoneRef.current.add(CACHE_KEY);
+                                    setTimeout(() => {
+                                        fetchAnalyticsData(true);
+                                    }, 0);
+                                }
                             return;
+                            }
                         }
                     } catch (e) {
                         console.error('[Analytics] Failed to parse cached data:', e);
@@ -150,7 +210,13 @@ export default function AnalyticsPage() {
 
             // THE GRAND UNIFIED FETCH - Single call replaces 3 parallel calls + N+1 loop
             console.log('[Analytics] Fetching unified analytics data from backend');
-            const response = await api.get(`/workspaces/${workspaceId}/analytics?t=${Date.now()}`);
+            const { from, to } = getPresetDates();
+            const query = new URLSearchParams();
+            query.set('t', String(Date.now()));
+            query.set('view', selectedView);
+            if (from) query.set('from', from);
+            if (to) query.set('to', to);
+            const response = await api.get(`/workspaces/${workspaceId}/analytics?${query.toString()}`);
             const { 
                 workspace: workspaceData, 
                 stats: statsData, 
@@ -158,19 +224,29 @@ export default function AnalyticsPage() {
                 members: membersData, 
                 tasks: tasksData,
                 currentRunningTimer,
-                stickyNote: stickyNoteData
+                stickyNote: stickyNoteData,
+                announcements: announcementsData,
+                recentActivity: recentActivityData,
+                performance,
+                permissions,
+                view
             } = response.data.data;
 
             setMembers(membersData || []);
             setRunningTimer(currentRunningTimer || null);
             setSpaces(spacesData || []);
             setWorkspace(workspaceData || null);
+            setStats(statsData || null);
             setTasks(tasksData || []);
             setStickyNote(stickyNoteData || null);
+            setAnnouncements(announcementsData || []);
+            setRecentActivity(recentActivityData || []);
+            setPerformanceData(performance || null);
+            setAccessDeniedMessage(null);
 
-            // Determine current user's status and admin role
+            // Determine current user's status
             let currentUserStatus: 'active' | 'inactive' = 'inactive';
-            let currentIsAdmin = false;
+            let currentCanViewWorkspaceAnalytics = false;
             
             if (localUserId) {
                 // Determine Status from members array
@@ -181,17 +257,22 @@ export default function AnalyticsPage() {
                 currentUserStatus = currentMember?.status || 'inactive';
                 setUserStatus(currentUserStatus);
 
-                // Determine Admin Privileges
-                if (workspaceData) {
-                    const isOwner = workspaceData.owner?._id === localUserId || workspaceData.owner === localUserId;
-                    const memberRecord = workspaceData.members?.find((m: any) => {
-                        const mId = typeof m.user === 'string' ? m.user : m.user?._id;
-                        return mId === localUserId;
-                    });
-                    const isMemberAdmin = memberRecord && (memberRecord.role === 'admin' || memberRecord.role === 'owner');
-                    currentIsAdmin = isOwner || !!isMemberAdmin;
-                    setIsAdmin(currentIsAdmin);
-                }
+            }
+            currentCanViewWorkspaceAnalytics = !!view?.canViewWorkspaceAnalytics;
+            setCanViewWorkspaceAnalytics(currentCanViewWorkspaceAnalytics);
+            setAnnouncementPermissions({
+                canViewAnnouncements: permissions?.canViewAnnouncements !== false,
+                canCreateAnnouncements: !!permissions?.canCreateAnnouncements,
+                canDeleteAnnouncements: !!permissions?.canDeleteAnnouncements,
+            });
+            const responseAvailableViews: AnalyticsView[] = Array.isArray(view?.available)
+                ? view.available.filter((item: string) => item === 'workspace' || item === 'personal')
+                : ['personal'];
+            setAvailableViews(responseAvailableViews.length ? responseAvailableViews : ['personal']);
+
+            const effectiveView: AnalyticsView = view?.effective === 'workspace' ? 'workspace' : 'personal';
+            if (effectiveView !== selectedView) {
+                setSelectedView(effectiveView);
             }
             
             // Cache the consolidated data
@@ -201,26 +282,72 @@ export default function AnalyticsPage() {
                 spaces: spacesData,
                 members: membersData,
                 workspace: workspaceData,
+                stats: statsData,
                 userId: localUserId,
                 userStatus: currentUserStatus,
                 runningTimer: currentRunningTimer,
-                isAdmin: currentIsAdmin,
-                stickyNote: stickyNoteData
+                canViewWorkspaceAnalytics: currentCanViewWorkspaceAnalytics,
+                announcementPermissions: {
+                    canViewAnnouncements: permissions?.canViewAnnouncements !== false,
+                    canCreateAnnouncements: !!permissions?.canCreateAnnouncements,
+                    canDeleteAnnouncements: !!permissions?.canDeleteAnnouncements,
+                },
+                availableViews: responseAvailableViews,
+                selectedView: effectiveView,
+                stickyNote: stickyNoteData,
+                announcements: announcementsData || [],
+                recentActivity: recentActivityData || [],
+                performance: performance || null
             };
             sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
 
         } catch (error: any) {
             console.error('Failed to fetch analytics data:', error);
             const message = error.response?.data?.message || 'Failed to load dashboard data. Please try again later.';
-            import('sonner').then(({ toast }) => toast.error(message));
+            if (error.response?.status === 403) {
+                setAccessDeniedMessage(message);
+                setCanViewWorkspaceAnalytics(false);
+                setAvailableViews(['personal']);
+            } else {
+                import('sonner').then(({ toast }) => toast.error(message));
+            }
         } finally {
             setLoading(false);
         }
-    }, [workspaceId, CACHE_DURATION, CACHE_KEY]);
+    }, [workspaceId, CACHE_DURATION, CACHE_KEY, getPresetDates, selectedView]);
 
     useEffect(() => {
         fetchAnalyticsData();
     }, [fetchAnalyticsData]);
+
+    useEffect(() => {
+        const currentViewParam = searchParams.get('view');
+        const shouldBePersonal = selectedView === 'personal';
+        const isAlreadySynced = shouldBePersonal
+            ? currentViewParam === 'personal'
+            : !currentViewParam;
+
+        if (isAlreadySynced) return;
+
+        const params = new URLSearchParams(searchParams.toString());
+        if (shouldBePersonal) {
+            params.set('view', 'personal');
+        } else {
+            params.delete('view');
+        }
+
+        const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+        router.replace(nextUrl, { scroll: false });
+    }, [selectedView, pathname, router, searchParams]);
+
+    useEffect(() => {
+        const explicitView = searchParams.get('view');
+        if (!explicitView) return;
+        const urlView: AnalyticsView = explicitView === 'personal' ? 'personal' : 'workspace';
+        if (urlView !== selectedView) {
+            setSelectedView(urlView);
+        }
+    }, [searchParams, selectedView]);
 
     // Listen for storage events to detect cache invalidation from other tabs/components
     useEffect(() => {
@@ -256,29 +383,114 @@ export default function AnalyticsPage() {
         const totalTasks = tasks.length;
         const completedTasks = tasks.filter(t => t.status === 'done').length;
         const clockedInMembers = members.filter(m => m.status === 'active').length;
+        const backendCompletionRate =
+            typeof stats?.completionRate === 'number'
+                ? Number(stats.completionRate).toFixed(1)
+                : (totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : "0");
 
         return {
             totalTeam: members.length,
             clockedIn: clockedInMembers,
             totalTasks,
             completedTasks,
-            completionRate: totalTasks > 0 ? ((completedTasks / totalTasks) * 100).toFixed(1) : "0",
+            completionRate: backendCompletionRate,
+            delayedOpenTasks: Number(stats?.delayedOpenTasks || 0),
+            delayedRate: Number(stats?.delayedRate || 0),
+            deadlineCompletionRate: Number(stats?.deadlineCompletionRate ?? 100),
             activeProjects: spaces.filter(s => s.status === 'active').length,
         };
-    }, [tasks, spaces, members]);
+    }, [tasks, spaces, members, stats]);
 
-    const statusStats = useMemo(() => ({
-        todo: tasks.filter(t => t.status === 'todo').length,
-        inprogress: tasks.filter(t => t.status === 'inprogress').length,
-        review: tasks.filter(t => t.status === 'review').length,
-        done: tasks.filter(t => t.status === 'done').length,
-    }), [tasks]);
+    const statusStats = useMemo(() => {
+        const now = new Date();
+        return {
+            todo: tasks.filter(t => t.status === 'todo').length,
+            inprogress: tasks.filter(t => t.status === 'inprogress').length,
+            review: tasks.filter(t => t.status === 'review').length,
+            done: tasks.filter(t => t.status === 'done').length,
+            delayed: tasks.filter((t: any) => {
+                const s = String(t.status || '').toLowerCase();
+                if (s === 'done' || s === 'cancelled') return false;
+                if (!t.deadline) return false;
+                return new Date(t.deadline) < now;
+            }).length,
+        };
+    }, [tasks]);
 
-    const priorityStats = useMemo(() => ({
-        high: tasks.filter(t => t.priority === 'high' || t.priority === 'urgent').length,
-        medium: tasks.filter(t => t.priority === 'medium').length,
-        low: tasks.filter(t => t.priority === 'low').length,
-    }), [tasks]);
+    const priorityStats = useMemo(() => {
+        const fallback = {
+            high: { total: 0, done: 0, completionRate: 0, deadlineSuccess: 100, delayedOpen: 0 },
+            medium: { total: 0, done: 0, completionRate: 0, deadlineSuccess: 100, delayedOpen: 0 },
+            low: { total: 0, done: 0, completionRate: 0, deadlineSuccess: 100, delayedOpen: 0 },
+        };
+
+        if (stats?.priorityPerformance && typeof stats.priorityPerformance === 'object') {
+            return {
+                high: { ...fallback.high, ...stats.priorityPerformance.high },
+                medium: { ...fallback.medium, ...stats.priorityPerformance.medium },
+                low: { ...fallback.low, ...stats.priorityPerformance.low },
+            };
+        }
+
+        // Backward-compat fallback for older analytics payloads
+        const taskRows = tasks || [];
+        const now = new Date();
+        const summarize = (rows: any[]) => {
+            const total = rows.length;
+            const doneRows = rows.filter((t: any) => String(t.status || '').toLowerCase() === 'done');
+            const done = doneRows.length;
+            const completionRate = total > 0 ? Math.round((done / total) * 100) : 0;
+            const doneWithDeadline = doneRows.filter((t: any) => !!t.deadline);
+            const onTimeDone = doneWithDeadline.filter((t: any) => {
+                if (!t.completedAt || !t.deadline) return false;
+                return new Date(t.completedAt) <= new Date(t.deadline);
+            }).length;
+            const deadlineSuccess = doneWithDeadline.length > 0
+                ? Math.round((onTimeDone / doneWithDeadline.length) * 100)
+                : 100;
+            const delayedOpen = rows.filter((t: any) => {
+                const s = String(t.status || '').toLowerCase();
+                if (s === 'done' || s === 'cancelled') return false;
+                if (!t.deadline) return false;
+                return new Date(t.deadline) < now;
+            }).length;
+            return { total, done, completionRate, deadlineSuccess, delayedOpen };
+        };
+
+        return {
+            high: summarize(taskRows.filter((t: any) => t.priority === 'high' || t.priority === 'urgent')),
+            medium: summarize(taskRows.filter((t: any) => t.priority === 'medium')),
+            low: summarize(taskRows.filter((t: any) => t.priority === 'low')),
+        };
+    }, [tasks, stats]);
+
+    const delayedOpenTasks = useMemo(() => {
+        const now = new Date();
+        return tasks.filter((t: any) => {
+            const assigneeId = typeof t.assignee === 'string' ? t.assignee : t.assignee?._id;
+            if (assigneeId !== userId) return false;
+            const s = String(t.status || '').toLowerCase();
+            if (s === 'done' || s === 'cancelled') return false;
+            if (!t.deadline) return false;
+            return new Date(t.deadline) < now;
+        });
+    }, [tasks, userId]);
+
+    useEffect(() => {
+        if (isDelayedFocus && yourTasksRef.current) {
+            yourTasksRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [isDelayedFocus, delayedOpenTasks.length]);
+
+    useEffect(() => {
+        const handleFocusDelayed = () => {
+            if (yourTasksRef.current) {
+                yourTasksRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        };
+        window.addEventListener('focusDelayedOpenTasks', handleFocusDelayed);
+        return () => window.removeEventListener('focusDelayedOpenTasks', handleFocusDelayed);
+    }, []);
 
     if (loading) {
         return (
@@ -289,12 +501,32 @@ export default function AnalyticsPage() {
         );
     }
 
+    if (accessDeniedMessage) {
+        return (
+            <div className="min-h-screen flex items-center justify-center px-4">
+                <div className="w-full max-w-xl rounded-2xl border bg-card p-8 text-center shadow-sm">
+                    <BarChart3 className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                    <h1 className="text-2xl font-bold text-foreground">Analytics unavailable</h1>
+                    <p className="mt-3 text-sm text-muted-foreground">{accessDeniedMessage}</p>
+                    <div className="mt-6 flex items-center justify-center gap-3">
+                        <Button variant="outline" onClick={() => router.back()}>
+                            Go back
+                        </Button>
+                        <Button onClick={() => fetchAnalyticsData(true)}>
+                            Retry
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-background">
             <main className="max-w-[1440px] mx-auto px-6 py-5">
                 {/* Header Actions */}
-                <div className="flex justify-end gap-3 mb-6">
-                    {isAdmin && (
+                <div className="flex flex-wrap items-center justify-end gap-3 mb-6">
+                    {announcementPermissions.canCreateAnnouncements && (
                         <Button 
                             variant="outline" 
                             className="gap-2"
@@ -304,17 +536,40 @@ export default function AnalyticsPage() {
                             Time Tracking
                         </Button>
                     )}
-                    <Button variant="outline" className="gap-2">
-                        <Calendar className="w-4 h-4" />
-                        Last {dateFilter} Days
-                    </Button>
+                    <select
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        value={range}
+                        onChange={(e) => setRange(e.target.value as '7d' | '30d' | '90d' | 'all' | 'custom')}
+                    >
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="90d">Last 90 days</option>
+                        <option value="all">All time</option>
+                        <option value="custom">Custom range</option>
+                    </select>
+                    {range === 'custom' && (
+                        <>
+                            <input
+                                type="date"
+                                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                                value={customFrom}
+                                onChange={(e) => setCustomFrom(e.target.value)}
+                            />
+                            <input
+                                type="date"
+                                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                                value={customTo}
+                                onChange={(e) => setCustomTo(e.target.value)}
+                            />
+                        </>
+                    )}
                 </div>
 
                 {/* Metrics Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <MetricCard title="Total Team" value={metrics.totalTeam} icon={<Users className="w-5 h-5"/>} color="blue" badge={`+${metrics.clockedIn} Clocked in`} />
                     <MetricCard title="Total Tasks" value={metrics.totalTasks} icon={<CheckCircle2 className="w-5 h-5"/>} color="primary" subtext={`${metrics.completedTasks} done`} />
-                    <MetricCard title="Completion Rate" value={`${metrics.completionRate}%`} icon={<TrendingUp className="w-5 h-5"/>} color="emerald" />
+                    <MetricCard title="On-time Completion Rate" value={`${metrics.deadlineCompletionRate}%`} icon={<TrendingUp className="w-5 h-5"/>} color="emerald" subtext={`${metrics.completedTasks} done`} />
                     <MetricCard title="Active Projects" value={metrics.activeProjects} icon={<Rocket className="w-5 h-5"/>} color="amber" />
                 </div>
 
@@ -333,8 +588,13 @@ export default function AnalyticsPage() {
                 {/* Team & Tasks */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     <TeamAvailability members={members} />
-                    <div className="lg:col-span-2">
-                        <YourTasks tasks={tasks} userId={userId} workspaceId={workspaceId} />
+                    <div id="your-assigned-work" ref={yourTasksRef} className="lg:col-span-2">
+                        <YourTasks
+                            tasks={isDelayedFocus ? delayedOpenTasks : tasks}
+                            userId={userId}
+                            workspaceId={workspaceId}
+                            mode={isDelayedFocus ? 'delayed-open' : 'all'}
+                        />
                     </div>
                 </div>
 
@@ -348,7 +608,12 @@ export default function AnalyticsPage() {
 
                 {/* Utilities */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    <Announcements workspaceId={workspaceId} isAdmin={isAdmin} />
+                    <Announcements
+                        workspaceId={workspaceId}
+                        canCreateAnnouncement={announcementPermissions.canCreateAnnouncements}
+                        canDeleteAnnouncement={announcementPermissions.canDeleteAnnouncements}
+                        initialAnnouncements={announcements}
+                    />
                     <StickyNotes 
                         workspaceId={workspaceId} 
                         userId={userId} 
@@ -358,12 +623,22 @@ export default function AnalyticsPage() {
 
                 {/* Workspace Activity Timeline */}
                 <div className="mb-8">
-                    <WorkspaceActivity workspaceId={workspaceId} userId={userId} />
+                    <WorkspaceActivity
+                        workspaceId={workspaceId}
+                        userId={userId}
+                        initialActivities={recentActivity}
+                    />
                 </div>
 
                 {/* Performance Metrics */}
                 <div className="mb-8">
-                    <PerformanceMetrics workspaceId={workspaceId} userId={userId} />
+                    <PerformanceMetrics
+                        workspaceId={workspaceId}
+                        userId={userId}
+                        canViewTeamPerformance={selectedView === 'workspace' && canViewWorkspaceAnalytics}
+                        initialMyMetrics={performanceData?.user || null}
+                        initialTeamMetrics={Array.isArray(performanceData?.team) ? performanceData?.team : []}
+                    />
                 </div>
             </main>
         </div>

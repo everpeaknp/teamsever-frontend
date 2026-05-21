@@ -22,10 +22,17 @@ interface Announcement {
 
 interface AnnouncementsProps {
   workspaceId: string;
-  isAdmin: boolean;
+  canCreateAnnouncement: boolean;
+  canDeleteAnnouncement: boolean;
+  initialAnnouncements?: Announcement[];
 }
 
-export function Announcements({ workspaceId, isAdmin }: AnnouncementsProps) {
+export function Announcements({
+  workspaceId,
+  canCreateAnnouncement,
+  canDeleteAnnouncement,
+  initialAnnouncements = [],
+}: AnnouncementsProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -79,8 +86,12 @@ export function Announcements({ workspaceId, isAdmin }: AnnouncementsProps) {
   };
 
   useEffect(() => {
+    if (initialAnnouncements.length > 0) {
+      setAnnouncements(initialAnnouncements);
+      return;
+    }
     fetchAnnouncements();
-  }, [workspaceId]);
+  }, [workspaceId, initialAnnouncements]);
 
   return (
     <Card className="h-[400px] flex flex-col">
@@ -89,7 +100,7 @@ export function Announcements({ workspaceId, isAdmin }: AnnouncementsProps) {
         <CardTitle className="text-lg">Team Announcements</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto space-y-4 px-6 pb-6">
-        {isAdmin && (
+        {canCreateAnnouncement && (
           <div className="flex gap-2 mb-4 sticky top-0 bg-background z-10 pb-2">
             <Input
               value={text}
@@ -108,7 +119,7 @@ export function Announcements({ workspaceId, isAdmin }: AnnouncementsProps) {
           <div className="text-center py-8 text-muted-foreground text-sm">
             <Megaphone className="w-12 h-12 mx-auto mb-2 opacity-20" />
             <p>No announcements yet</p>
-            {isAdmin && <p className="text-xs mt-1">Be the first to post!</p>}
+            {canCreateAnnouncement && <p className="text-xs mt-1">Be the first to post!</p>}
           </div>
         ) : (
           <div className="space-y-3">
@@ -126,7 +137,7 @@ export function Announcements({ workspaceId, isAdmin }: AnnouncementsProps) {
                       <span>{new Date(announcement.createdAt).toLocaleString()}</span>
                     </div>
                   </div>
-                  {isAdmin && (
+                  {canDeleteAnnouncement && (
                     <button
                       onClick={() => handleDelete(announcement._id)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"

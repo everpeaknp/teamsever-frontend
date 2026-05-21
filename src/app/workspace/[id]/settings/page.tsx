@@ -140,7 +140,7 @@ export default function GeneralSettingsPage() {
 
 
   
-  if (!can('view_settings')) {
+  if (!can('MANAGE_SETTINGS')) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center px-4">
         <SettingsIcon className="w-12 h-12 text-muted-foreground mb-4" />

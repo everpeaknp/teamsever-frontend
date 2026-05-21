@@ -49,6 +49,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const currentUserId = currentUser?._id || (typeof window !== 'undefined' ? localStorage.getItem('userId') : null);
   const currentUserName = currentUser?.name || (typeof window !== 'undefined' ? localStorage.getItem('userName') : null);
   const currentUserEmail = currentUser?.email || (typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null);
+  const isCommitLog = title.includes('Commit Log');
 
   // Generate room ID - prefer conversationId for DMs to match socket events
   const roomId = type === 'workspace' 
@@ -114,6 +115,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   // Get draft from store
   const draft = getDraft(roomId);
   const [inputValue, setInputValue] = useState(draft);
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
+  const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
 
   // Fetch workspace members for filtering
   useEffect(() => {
@@ -170,9 +173,168 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     onInitialLoad: handleInitialLoad
   });
 
-  // Local state for messages (includes optimistic messages)
-  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
-  const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
+  const getCommitRows = useCallback(() => {
+    const rows: Array<{
+      time: string;
+      user: string;
+      repository: string;
+      branch: string;
+      commitSha: string;
+      commitAuthor: string;
+      commitMessage: string;
+      compareUrl: string;
+    }> = [];
+
+    localMessages
+      .filter((m) => m.type === 'github_commit')
+      .forEach((m) => {
+        const baseUser =
+          (m.sender && typeof m.sender === 'object' && (m.sender as any).name) ||
+          m.metadata?.pusher ||
+          'GitHub Bot';
+        const repo = m.metadata?.repoName || '-';
+        const branch = m.metadata?.branchName || 'main';
+        const compareUrl = m.metadata?.compareUrl || '';
+        const commits = Array.isArray(m.metadata?.commits) ? m.metadata.commits : [];
+
+        if (commits.length === 0) {
+          rows.push({
+            time: format(new Date(m.createdAt), 'yyyy-MM-dd HH:mm:ss'),
+            user: baseUser,
+            repository: repo,
+            branch,
+            commitSha: '-',
+            commitAuthor: '-',
+            commitMessage: m.content || '-',
+            compareUrl,
+          });
+          return;
+        }
+
+        commits.forEach((c: any) => {
+          const sha =
+            typeof c?.url === 'string' && c.url.includes('/')
+              ? c.url.split('/').pop()?.substring(0, 7) || '-'
+              : '-';
+          rows.push({
+            time: format(new Date(m.createdAt), 'yyyy-MM-dd HH:mm:ss'),
+            user: baseUser,
+            repository: repo,
+            branch,
+            commitSha: sha,
+            commitAuthor: c?.author || '-',
+            commitMessage: c?.message || '-',
+            compareUrl,
+          });
+        });
+      });
+
+    return rows;
+  }, [localMessages]);
+
+  const selectedContributorName =
+    filterUserId === 'all'
+      ? null
+      : workspaceMembers.find((m) => (m.user?._id || m.user) === filterUserId)?.user?.name || 'Selected User';
+
+  const exportCommitExcel = useCallback(() => {
+    const rows = getCommitRows();
+    if (rows.length === 0) {
+      return;
+    }
+
+    const isSingleContributor = !!selectedContributorName;
+    const header = isSingleContributor
+      ? ['Time', 'Repository', 'Branch', 'Commit SHA', 'Commit Author', 'Commit Message', 'Compare URL']
+      : ['Time', 'User', 'Repository', 'Branch', 'Commit SHA', 'Commit Author', 'Commit Message', 'Compare URL'];
+    const csvRows = [
+      isSingleContributor ? `"Contributor","${selectedContributorName?.replace(/"/g, '""')}"` : '',
+      header.join(','),
+      ...rows.map((r) =>
+        (isSingleContributor
+          ? [r.time, r.repository, r.branch, r.commitSha, r.commitAuthor, r.commitMessage, r.compareUrl]
+          : [r.time, r.user, r.repository, r.branch, r.commitSha, r.commitAuthor, r.commitMessage, r.compareUrl])
+          .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`)
+          .join(',')
+      ),
+    ].filter(Boolean);
+
+    const blob = new Blob([`\ufeff${csvRows.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = format(new Date(), 'yyyyMMdd_HHmm');
+    a.href = url;
+    a.download = `commit-log-${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, [getCommitRows, selectedContributorName]);
+
+  const exportCommitPdf = useCallback(() => {
+    const rows = getCommitRows();
+    if (rows.length === 0) {
+      return;
+    }
+
+    const isSingleContributor = !!selectedContributorName;
+    const stamp = format(new Date(), 'yyyy-MM-dd HH:mm');
+    const htmlRows = rows
+      .map(
+        (r) => `
+          <tr>
+            <td>${r.time}</td>
+            ${isSingleContributor ? '' : `<td>${r.user}</td>`}
+            <td>${r.repository}</td>
+            <td>${r.branch}</td>
+            <td>${r.commitSha}</td>
+            <td>${r.commitAuthor}</td>
+            <td>${r.commitMessage}</td>
+          </tr>
+        `
+      )
+      .join('');
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Commit Log Export</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; color: #111; }
+            h1 { margin: 0 0 6px 0; font-size: 24px; }
+            p { margin: 0 0 16px 0; color: #555; }
+            table { border-collapse: collapse; width: 100%; font-size: 12px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+            th { background: #f5f5f5; font-weight: 700; }
+          </style>
+        </head>
+        <body>
+          <h1>Commit Log Export</h1>
+          ${isSingleContributor ? `<p><strong>Contributor:</strong> ${selectedContributorName}</p>` : ''}
+          <p>Generated: ${stamp}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                ${isSingleContributor ? '' : '<th>User</th>'}
+                <th>Repository</th>
+                <th>Branch</th>
+                <th>SHA</th>
+                <th>Author</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody>${htmlRows}</tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  }, [getCommitRows, selectedContributorName]);
 
   // Merge fetched messages with optimistic messages
   useEffect(() => {
@@ -456,7 +618,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           </button>
           <h2 className="text-base md:text-lg font-bold text-foreground truncate">{title}</h2>
           
-          {title.includes('Commit Log') && (
+          {isCommitLog && (
             <div className="flex items-center gap-1 ml-4 bg-muted/20 p-1 rounded-lg border border-border/30 overflow-x-auto no-scrollbar">
               {(['all', 'today', 'yesterday', '7days', 'week'] as const).map((f) => (
                 <button
@@ -545,6 +707,28 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           )}
         </div>
         <div className="flex items-center gap-2 ml-2">
+          {isCommitLog && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={exportCommitExcel}
+                disabled={localMessages.filter((m) => m.type === 'github_commit').length === 0}
+              >
+                Export Excel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={exportCommitPdf}
+                disabled={localMessages.filter((m) => m.type === 'github_commit').length === 0}
+              >
+                Export PDF
+              </Button>
+            </>
+          )}
           {type === 'direct' && userId && (
             <Button
               variant="outline"
@@ -556,7 +740,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
               View Profile
             </Button>
           )}
-          {type === 'workspace' && channelId && !title.includes('General') && !title.includes('Commit Log') && isAdmin && (
+          {type === 'workspace' && channelId && !title.includes('General') && !isCommitLog && isAdmin && (
             <button 
               onClick={() => setIsEditModalOpen(true)}
               className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors"
@@ -845,7 +1029,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       )}
 
       {/* Input Area - Hidden for Commit Log */}
-      {!title.includes('Commit Log') && (
+      {!isCommitLog && (
         <div className="border-t border-border p-4 pb-4 md:pb-6 bg-background/95 backdrop-blur-sm sticky bottom-0 z-10 transition-all">
           <div className="max-w-4xl mx-auto flex gap-2 items-end">
             <div className="flex-1 relative">

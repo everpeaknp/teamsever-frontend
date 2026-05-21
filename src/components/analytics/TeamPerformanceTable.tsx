@@ -4,8 +4,7 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { MoreHorizontal, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Trophy } from 'lucide-react';
 import { Task } from '@/types';
 
 interface TeamPerformanceTableProps {
@@ -15,10 +14,6 @@ interface TeamPerformanceTableProps {
 }
 
 export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerformanceTableProps) {
-  const getInitials = (name: string) => {
-    return name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'U';
-  };
-
   const memberStats = useMemo(() => {
     return members.map(member => {
       const userId = typeof member.user === 'string' ? member.user : member.user?._id;
@@ -67,13 +62,14 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
         name: userName,
         avatar: userAvatar,
         role: member.role || 'member',
+        totalAssigned: memberTasks.length,
         tasksFinished: completedCount,
         avgTime: avgTimeDisplay,
         avgTimeHours,
         status: member.status || 'inactive',
         performance,
       };
-    });
+    }).sort((a, b) => b.performance - a.performance || b.tasksFinished - a.tasksFinished);
   }, [members, tasks]);
 
   const filteredMembers = useMemo(() => {
@@ -122,21 +118,49 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
     return { icon: <TrendingDown className="w-3 h-3" />, text: 'Too slow', color: 'text-red-600' };
   };
 
+  const teamSummary = useMemo(() => {
+    const totalDone = filteredMembers.reduce((sum, member) => sum + member.tasksFinished, 0);
+    const totalAssigned = filteredMembers.reduce((sum, member) => sum + member.totalAssigned, 0);
+    const avgPerformance = filteredMembers.length > 0
+      ? Math.round(filteredMembers.reduce((sum, member) => sum + member.performance, 0) / filteredMembers.length)
+      : 0;
+    const activeNow = filteredMembers.filter((member) => member.status === 'active').length;
+    return { totalDone, totalAssigned, avgPerformance, activeNow };
+  }, [filteredMembers]);
+
   return (
     <Card className="overflow-hidden">
-      <div className="px-6 py-4 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="px-6 py-4 border-b">
         <h4 className="font-bold">Team Performance Overview</h4>
+        <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="rounded-md border px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Total Done</p>
+            <p className="text-base font-semibold">{teamSummary.totalDone}</p>
+          </div>
+          <div className="rounded-md border px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Assigned</p>
+            <p className="text-base font-semibold">{teamSummary.totalAssigned}</p>
+          </div>
+          <div className="rounded-md border px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Avg Performance</p>
+            <p className="text-base font-semibold">{teamSummary.avgPerformance}%</p>
+          </div>
+          <div className="rounded-md border px-3 py-2">
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Clocked In</p>
+            <p className="text-base font-semibold">{teamSummary.activeNow}</p>
+          </div>
+        </div>
       </div>
       
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-slate-50 dark:bg-slate-800/50 text-muted-foreground text-xs font-bold uppercase tracking-wider">
             <tr>
-              <th className="px-6 py-4">Name</th>
-              <th className="px-6 py-4">Tasks Finished</th>
+              <th className="px-6 py-4">Member</th>
+              <th className="px-6 py-4">Done / Assigned</th>
               <th className="px-6 py-4">Avg. Time / Task</th>
               <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Performance</th>
+              <th className="px-6 py-4">Performance Score</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -147,7 +171,7 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
                 </td>
               </tr>
             ) : (
-              filteredMembers.map((member) => {
+              filteredMembers.map((member, index) => {
                 const perfData = getPerformanceLabel(member.performance);
                 const timeFeedback = getTimePerformanceFeedback(member.avgTimeHours);
                 
@@ -155,6 +179,9 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
                   <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
+                        <div className="w-6 text-xs font-bold text-muted-foreground">
+                          {index < 3 ? <Trophy className={`w-4 h-4 ${index === 0 ? 'text-amber-500' : index === 1 ? 'text-slate-400' : 'text-orange-600'}`} /> : `#${index + 1}`}
+                        </div>
                         <UserAvatar 
                           user={{ name: member.name, avatar: member.avatar, _id: member.id }} 
                           className="w-8 h-8" 
@@ -165,7 +192,10 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium">{member.tasksFinished}</td>
+                    <td className="px-6 py-4 text-sm font-medium">
+                      {member.tasksFinished}
+                      <span className="text-muted-foreground"> / {member.totalAssigned}</span>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1">
                         <span className="text-sm font-medium">{member.avgTime}</span>
@@ -178,13 +208,13 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
                     <td className="px-6 py-4">{getStatusBadge(member.status)}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <div className="w-16 bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                        <div className="w-24 bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
                           <div 
                             className={`h-full ${perfData.color}`} 
                             style={{ width: `${member.performance}%` }}
                           ></div>
                         </div>
-                        <span className="text-[10px] font-bold">{perfData.label}</span>
+                        <span className="text-[10px] font-bold">{member.performance}% {perfData.label}</span>
                       </div>
                     </td>
                   </tr>
@@ -195,18 +225,10 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
         </table>
       </div>
       
-      <div className="px-6 py-4 border-t flex items-center justify-between">
+      <div className="px-6 py-4 border-t">
         <span className="text-xs text-muted-foreground">
           Showing {filteredMembers.length} of {members.length} members
         </span>
-        <div className="flex gap-2">
-          <Button variant="outline" size="icon">
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <Button variant="outline" size="icon">
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
       </div>
     </Card>
   );

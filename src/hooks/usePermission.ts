@@ -67,6 +67,8 @@ export type PermissionAction =
   
   // Settings and analytics
   | "MANAGE_SETTINGS"
+  | "VIEW_ANALYTICS_PERSONAL"
+  | "VIEW_ANALYTICS_TEAM"
   | "VIEW_ANALYTICS"
   | "VIEW_ACTIVITY_LOG";
 
@@ -245,14 +247,18 @@ const ROLE_PERMISSIONS: Record<string, PermissionAction[]> = {
     
     // Settings
     "MANAGE_SETTINGS",
+    "VIEW_ANALYTICS_PERSONAL",
+    "VIEW_ANALYTICS_TEAM",
     "VIEW_ANALYTICS",
     "VIEW_ACTIVITY_LOG",
   ],
 
   ADMIN: [
     // Workspace
+    "UPDATE_WORKSPACE",
     "INVITE_MEMBER",
     "REMOVE_MEMBER",
+    "CHANGE_MEMBER_ROLE",
     "VIEW_WORKSPACE",
     "LEAVE_WORKSPACE",
     
@@ -287,7 +293,146 @@ const ROLE_PERMISSIONS: Record<string, PermissionAction[]> = {
     "COMMENT_TASK",
     
     // Settings
+    "MANAGE_SETTINGS",
+    "VIEW_ANALYTICS_PERSONAL",
+    "VIEW_ANALYTICS_TEAM",
     "VIEW_ANALYTICS",
+    "VIEW_ACTIVITY_LOG",
+  ],
+
+  OPERATIONS_MANAGER: [
+    // Workspace
+    "VIEW_WORKSPACE",
+    "LEAVE_WORKSPACE",
+    "INVITE_MEMBER",
+    "REMOVE_MEMBER",
+
+    // Space
+    "CREATE_SPACE",
+    "DELETE_SPACE",
+    "UPDATE_SPACE",
+    "VIEW_SPACE",
+    "ADD_SPACE_MEMBER",
+    "REMOVE_SPACE_MEMBER",
+    "MANAGE_SPACE_PERMISSIONS",
+
+    // Folder
+    "CREATE_FOLDER",
+    "DELETE_FOLDER",
+    "UPDATE_FOLDER",
+    "VIEW_FOLDER",
+
+    // List
+    "CREATE_LIST",
+    "DELETE_LIST",
+    "UPDATE_LIST",
+    "VIEW_LIST",
+
+    // Task
+    "CREATE_TASK",
+    "DELETE_TASK",
+    "EDIT_TASK",
+    "VIEW_TASK",
+    "ASSIGN_TASK",
+    "CHANGE_STATUS",
+    "COMMENT_TASK",
+
+    // Settings
+    "VIEW_ANALYTICS_PERSONAL",
+    "VIEW_ANALYTICS_TEAM",
+    "VIEW_ANALYTICS",
+    "VIEW_ACTIVITY_LOG",
+  ],
+
+  PROJECT_MANAGER: [
+    // Workspace
+    "VIEW_WORKSPACE",
+    "LEAVE_WORKSPACE",
+
+    // Space
+    "CREATE_SPACE",
+    "DELETE_SPACE",
+    "UPDATE_SPACE",
+    "VIEW_SPACE",
+    "ADD_SPACE_MEMBER",
+    "REMOVE_SPACE_MEMBER",
+    "MANAGE_SPACE_PERMISSIONS",
+
+    // Folder
+    "CREATE_FOLDER",
+    "DELETE_FOLDER",
+    "UPDATE_FOLDER",
+    "VIEW_FOLDER",
+
+    // List
+    "CREATE_LIST",
+    "DELETE_LIST",
+    "UPDATE_LIST",
+    "VIEW_LIST",
+
+    // Task
+    "CREATE_TASK",
+    "DELETE_TASK",
+    "EDIT_TASK",
+    "VIEW_TASK",
+    "ASSIGN_TASK",
+    "CHANGE_STATUS",
+    "COMMENT_TASK",
+
+    // Activity
+    "VIEW_ANALYTICS_PERSONAL",
+    "VIEW_ACTIVITY_LOG",
+  ],
+
+  DEVELOPER: [
+    // Workspace
+    "VIEW_WORKSPACE",
+    "LEAVE_WORKSPACE",
+
+    // Space
+    "VIEW_SPACE",
+
+    // Folder
+    "VIEW_FOLDER",
+
+    // List
+    "VIEW_LIST",
+
+    // Task
+    "VIEW_TASK",
+    "EDIT_TASK",
+    "ASSIGN_TASK",
+    "CHANGE_STATUS",
+    "COMMENT_TASK",
+
+    // Activity
+    "VIEW_ANALYTICS_PERSONAL",
+    "VIEW_ACTIVITY_LOG",
+  ],
+
+  QA: [
+    // Workspace
+    "VIEW_WORKSPACE",
+    "LEAVE_WORKSPACE",
+
+    // Space
+    "VIEW_SPACE",
+
+    // Folder
+    "VIEW_FOLDER",
+
+    // List
+    "VIEW_LIST",
+
+    // Task
+    "CREATE_TASK",
+    "EDIT_TASK",
+    "VIEW_TASK",
+    "CHANGE_STATUS",
+    "COMMENT_TASK",
+
+    // Activity
+    "VIEW_ANALYTICS_PERSONAL",
     "VIEW_ACTIVITY_LOG",
   ],
 
@@ -311,6 +456,7 @@ const ROLE_PERMISSIONS: Record<string, PermissionAction[]> = {
     "COMMENT_TASK",
     
     // Settings
+    "VIEW_ANALYTICS_PERSONAL",
     "VIEW_ACTIVITY_LOG",
   ],
 

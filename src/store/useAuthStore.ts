@@ -55,7 +55,7 @@ const PERMISSIONS = {
   update_workspace: ['owner', 'admin', 'operations_manager'],
   invite_member: ['owner', 'admin', 'operations_manager'],
   remove_member: ['owner', 'admin', 'operations_manager'],
-  change_member_role: ['owner', 'admin', 'operations_manager'],
+  change_member_role: ['owner', 'admin'],
   
   // Space permissions
   create_space: ['owner', 'admin', 'operations_manager', 'project_manager'],
@@ -75,10 +75,13 @@ const PERMISSIONS = {
   
   // View permissions
   view_workspace: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member', 'guest'],
+  view_analytics_personal: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
+  view_analytics_team: ['owner', 'admin', 'operations_manager'],
   view_analytics: ['owner', 'admin', 'operations_manager'],
-  view_settings: ['owner', 'admin', 'operations_manager'],
+  view_settings: ['owner', 'admin'],
   view_activity_log: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa'],
-  MANAGE_CUSTOM_ROLES: ['owner', 'admin', 'operations_manager'],
+  MANAGE_CUSTOM_ROLES: ['owner', 'admin'],
+  MANAGE_SETTINGS: ['owner', 'admin'],
 } as const;
 
 type Permission = keyof typeof PERMISSIONS;

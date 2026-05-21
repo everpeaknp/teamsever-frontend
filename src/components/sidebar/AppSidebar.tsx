@@ -69,6 +69,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   const { can, isAdmin, isOwner } = usePermissions();
   const { setWorkspaceContext } = useWorkspaceContext();
   const unreadCount = useNotificationStore(state => state.unreadCount);
+  const setUnreadCount = useNotificationStore(state => state.setUnreadCount);
   const syncPermission = useNotificationStore(state => state.syncPermission);
   const accentColor = useThemeStore(state => state.accentColor);
   const { resolvedTheme } = useTheme();
@@ -128,6 +129,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   const [inboxUnreadFallback, setInboxUnreadFallback] = useState(0);
   const [groupUnreadFallback, setGroupUnreadFallback] = useState(0);
   const [notificationUnreadFallback, setNotificationUnreadFallback] = useState(0);
+  const [notificationHydrated, setNotificationHydrated] = useState(false);
 
   // Extract workspaceId from URL
   let workspaceId = params?.id as string;
@@ -205,6 +207,19 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
     }
     
     return total;
+  });
+  const hasGroupRoom = useChatStore(state => {
+    if (!workspaceId) return false;
+    return !!state.rooms[`workspace_${workspaceId}`];
+  });
+  const hasInboxRooms = useChatStore(state => {
+    const activeWorkspaceId = workspaceId && workspaceId !== 'undefined' ? workspaceId : '';
+    if (!activeWorkspaceId) return false;
+    const isConversationId = (roomId: string) => /^[a-fA-F0-9]{24}$/.test(roomId);
+    return Object.values(state.rooms).some((room) => {
+      const isDirect = room.type === 'direct' || isConversationId(room.roomId);
+      return isDirect && room.workspaceId === activeWorkspaceId;
+    });
   });
 
   // Use system accent color if user hasn't set one or as base
@@ -346,8 +361,11 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
             const notifRes = await api.get(`/notifications/unread-count?workspaceId=${workspaceId}`);
             const unread = Number(notifRes.data?.data?.unreadCount || notifRes.data?.count || 0);
             setNotificationUnreadFallback(unread);
+            setUnreadCount(unread);
+            setNotificationHydrated(true);
           } catch (error) {
             console.error('[AppSidebar] Failed to sync notifications unread:', error);
+            setNotificationHydrated(true);
           }
         }
       } catch (error) {
@@ -358,9 +376,9 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
     syncUnreadCounts();
   }, [isClient, user?._id, workspaceId]);
 
-  const effectiveGroupChatUnread = Math.max(groupChatUnread, groupUnreadFallback);
-  const effectiveInboxUnread = Math.max(inboxUnread, inboxUnreadFallback);
-  const effectiveNotificationUnread = Math.max(unreadCount, notificationUnreadFallback);
+  const effectiveGroupChatUnread = hasGroupRoom ? groupChatUnread : groupUnreadFallback;
+  const effectiveInboxUnread = hasInboxRooms ? inboxUnread : inboxUnreadFallback;
+  const effectiveNotificationUnread = notificationHydrated ? unreadCount : Math.max(unreadCount, notificationUnreadFallback);
 
   // Fetch all workspaces for switcher
   const fetchAllWorkspaces = async () => {
@@ -725,42 +743,43 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
             </div>
 
             {/* SETTINGS */}
-            <div className="relative group">
-              <Link
-                href={`/workspace/${workspaceId}/settings`}
-                className={cn(
-                  'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
-                  isSettingsPage
-                    ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
-                    : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
-                )}
-                title="Settings"
-              >
-                <div className="relative">
-                  <SettingsIcon className="w-5 h-5 relative z-10" strokeWidth={1.5} />
-                  {isSettingsPage && (
-                    <motion.div
-                      layoutId="active-glow"
-                      className="absolute inset-0 blur-md opacity-40 z-0"
-                      style={{ backgroundColor: themeColor }}
-                    />
+            {can('MANAGE_SETTINGS') && (
+              <div className="relative group">
+                <Link
+                  href={`/workspace/${workspaceId}/settings`}
+                  className={cn(
+                    'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
+                    isSettingsPage
+                      ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
+                      : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
                   )}
-                </div>
-                <span className="text-[10px] font-semibold tracking-wide">
-                  Settings
-                </span>
-              </Link>
+                  title="Settings"
+                >
+                  <div className="relative">
+                    <SettingsIcon className="w-5 h-5 relative z-10" strokeWidth={1.5} />
+                    {isSettingsPage && (
+                      <motion.div
+                        layoutId="active-glow"
+                        className="absolute inset-0 blur-md opacity-40 z-0"
+                        style={{ backgroundColor: themeColor }}
+                      />
+                    )}
+                  </div>
+                  <span className="text-[10px] font-semibold tracking-wide">
+                    Settings
+                  </span>
+                </Link>
 
-              {/* Smooth Indicator Pill */}
-              {isSettingsPage && (
-                <motion.div
-                  layoutId="sidebar-indicator"
-                  className="absolute -left-1 top-2 bottom-2 w-1 rounded-r-full z-20 shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-                  style={{ backgroundColor: themeColor }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                />
-              )}
-            </div>
+                {isSettingsPage && (
+                  <motion.div
+                    layoutId="sidebar-indicator"
+                    className="absolute -left-1 top-2 bottom-2 w-1 rounded-r-full z-20 shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                    style={{ backgroundColor: themeColor }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  />
+                )}
+              </div>
+            )}
 
             {/* TIME TRACKING (Admin Only) */}
             {(isAdmin() || isOwner()) && (

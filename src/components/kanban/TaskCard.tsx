@@ -13,6 +13,7 @@ interface TaskCardProps {
   task: Task;
   handleDragStart: (e: React.DragEvent<HTMLDivElement>, task: Task) => void;
   canDrag: boolean;
+  isBlocked?: boolean;
   spaceMembers: any[];
 }
 
@@ -62,7 +63,7 @@ const getPriorityColor = (priority: Task['priority']) => {
   }
 };
 
-export function TaskCard({ task, handleDragStart, canDrag, spaceMembers }: TaskCardProps) {
+export function TaskCard({ task, handleDragStart, canDrag, isBlocked = false, spaceMembers }: TaskCardProps) {
   const { openTask } = useTaskSidebarStore();
   const statusStyles = getStatusStyles(task.status);
 
@@ -72,6 +73,8 @@ export function TaskCard({ task, handleDragStart, canDrag, spaceMembers }: TaskC
       <motion.div
         layout
         layoutId={task._id}
+        animate={isBlocked ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+        transition={{ duration: 0.35, ease: 'easeInOut' }}
         draggable={canDrag}
         onDragStart={(e: any) => handleDragStart(e, task)}
         onClick={() => openTask(task._id)}

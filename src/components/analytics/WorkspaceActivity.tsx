@@ -27,22 +27,31 @@ import { api } from '@/lib/axios';
 interface WorkspaceActivityProps {
   workspaceId: string;
   userId: string;
+  initialActivities?: any[];
 }
 
-export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProps) {
+export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] }: WorkspaceActivityProps) {
   const [activities, setActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialActivities.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [skip, setSkip] = useState(0);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const INITIAL_LIMIT = 20;
-  const LOAD_MORE_LIMIT = 10;
+  const INITIAL_LIMIT = 8;
+  const LOAD_MORE_LIMIT = 8;
 
   useEffect(() => {
+    if (initialActivities.length > 0 && !startDate && !endDate) {
+      const seed = initialActivities.slice(0, INITIAL_LIMIT);
+      setActivities(seed);
+      setSkip(seed.length);
+      setHasMore(initialActivities.length > seed.length);
+      setLoading(false);
+      return;
+    }
     fetchActivities(true);
-  }, [workspaceId, startDate, endDate]);
+  }, [workspaceId, startDate, endDate, initialActivities]);
 
   const fetchActivities = async (isInitial = false) => {
     try {
@@ -101,7 +110,7 @@ export function WorkspaceActivity({ workspaceId, userId }: WorkspaceActivityProp
   };
 
   const handleSeeLess = () => {
-    // Reset to initial state - show only first 7 activities
+    // Collapse back to compact mode
     setActivities(prev => prev.slice(0, INITIAL_LIMIT));
     setSkip(INITIAL_LIMIT);
     setHasMore(true); // Assume there might be more

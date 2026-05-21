@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { api } from '@/lib/axios';
 
+const hierarchyRequestCache = new Map<string, Promise<void>>();
+
 export interface List {
   _id: string;
   name: string;
@@ -104,7 +106,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       return;
     }
 
-    try {
+    const inFlightRequest = hierarchyRequestCache.get(workspaceId);
+    if (inFlightRequest) {
+      console.log('[WorkspaceStore] Reusing in-flight hierarchy request for workspace:', workspaceId);
+      return inFlightRequest;
+    }
+
+    const requestPromise = (async () => {
       set({ loading: true, error: null });
       console.log('[WorkspaceStore] Fetching hierarchy for workspace:', workspaceId);
 
@@ -150,14 +158,21 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         loading: false,
         error: null,
         lastFetchedWorkspaceId: workspaceId,
-        lastFetchTime: now,
+        lastFetchTime: Date.now(),
       });
-    } catch (err: any) {
-      console.error('[WorkspaceStore] Failed to fetch hierarchy:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to load workspace';
-      set({ error: errorMessage, loading: false });
-      throw err;
-    }
+    })()
+      .catch((err: any) => {
+        console.error('[WorkspaceStore] Failed to fetch hierarchy:', err);
+        const errorMessage = err.response?.data?.message || err.message || 'Failed to load workspace';
+        set({ error: errorMessage, loading: false });
+        throw err;
+      })
+      .finally(() => {
+        hierarchyRequestCache.delete(workspaceId);
+      });
+
+    hierarchyRequestCache.set(workspaceId, requestPromise);
+    return requestPromise;
   },
 
   setHierarchy: (hierarchy) => set({ hierarchy, error: null }),

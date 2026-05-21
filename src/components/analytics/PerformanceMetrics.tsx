@@ -8,11 +8,20 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Trophy, Target, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 interface PerformanceMetrics {
   totalTasksFinished: number;
+  completionRate?: number | null;
+  assignedTasksTotal?: number;
+  assignedTasksDone?: number;
   averageTimePerTask: number;
   deadlineSuccessRate: number;
+  tasksWithDeadline?: number;
+  tasksMetDeadline?: number;
+  delayedOpenTasks?: number;
+  completedLateTasks?: number;
+  totalDelayedTasks?: number;
   performanceNote: string;
 }
 
@@ -29,27 +38,58 @@ interface TeamMember {
 interface PerformanceMetricsProps {
   workspaceId: string;
   userId: string;
+  canViewTeamPerformance?: boolean;
+  initialMyMetrics?: PerformanceMetrics | null;
+  initialTeamMetrics?: TeamMember[];
 }
 
-export function PerformanceMetrics({ workspaceId, userId }: PerformanceMetricsProps) {
+export function PerformanceMetrics({
+  workspaceId,
+  userId,
+  canViewTeamPerformance = false,
+  initialMyMetrics = null,
+  initialTeamMetrics = []
+}: PerformanceMetricsProps) {
+  const router = useRouter();
   const [myMetrics, setMyMetrics] = useState<PerformanceMetrics | null>(null);
   const [teamMetrics, setTeamMetrics] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchPerformanceData();
-  }, [workspaceId, userId]);
+    if (initialMyMetrics) {
+      setMyMetrics(initialMyMetrics);
+      setTeamMetrics(canViewTeamPerformance ? initialTeamMetrics : []);
+      setLoading(false);
+      if (canViewTeamPerformance && initialTeamMetrics.length === 0) {
+        fetchPerformanceData(false);
+      }
+      return;
+    }
+    fetchPerformanceData(true);
+  }, [workspaceId, userId, canViewTeamPerformance, initialMyMetrics, initialTeamMetrics]);
 
-  const fetchPerformanceData = async () => {
+  const fetchPerformanceData = async (includeMyPerformance = true) => {
     try {
       setLoading(true);
-      const [myPerformanceRes, teamPerformanceRes] = await Promise.all([
-        api.get(`/performance/me/workspace/${workspaceId}`),
-        api.get(`/performance/team/workspace/${workspaceId}`)
-      ]);
+      const requests: Promise<any>[] = [];
+      if (includeMyPerformance) {
+        requests.push(api.get(`/performance/me/workspace/${workspaceId}`));
+      }
+      if (canViewTeamPerformance) {
+        requests.push(api.get(`/performance/team/workspace/${workspaceId}`));
+      }
 
-      setMyMetrics(myPerformanceRes.data.data);
-      setTeamMetrics(teamPerformanceRes.data.data);
+      const responses = await Promise.all(requests);
+      let responseIndex = 0;
+      if (includeMyPerformance) {
+        setMyMetrics(responses[responseIndex]?.data?.data || null);
+        responseIndex += 1;
+      }
+      if (canViewTeamPerformance) {
+        setTeamMetrics(responses[responseIndex]?.data?.data || []);
+      } else {
+        setTeamMetrics([]);
+      }
     } catch (error) {
       console.error('Failed to fetch performance data:', error);
     } finally {
@@ -67,6 +107,11 @@ export function PerformanceMetrics({ workspaceId, userId }: PerformanceMetricsPr
     if (rate > 80) return <CheckCircle2 className="w-4 h-4" />;
     if (rate >= 60) return <TrendingUp className="w-4 h-4" />;
     return <AlertCircle className="w-4 h-4" />;
+  };
+
+  const focusDelayedTasks = () => {
+    router.push(`/workspace/${workspaceId}/analytics?focus=delayed-open#your-assigned-work`);
+    window.dispatchEvent(new CustomEvent('focusDelayedOpenTasks'));
   };
 
   if (loading) {
@@ -87,6 +132,14 @@ export function PerformanceMetrics({ workspaceId, userId }: PerformanceMetricsPr
       </div>
     );
   }
+
+  const previewTeamMembers = [...teamMetrics]
+    .sort((a, b) => {
+      const successDiff = (b.metrics?.deadlineSuccessRate || 0) - (a.metrics?.deadlineSuccessRate || 0);
+      if (successDiff !== 0) return successDiff;
+      return (b.metrics?.totalTasksFinished || 0) - (a.metrics?.totalTasksFinished || 0);
+    })
+    .slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -110,6 +163,20 @@ export function PerformanceMetrics({ workspaceId, userId }: PerformanceMetricsPr
                 <p className="text-2xl font-bold">{myMetrics.totalTasksFinished}</p>
               </div>
 
+              {/* Completion Rate */}
+              <div className="p-4 rounded-lg border bg-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-muted-foreground">Completion Rate</span>
+                </div>
+                <p className="text-2xl font-bold">
+                  {typeof myMetrics.completionRate === 'number' ? `${myMetrics.completionRate}%` : 'N/A'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {myMetrics.assignedTasksDone ?? 0}/{myMetrics.assignedTasksTotal ?? 0} assigned done
+                </p>
+              </div>
+
               {/* Success Rate */}
               <div className="p-4 rounded-lg border bg-card">
                 <div className="flex items-center gap-2 mb-2">
@@ -117,6 +184,39 @@ export function PerformanceMetrics({ workspaceId, userId }: PerformanceMetricsPr
                   <span className="text-sm font-medium text-muted-foreground">Deadline Success</span>
                 </div>
                 <p className="text-2xl font-bold">{myMetrics.deadlineSuccessRate}%</p>
+              </div>
+              <div className="p-4 rounded-lg border bg-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span className="text-sm font-medium text-muted-foreground">On-Time Completions</span>
+                </div>
+                <p className="text-2xl font-bold">
+                  {myMetrics.tasksMetDeadline ?? 0}/{myMetrics.tasksWithDeadline ?? 0}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  met deadline / had deadline
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={focusDelayedTasks}
+                className="p-4 rounded-lg border bg-card hover:border-amber-400/60 hover:bg-amber-500/5 transition-colors text-left"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm font-medium text-muted-foreground">Delayed Open Tasks</span>
+                </div>
+                <p className="text-2xl font-bold">{myMetrics.delayedOpenTasks ?? 0}</p>
+              </button>
+              <div className="p-4 rounded-lg border bg-card">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <span className="text-sm font-medium text-muted-foreground">Total Delayed (Lifetime)</span>
+                </div>
+                <p className="text-2xl font-bold">{myMetrics.totalDelayedTasks ?? (myMetrics.delayedOpenTasks ?? 0)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {(myMetrics.completedLateTasks ?? 0)} completed late
+                </p>
               </div>
             </div>
 
@@ -138,79 +238,51 @@ export function PerformanceMetrics({ workspaceId, userId }: PerformanceMetricsPr
         </Card>
       )}
 
-      {/* Team Performance */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            Team Performance
-          </CardTitle>
-          <div className="mt-2 p-3 bg-muted/30 rounded-lg border border-dashed border-primary/20">
-            <h5 className="text-[10px] font-bold uppercase tracking-wider text-primary mb-1">Evaluation Methodology</h5>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Performance is calculated using raw data: <strong>Success Rate</strong> measures tasks completed on or before their deadline. 
-              <strong>Tasks Done</strong> represents total workspace contribution. No hidden algorithms are used—just pure work transparency.
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {teamMetrics.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No performance data available yet</p>
-              <p className="text-sm mt-2">Complete tasks with deadlines to see team metrics</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {teamMetrics.map((member) => (
-                <div
-                  key={member.user._id}
-                  className="p-4 rounded-lg border bg-card hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Avatar */}
-                    {/* Avatar */}
-                    <UserAvatar 
-                      user={member.user} 
-                      className="w-12 h-12 flex-shrink-0" 
-                    />
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h4 className="font-semibold text-sm">{member.user.name}</h4>
-                          <p className="text-xs text-muted-foreground">{member.user.email}</p>
-                        </div>
-                        <Badge className={getPerformanceColor(member.metrics.deadlineSuccessRate)}>
-                          {member.metrics.deadlineSuccessRate}% Success
-                        </Badge>
-                      </div>
-
-                      {/* Metrics Grid */}
-                      <div className="grid grid-cols-2 gap-4 mt-3">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Tasks Done</p>
-                          <p className="text-sm font-bold">{member.metrics.totalTasksFinished}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Success Rate</p>
-                          <p className="text-sm font-bold">{member.metrics.deadlineSuccessRate}%</p>
-                        </div>
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="mt-3">
-                        <Progress value={member.metrics.deadlineSuccessRate} className="h-1.5" />
+      {/* Team Performance (privileged only) */}
+      {canViewTeamPerformance && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              Team Performance
+            </CardTitle>
+            <button
+              type="button"
+              onClick={() => router.push(`/workspace/${workspaceId}/analytics/team-performance`)}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              View More
+            </button>
+          </CardHeader>
+          <CardContent>
+            {previewTeamMembers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No performance data available yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {previewTeamMembers.map((member) => (
+                  <div key={member.user._id} className="flex items-center justify-between p-3 rounded-lg border">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <UserAvatar user={member.user} className="w-9 h-9 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">{member.user.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {member.metrics.totalTasksFinished} done • {member.metrics.deadlineSuccessRate ?? 0}% on-time
+                        </p>
                       </div>
                     </div>
+                    <Badge className={getPerformanceColor(member.metrics.deadlineSuccessRate)}>
+                      {member.metrics.deadlineSuccessRate}% success
+                    </Badge>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

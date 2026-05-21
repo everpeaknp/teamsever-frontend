@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/axios';
 import { usePermissions } from '@/store/useAuthStore';
@@ -44,18 +44,23 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { TableSkeleton } from '@/components/skeletons/PageSkeleton';
 import { ICustomRole } from '@/types/pro-features';
+import { UserAvatar } from '@/components/ui/user-avatar';
 
 interface Member {
   _id: string;
   name: string;
   email: string;
+  avatar?: string;
+  profilePicture?: string;
   role: 'owner' | 'admin' | 'operations_manager' | 'project_manager' | 'qa' | 'developer' | 'member' | 'guest';
   isOwner: boolean;
   customRole?: ICustomRole | null;
   customRoleTitle?: string;
+  canMarkTaskDone?: boolean;
 }
 
 export default function MembersPage() {
@@ -96,14 +101,16 @@ export default function MembersPage() {
   const [maxCustomRoles, setMaxCustomRoles] = useState<number>(0);
   const [currentCustomRoleCount, setCurrentCustomRoleCount] = useState<number>(0);
   const [availableCustomRoles, setAvailableCustomRoles] = useState<ICustomRole[]>([]);
+  const initWorkspaceRef = useRef<string | null>(null);
 
   // Subscription state
   const { canInviteMember: globalCanInviteMember } = useSubscription();
   const { whatsappNumber } = useSystemSettings();
 
   useEffect(() => {
+    if (!workspaceId || initWorkspaceRef.current === workspaceId) return;
+    initWorkspaceRef.current = workspaceId;
     fetchMembers();
-    fetchSpaces();
     fetchCustomRoles();
     checkCustomRoleEntitlement();
   }, [workspaceId]);
@@ -132,6 +139,11 @@ export default function MembersPage() {
       // non-critical
     }
   };
+
+  useEffect(() => {
+    if (!showInviteModal || spaces.length > 0) return;
+    fetchSpaces();
+  }, [showInviteModal, spaces.length]);
 
   // Socket.IO listeners for real-time member updates
   useEffect(() => {
@@ -270,8 +282,31 @@ export default function MembersPage() {
       toast.success(isCustom ? 'Custom role assigned' : 'Member role updated');
       fetchMembers(); // Refresh to get the fully populated customRole object
     } catch (error: any) {
-      console.error('Failed to update role:', error);
+      if (error?.response?.status !== 403) {
+        console.error('Failed to update role:', error);
+      }
       const errorMessage = error.response?.data?.message || 'Failed to update role';
+      toast.error(errorMessage);
+      setError(errorMessage);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleDoneApprovalToggle = async (userId: string, canMarkTaskDone: boolean) => {
+    try {
+      setUpdating(userId);
+      setError(null);
+      await api.patch(`/workspaces/${workspaceId}/members/${userId}`, { canMarkTaskDone });
+      setMembers((prev) =>
+        prev.map((member) =>
+          member._id === userId ? { ...member, canMarkTaskDone } : member
+        )
+      );
+      toast.success(canMarkTaskDone ? 'Done approval enabled' : 'Done approval disabled');
+    } catch (error: any) {
+      console.error('Failed to update done-approval toggle:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to update permission';
       toast.error(errorMessage);
       setError(errorMessage);
     } finally {
@@ -582,15 +617,6 @@ export default function MembersPage() {
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   if (loading) {
     return <TableSkeleton />;
   }
@@ -656,6 +682,7 @@ export default function MembersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Can Mark Done</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -664,9 +691,10 @@ export default function MembersPage() {
                 <TableRow key={member._id}>
                   {/* Avatar */}
                   <TableCell>
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold">
-                      {getInitials(member.name)}
-                    </div>
+                    <UserAvatar
+                      user={member}
+                      className="w-10 h-10"
+                    />
                   </TableCell>
 
                   {/* Name */}
@@ -738,6 +766,24 @@ export default function MembersPage() {
                   </TableCell>
 
                   {/* Actions */}
+                  <TableCell>
+                    {!member.isOwner ? (
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={!!member.canMarkTaskDone}
+                          onCheckedChange={(checked) => handleDoneApprovalToggle(member._id, checked)}
+                          disabled={!can('change_member_role') || updating === member._id}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {member.canMarkTaskDone ? 'Enabled' : 'Disabled'}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Always allowed</span>
+                    )}
+                  </TableCell>
+
+                  {/* Actions */}
                   <TableCell className="text-right">
                     {can('remove_member') && !member.isOwner && (
                       <Button
@@ -761,9 +807,10 @@ export default function MembersPage() {
           {members.map((member) => (
             <div key={member._id} className="bg-card rounded-xl p-4 shadow-sm border border-border">
               <div className="flex items-start gap-3 mb-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                  {getInitials(member.name)}
-                </div>
+                <UserAvatar
+                  user={member}
+                  className="w-12 h-12 flex-shrink-0"
+                />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <h3 className="font-medium text-card-foreground truncate">{member.name}</h3>
@@ -825,6 +872,17 @@ export default function MembersPage() {
                   </Button>
                 )}
               </div>
+
+              {!member.isOwner && (
+                <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                  <span className="text-sm text-muted-foreground">Can mark task as Done</span>
+                  <Switch
+                    checked={!!member.canMarkTaskDone}
+                    onCheckedChange={(checked) => handleDoneApprovalToggle(member._id, checked)}
+                    disabled={!can('change_member_role') || updating === member._id}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>

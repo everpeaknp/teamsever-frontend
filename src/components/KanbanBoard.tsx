@@ -12,6 +12,7 @@ interface KanbanBoardProps {
   tasks: Task[];
   onStatusChange: (taskId: string, newStatus: Task['status']) => void;
   canChangeStatus: boolean;
+  canMarkDone?: boolean;
   canDelete?: boolean;
   spaceMembers: any[];
 }
@@ -23,10 +24,18 @@ const COLUMNS = [
   { id: 'done', title: 'Done', headingColor: 'text-green-600 dark:text-green-400' },
 ] as const;
 
-export function KanbanBoard({ tasks, onStatusChange, canChangeStatus, canDelete = false, spaceMembers }: KanbanBoardProps) {
+export function KanbanBoard({
+  tasks,
+  onStatusChange,
+  canChangeStatus,
+  canMarkDone = false,
+  canDelete = false,
+  spaceMembers,
+}: KanbanBoardProps) {
   const [cards, setCardsLocal] = useState<Task[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isOverDeleteZone, setIsOverDeleteZone] = useState(false);
+  const [blockedTaskId, setBlockedTaskId] = useState<string | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { deleteTask, setTasks } = useTaskStore();
@@ -50,6 +59,11 @@ export function KanbanBoard({ tasks, onStatusChange, canChangeStatus, canDelete 
   const handleDragEnd = () => {
     setIsDragging(false);
     setIsOverDeleteZone(false);
+  };
+
+  const handleBlockedDoneDrop = (taskId: string) => {
+    setBlockedTaskId(taskId);
+    setTimeout(() => setBlockedTaskId(null), 450);
   };
 
   const handleStatusChange = (taskId: string, newStatus: Task['status']) => {
@@ -165,6 +179,9 @@ export function KanbanBoard({ tasks, onStatusChange, canChangeStatus, canDelete 
               setCards={setCards}
               onStatusChange={handleStatusChange}
               canChangeStatus={canChangeStatus}
+              canMarkDone={canMarkDone}
+              blockedTaskId={blockedTaskId}
+              onBlockedDoneDrop={handleBlockedDoneDrop}
               spaceMembers={spaceMembers}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}

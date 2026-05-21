@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Task } from '@/types';
 import { TaskCard } from './TaskCard';
 import { DropIndicator } from './DropIndicator';
+import { toast } from 'sonner';
 
 interface KanbanColumnProps {
   title: string;
@@ -13,6 +14,9 @@ interface KanbanColumnProps {
   setCards: (cards: Task[]) => void;
   onStatusChange: (taskId: string, newStatus: Task['status']) => void;
   canChangeStatus: boolean;
+  canMarkDone: boolean;
+  blockedTaskId: string | null;
+  onBlockedDoneDrop: (taskId: string) => void;
   spaceMembers: any[];
   onDragStart: () => void;
   onDragEnd: () => void;
@@ -26,6 +30,9 @@ export function KanbanColumn({
   setCards,
   onStatusChange,
   canChangeStatus,
+  canMarkDone,
+  blockedTaskId,
+  onBlockedDoneDrop,
   spaceMembers,
   onDragStart,
   onDragEnd,
@@ -63,6 +70,14 @@ export function KanbanColumn({
       if (!cardToTransfer) return;
 
       const oldStatus = cardToTransfer.status;
+
+      // Hard block moving to Done without explicit Done-approval permission.
+      if (column === 'done' && oldStatus !== 'done' && !canMarkDone) {
+        onBlockedDoneDrop(cardId);
+        toast.error('Task is locked in review. Done approval is required.');
+        return;
+      }
+
       cardToTransfer = { ...cardToTransfer, status: column as Task['status'] };
 
       copy = copy.filter((c) => c._id !== cardId);
@@ -167,6 +182,7 @@ export function KanbanColumn({
               task={c}
               handleDragStart={handleDragStart}
               canDrag={canChangeStatus}
+              isBlocked={blockedTaskId === c._id}
               spaceMembers={spaceMembers}
             />
           );
