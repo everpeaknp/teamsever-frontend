@@ -61,17 +61,24 @@ const PERMISSIONS = {
   create_space: ['owner', 'admin', 'operations_manager', 'project_manager'],
   delete_space: ['owner', 'admin', 'operations_manager', 'project_manager'],
   update_space: ['owner', 'admin', 'operations_manager', 'project_manager', 'member'],
+  VIEW_SPACE: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member', 'guest'],
   
   // List permissions
   create_list: ['owner', 'admin', 'operations_manager', 'project_manager', 'member'],
   delete_list: ['owner', 'admin', 'operations_manager', 'project_manager'],
   update_list: ['owner', 'admin', 'operations_manager', 'project_manager', 'member'],
+  CREATE_LIST: ['owner', 'admin', 'operations_manager', 'project_manager', 'member'],
+  VIEW_LIST: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member', 'guest'],
   
   // Task permissions
   create_task: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
   delete_task: ['owner', 'admin', 'operations_manager', 'project_manager'],
   update_task: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
   assign_task: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'member'],
+  CREATE_FOLDER: ['owner', 'admin', 'operations_manager', 'project_manager'],
+  VIEW_FOLDER: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member', 'guest'],
+  CREATE_TASK: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
+  VIEW_TASK: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member', 'guest'],
   
   // View permissions
   view_workspace: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member', 'guest'],
@@ -96,10 +103,17 @@ interface AuthState {
   // Current workspace context
   currentWorkspaceId: string | null;
   currentWorkspaceRole: Role | null;
+  currentWorkspacePermissionAdditions: string[];
+  currentWorkspaceRestrictedPermissions: string[];
   
   // Actions
   setUser: (user: User) => void;
-  setWorkspaceContext: (workspaceId: string, role: Role) => void;
+  setWorkspaceContext: (
+    workspaceId: string,
+    role: Role,
+    permissionAdditions?: string[],
+    restrictedPermissions?: string[]
+  ) => void;
   clearWorkspaceContext: () => void;
   clearUser: () => void;
   
@@ -123,6 +137,8 @@ export const useAuthStore = create<AuthState>()(
       userEmail: null,
       currentWorkspaceId: null,
       currentWorkspaceRole: null,
+      currentWorkspacePermissionAdditions: [],
+      currentWorkspaceRestrictedPermissions: [],
 
       // Set user info
       setUser: (user: User) => {
@@ -142,13 +158,27 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // Set current workspace context
-      setWorkspaceContext: (workspaceId, role) => {
-        set({ currentWorkspaceId: workspaceId, currentWorkspaceRole: role });
+      setWorkspaceContext: (workspaceId, role, permissionAdditions = [], restrictedPermissions = []) => {
+        // normalize permission additions/restricted to lowercase keys
+        const normalizedAdditions = (permissionAdditions || []).map((p) => String(p).toLowerCase());
+        const normalizedRestricted = (restrictedPermissions || []).map((p) => String(p).toLowerCase());
+
+        set({
+          currentWorkspaceId: workspaceId,
+          currentWorkspaceRole: role,
+          currentWorkspacePermissionAdditions: normalizedAdditions,
+          currentWorkspaceRestrictedPermissions: normalizedRestricted,
+        });
       },
 
       // Clear workspace context
       clearWorkspaceContext: () => {
-        set({ currentWorkspaceId: null, currentWorkspaceRole: null });
+        set({
+          currentWorkspaceId: null,
+          currentWorkspaceRole: null,
+          currentWorkspacePermissionAdditions: [],
+          currentWorkspaceRestrictedPermissions: [],
+        });
       },
 
       // Clear all user data
@@ -165,14 +195,33 @@ export const useAuthStore = create<AuthState>()(
 
       // Check if user has specific permission
       can: (permission: Permission) => {
-        const { currentWorkspaceRole } = get();
-        
+        const {
+          currentWorkspaceRole,
+          currentWorkspacePermissionAdditions,
+          currentWorkspaceRestrictedPermissions,
+        } = get();
+
         if (!currentWorkspaceRole) {
           return false;
         }
 
-        const allowedRoles = PERMISSIONS[permission] as readonly Role[];
-        return allowedRoles.includes(currentWorkspaceRole);
+        const normalizedPermission = String(permission).toLowerCase();
+
+        // Check restricted (normalized)
+        if (currentWorkspaceRestrictedPermissions.map((p) => p.toLowerCase()).includes(normalizedPermission)) {
+          return false;
+        }
+
+        // Check additions (normalized)
+        if (currentWorkspacePermissionAdditions.map((p) => p.toLowerCase()).includes(normalizedPermission)) {
+          return true;
+        }
+
+        // Fallback to PERMISSIONS map - try exact key then lowercase key
+        const allowedRoles = (PERMISSIONS as any)[permission] || (PERMISSIONS as any)[normalizedPermission];
+        if (!allowedRoles) return false;
+
+        return (allowedRoles as readonly Role[]).includes(currentWorkspaceRole);
       },
 
       // Check if user has specific role
@@ -210,6 +259,8 @@ export const useAuthStore = create<AuthState>()(
         userEmail: state.userEmail,
         currentWorkspaceId: state.currentWorkspaceId,
         currentWorkspaceRole: state.currentWorkspaceRole,
+        currentWorkspacePermissionAdditions: state.currentWorkspacePermissionAdditions,
+        currentWorkspaceRestrictedPermissions: state.currentWorkspaceRestrictedPermissions,
       }),
     }
   )

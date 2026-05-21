@@ -55,7 +55,7 @@ export const HierarchyItemComponent = React.memo(function HierarchyItemComponent
   const toggleFavorite = useUIStore(state => state.toggleFavorite);
   
   const openModal = useModalStore(state => state.openModal);
-  const { isAdmin, isOwner } = usePermissions();
+  const { can, isAdmin, isOwner } = usePermissions();
   const { user, setUser } = useAuthStore();
   
   const [isHovered, setIsHovered] = useState(false);
@@ -93,14 +93,17 @@ export const HierarchyItemComponent = React.memo(function HierarchyItemComponent
       const folderLevel = getFolderPermissionLevelForItem();
       const hasFullSpaceAccess = spaceLevel === 'FULL';
       const hasFullFolderAccess = folderLevel === 'FULL';
-      const canManageByPermission = item.type === 'folder'
-        ? (hasFullSpaceAccess || hasFullFolderAccess)
-        : hasFullSpaceAccess;
 
-      setCanCreateContent(isAdminOrOwner || canManageByPermission);
-      setCanManageItem(isAdminOrOwner || canManageByPermission);
+      setCanCreateContent(
+        isAdminOrOwner ||
+        (item.type === 'space' && can('CREATE_FOLDER')) ||
+        (item.type === 'folder' && can('CREATE_LIST')) ||
+        hasFullSpaceAccess ||
+        hasFullFolderAccess
+      );
+      setCanManageItem(isAdminOrOwner || hasFullSpaceAccess || hasFullFolderAccess);
     }
-  }, [userId, isAdminOrOwner, item._id, item.type, parentSpaceId]);
+  }, [userId, isAdminOrOwner, can, item._id, item.type, parentSpaceId]);
 
   // Admins/owners/full-space can manage folders/lists
   // Space-level destructive/admin actions stay admin/owner only.
@@ -293,7 +296,7 @@ const getRoute = () => {
           )}
 
           {/* Hover Actions */}
-          {isHovered && canManageItem && (
+          {isHovered && (canManageItem || canCreateContent) && (
             <div className="flex items-center gap-0.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
               {/* Add Button - For spaces: create folder */}
               {item.type === 'space' && canCreateContent && (

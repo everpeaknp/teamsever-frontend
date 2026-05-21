@@ -151,6 +151,26 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] 
     });
   };
 
+  const formatDisplayValue = (value: any) => {
+    if (value === null || value === undefined) return 'None';
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+    if (Array.isArray(value)) {
+      return value.length > 0 ? `${value.length} item${value.length === 1 ? '' : 's'}` : 'None';
+    }
+    if (typeof value === 'object') {
+      return value.name || value.email || value.title || value.id || value._id || 'Unknown';
+    }
+    return String(value);
+  };
+
+  const getUserLabel = (value: any) => {
+    if (!value) return 'Unknown User';
+    if (typeof value === 'string') return value;
+    return value.name || value.email || value.id || value._id || 'Unknown User';
+  };
+
   const getActivityIcon = (activity: any) => {
     // Workspace-level activities
     const iconMap: any = {
@@ -211,13 +231,13 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] 
     if (activity.description) {
       return (
         <>
-          <span className="font-semibold">{user.name}</span>
+          <span className="font-semibold">{getUserLabel(user)}</span>
           {' '}
           {activity.description}
           {targetUser && activity.type !== 'member_joined' && (
             <>
               {' '}
-              <span className="font-semibold">{targetUser.name}</span>
+              <span className="font-semibold">{getUserLabel(targetUser)}</span>
             </>
           )}
         </>
@@ -237,7 +257,7 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] 
     if (activity.type === 'comment') {
       return (
         <>
-          <span className="font-semibold">{user.name}</span>
+          <span className="font-semibold">{getUserLabel(user)}</span>
           {' commented on '}
           <span className="text-blue-600 dark:text-blue-400 font-medium">{taskTitle}</span>
         </>
@@ -259,7 +279,7 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] 
       if (activity.fieldChanged === 'title' && !activity.oldValue) {
         return (
           <>
-            <span className="font-semibold">{user.name}</span>
+            <span className="font-semibold">{getUserLabel(user)}</span>
             {' created task '}
             <span className="text-blue-600 dark:text-blue-400 font-medium">{taskTitle}</span>
           </>
@@ -269,11 +289,15 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] 
       // Task update
       return (
         <>
-          <span className="font-semibold">{user.name}</span>
+          <span className="font-semibold">{getUserLabel(user)}</span>
           {' changed '}
           <span className="font-medium">{field}</span>
           {' on '}
           <span className="text-blue-600 dark:text-blue-400 font-medium">{taskTitle}</span>
+          {' '}
+          <span className="text-xs text-muted-foreground">
+            ({formatDisplayValue(activity.oldValue)} → {formatDisplayValue(activity.newValue)})
+          </span>
         </>
       );
     }
@@ -281,7 +305,7 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] 
     if (activity.type === 'clock_in') {
       return (
         <>
-          <span className="font-semibold">{user.name}</span>
+          <span className="font-semibold">{getUserLabel(user)}</span>
           {' '}
           <span className="text-emerald-600 font-medium">clocked in</span>
         </>
@@ -294,7 +318,7 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] 
       
       return (
         <>
-          <span className="font-semibold">{user.name}</span>
+          <span className="font-semibold">{getUserLabel(user)}</span>
           {' '}
           <span className="text-orange-600 font-medium">clocked out</span>
           {formattedDuration && <span className="text-xs text-muted-foreground ml-2">({formattedDuration} shift)</span>}
@@ -440,14 +464,14 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] 
                                   <div className="flex items-center gap-2 mt-2">
                                     {activity.fieldChanged === 'status' && (
                                       <>
-                                        {getStatusBadge(activity.oldValue)}
+                                        {getStatusBadge(String(activity.oldValue || 'todo'))}
                                         <span className="text-xs text-muted-foreground">→</span>
-                                        {getStatusBadge(activity.newValue)}
+                                        {getStatusBadge(String(activity.newValue || 'todo'))}
                                       </>
                                     )}
                                     {activity.fieldChanged !== 'status' && (
                                       <span className="text-xs text-muted-foreground">
-                                        {activity.oldValue} → {activity.newValue}
+                                        {formatDisplayValue(activity.oldValue)} → {formatDisplayValue(activity.newValue)}
                                       </span>
                                     )}
                                   </div>

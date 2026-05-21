@@ -418,11 +418,47 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
         throw new Error('Workspace not found');
       }
 
+      const currentUserId = user?._id;
+      const currentWorkspaceMember = currentUserId
+        ? workspace.members?.find((member: any) => {
+            const memberUserId = typeof member.user === 'string' ? member.user : member.user?._id?.toString?.();
+            return memberUserId === currentUserId;
+          })
+        : null;
+
+      const workspaceRolePermissionAdditions = Array.isArray(workspace.rolePermissionAdditions)
+        ? workspace.rolePermissionAdditions
+            .filter((entry: any) => {
+              const entryRole = typeof entry.role === 'string' ? entry.role.toLowerCase() : '';
+              const currentRole = (currentWorkspaceMember?.role || 'member').toLowerCase();
+              return entryRole === currentRole;
+            })
+            .flatMap((entry: any) => (Array.isArray(entry.permissions) ? entry.permissions : []))
+        : [];
+
+      const memberAdditionalPermissions = Array.isArray(currentWorkspaceMember?.additionalPermissions)
+        ? currentWorkspaceMember.additionalPermissions
+        : [];
+
+      const memberRestrictedPermissions = Array.isArray(currentWorkspaceMember?.restrictedPermissions)
+        ? currentWorkspaceMember.restrictedPermissions
+        : [];
+
+      const effectivePermissionAdditions = Array.from(new Set([
+        ...workspaceRolePermissionAdditions,
+        ...memberAdditionalPermissions,
+      ]));
+      const effectiveRestrictedPermissions = Array.from(new Set(memberRestrictedPermissions)) as string[];
+
       // Set workspace context for permissions
       if (user?._id) {
-        const userMember = workspace.members?.find((m: any) => m.user === user._id || m.user._id === user._id);
-        if (userMember) {
-          setWorkspaceContext(workspace._id, userMember.role);
+        if (currentWorkspaceMember) {
+          setWorkspaceContext(
+            workspace._id,
+            currentWorkspaceMember.role,
+            effectivePermissionAdditions,
+            effectiveRestrictedPermissions
+          );
         }
       }
 
