@@ -76,6 +76,7 @@ const PERMISSIONS = {
   update_task: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
   assign_task: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'member'],
   CREATE_FOLDER: ['owner', 'admin', 'operations_manager', 'project_manager'],
+  delete_folder: ['owner', 'admin', 'operations_manager', 'project_manager'],
   VIEW_FOLDER: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member', 'guest'],
   CREATE_TASK: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
   VIEW_TASK: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member', 'guest'],
