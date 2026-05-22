@@ -155,15 +155,17 @@ export default function ListView() {
         return;
       }
       inFlightFetchRef.current = true;
-      const [workspaceRes, spaceRes, listRes] = await Promise.all([
+      const [workspaceRes, spaceRes, listRes, membersRes] = await Promise.all([
         api.get(`/workspaces/${workspaceId}`),
         api.get(`/spaces/${spaceId}`),
         api.get(`/lists/${listId}`),
+        api.get(`/workspaces/${workspaceId}/members`),
       ]);
 
       const workspaceData = workspaceRes.data.data;
       const spaceData = spaceRes.data.data;
       const listData = listRes.data.data;
+      const membersData = membersRes.data.data || [];
 
       setWorkspace(workspaceData);
       setSpace(spaceData);
@@ -190,8 +192,8 @@ export default function ListView() {
         : workspaceData.owner?._id;
       
       const isOwner = workspaceOwnerId === userId;
-      const workspaceMember = workspaceData.members.find((m: any) => {
-        const memberId = typeof m.user === 'string' ? m.user : m.user._id;
+      const workspaceMember = membersData.find((m: any) => {
+        const memberId = typeof m._id === 'string' ? m._id : m._id?.toString?.();
         return memberId === userId;
       });
       const isAdmin = workspaceMember?.role === 'admin' || workspaceMember?.role === 'owner';

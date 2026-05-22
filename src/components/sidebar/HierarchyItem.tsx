@@ -94,6 +94,10 @@ export const HierarchyItemComponent = React.memo(function HierarchyItemComponent
       const hasFullSpaceAccess = spaceLevel === 'FULL';
       const hasFullFolderAccess = folderLevel === 'FULL';
 
+      const canDeleteSpace = item.type === 'space' && can('DELETE_SPACE');
+      const canDeleteFolder = item.type === 'folder' && can('DELETE_FOLDER');
+      const canDeleteList = item.type === 'list' && can('DELETE_LIST');
+
       setCanCreateContent(
         isAdminOrOwner ||
         (item.type === 'space' && can('CREATE_FOLDER')) ||
@@ -101,7 +105,14 @@ export const HierarchyItemComponent = React.memo(function HierarchyItemComponent
         hasFullSpaceAccess ||
         hasFullFolderAccess
       );
-      setCanManageItem(isAdminOrOwner || hasFullSpaceAccess || hasFullFolderAccess);
+      setCanManageItem(
+        isAdminOrOwner ||
+        hasFullSpaceAccess ||
+        hasFullFolderAccess ||
+        canDeleteSpace ||
+        canDeleteFolder ||
+        canDeleteList
+      );
     }
   }, [userId, isAdminOrOwner, can, item._id, item.type, parentSpaceId]);
 

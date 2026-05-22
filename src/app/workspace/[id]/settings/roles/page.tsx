@@ -783,14 +783,14 @@ export default function RolesPage() {
     setShowSystemRoleModal(true);
   };
 
-  const loadMemberPermissionAdditions = useCallback(async (memberId: string) => {
+  const loadMemberPermissionAdditions = useCallback(async (memberId: string, forceRefresh = false) => {
     if (!memberId) {
       setMemberAdditionalPermissions([]);
       setMemberRestrictedPermissions([]);
       return;
     }
 
-    if (Object.prototype.hasOwnProperty.call(memberPermissionMap, memberId)) {
+    if (!forceRefresh && Object.prototype.hasOwnProperty.call(memberPermissionMap, memberId)) {
       setMemberAdditionalPermissions(memberPermissionMap[memberId].additionalPermissions || []);
       setMemberRestrictedPermissions(memberPermissionMap[memberId].restrictedPermissions || []);
       return;
@@ -940,6 +940,7 @@ export default function RolesPage() {
           restrictedPermissions: memberRestrictedPermissions,
         }
       }));
+      await loadMemberPermissionAdditions(selectedMemberId, true);
       toast.success('Member permission overrides updated');
       setShowMemberModal(false);
     } catch (error: any) {
@@ -963,6 +964,7 @@ export default function RolesPage() {
         ...prev,
         [selectedMemberId]: { additionalPermissions: [], restrictedPermissions: [] }
       }));
+      await loadMemberPermissionAdditions(selectedMemberId, true);
       toast.success('Member overrides reset');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to reset member additions');

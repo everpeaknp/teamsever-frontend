@@ -83,8 +83,11 @@ export function YourTasks({ tasks, userId, workspaceId, mode = 'all' }: YourTask
     const userLists: ListMembership[] = [];
 
     hierarchy.spaces.forEach((space: any) => {
+      const spaceLists = Array.isArray(space?.lists) ? space.lists : [];
+      const spaceFolders = Array.isArray(space?.folders) ? space.folders : [];
+
       // Check standalone lists
-      space.lists.forEach((list: any) => {
+      spaceLists.forEach((list: any) => {
         if (list.isMember) {
           userLists.push({
             _id: list._id,
@@ -97,8 +100,10 @@ export function YourTasks({ tasks, userId, workspaceId, mode = 'all' }: YourTask
       });
 
       // Check folders
-      space.folders.forEach((folder: any) => {
-        folder.lists.forEach((list: any) => {
+      spaceFolders.forEach((folder: any) => {
+        const folderLists = Array.isArray(folder?.lists) ? folder.lists : [];
+
+        folderLists.forEach((list: any) => {
           if (list.isMember) {
             userLists.push({
               _id: list._id,
