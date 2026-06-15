@@ -241,6 +241,22 @@ export async function loginWithGithub(idToken: string): Promise<void> {
 }
 
 /**
+ * Login with Apple
+ */
+export async function loginWithApple(idToken: string): Promise<void> {
+  try {
+    const response = await api.post('/auth/apple', { idToken });
+    const authData = normalizeAuthResponse(response.data);
+    storeAuthData(authData);
+    console.log('✅ Apple login success');
+  } catch (error: any) {
+    console.error('❌ Apple login error:', error);
+    const backendMessage = error.response?.data?.message || 'Apple login failed';
+    throw new Error(backendMessage);
+  }
+}
+
+/**
  * Request a password reset email for the given address.
  * The backend should respond with 200 regardless of whether the email exists.
  */

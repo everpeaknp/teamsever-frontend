@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { login, loginWithGoogle, loginWithGithub, getCurrentUser } from '@/lib/auth';
-import { signInWithGoogle, signInWithGithub } from '@/lib/firebase';
+import { login, loginWithGoogle, loginWithGithub, loginWithApple, getCurrentUser } from '@/lib/auth';
+import { signInWithGoogle, signInWithGithub, signInWithApple } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Eye, 
@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -109,6 +110,24 @@ export default function LoginPage() {
       }
     } finally {
       setGithubLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    setError('');
+    setAppleLoading(true);
+    try {
+      const result = await signInWithApple();
+      const idToken = await result.user.getIdToken();
+      await loginWithApple(idToken);
+      const urlParams = new URLSearchParams(window.location.search);
+      router.push(urlParams.get('redirect') || '/dashboard');
+    } catch (err: any) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message || 'Apple login failed');
+      }
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -229,7 +248,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               onClick={handleGoogleLogin}
               disabled={googleLoading}
@@ -257,6 +276,20 @@ export default function LoginPage() {
                 <Github className="w-4 h-4 dark:text-white" />
               )}
             </button>
+            <button
+              onClick={handleAppleLogin}
+              disabled={appleLoading}
+              className="flex items-center justify-center gap-2 h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
+              aria-label="Continue with Apple"
+            >
+              {appleLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-slate-600 dark:text-white" />
+              ) : (
+                <svg className="w-4 h-4 dark:fill-white fill-black" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M16.365 1.43c0 1.14-.45 2.24-1.2 3.05-.82.9-2.18 1.6-3.32 1.5-.13-1.1.4-2.28 1.16-3.08.84-.88 2.28-1.54 3.36-1.47zM20.5 17.5c-.55 1.26-.83 1.8-1.55 2.9-1 1.53-2.41 3.43-4.15 3.44-1.55.02-1.96-1.02-4.06-1.01-2.1.01-2.55 1.03-4.11 1-1.75-.02-3.1-1.74-4.1-3.27-2.79-4.28-3.08-9.3-1.37-11.92 1.22-1.9 3.16-3.02 4.99-3.02 1.88 0 3.06 1.03 4.6 1.03 1.5 0 2.41-1.03 4.57-1.03 1.63 0 3.36.89 4.58 2.43-3.98 2.18-3.34 7.8.1 9.45z"/>
+                </svg>
+              )}
+            </button>
           </div>
         </div>
 
@@ -277,9 +310,9 @@ export default function LoginPage() {
           </div>
           
           <div className="flex items-center justify-center gap-4 text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-[0.2em] pt-4">
-            <span>Privacy</span>
+            <Link href="/privacy-policy" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Privacy</Link>
             <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-800" />
-            <span>Terms</span>
+            <Link href="/terms-and-conditions" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Terms</Link>
             <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-800" />
             <span>© 2026</span>
           </div>

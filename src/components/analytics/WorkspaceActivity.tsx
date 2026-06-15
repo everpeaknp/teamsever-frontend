@@ -28,9 +28,10 @@ interface WorkspaceActivityProps {
   workspaceId: string;
   userId: string;
   initialActivities?: any[];
+  managedByParent?: boolean;
 }
 
-export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] }: WorkspaceActivityProps) {
+export function WorkspaceActivity({ workspaceId, userId, initialActivities = [], managedByParent = false }: WorkspaceActivityProps) {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(initialActivities.length === 0);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -50,8 +51,15 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] 
       setLoading(false);
       return;
     }
+    if (managedByParent && !startDate && !endDate) {
+      setActivities([]);
+      setSkip(0);
+      setHasMore(false);
+      setLoading(false);
+      return;
+    }
     fetchActivities(true);
-  }, [workspaceId, startDate, endDate, initialActivities]);
+  }, [workspaceId, startDate, endDate, initialActivities, managedByParent]);
 
   const fetchActivities = async (isInitial = false) => {
     try {
@@ -66,17 +74,17 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [] 
       const limit = isInitial ? INITIAL_LIMIT : LOAD_MORE_LIMIT;
       
       console.log('[WorkspaceActivity] Fetching activities for workspace:', workspaceId);
-      const response = await api.get(`/workspaces/${workspaceId}/activity`, {
+      const response = await api.get(`/v2/workspaces/${workspaceId}/analytics/activity`, {
         params: {
-          limit: limit + 1, // Fetch one extra to check if there are more
-          skip: currentSkip,
-          startDate: startDate || undefined,
-          endDate: endDate || undefined,
+          page: Math.floor(currentSkip / limit) + 1,
+          limit: limit + 1,
+          from: startDate || undefined,
+          to: endDate || undefined,
         },
       });
       
       console.log('[WorkspaceActivity] Response:', response.data);
-      const fetchedActivities = response.data.data || [];
+      const fetchedActivities = response.data?.data?.items || [];
       
       // Check if there are more activities
       const hasMoreActivities = fetchedActivities.length > limit;

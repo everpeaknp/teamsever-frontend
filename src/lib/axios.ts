@@ -19,6 +19,7 @@ api.interceptors.request.use(
         config.url?.includes('/auth/register') ||
         config.url?.includes('/auth/google') ||
         config.url?.includes('/auth/github') ||
+        config.url?.includes('/auth/apple') ||
         config.url?.includes('/auth/forgot-password') ||
         config.url?.includes('/auth/reset-password');
       

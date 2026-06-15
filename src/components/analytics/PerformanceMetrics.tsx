@@ -29,8 +29,9 @@ interface TeamMember {
   user: {
     _id: string;
     name: string;
-    email: string;
+    email?: string;
     avatar?: string;
+    profilePicture?: string;
   };
   metrics: PerformanceMetrics;
 }
@@ -41,6 +42,7 @@ interface PerformanceMetricsProps {
   canViewTeamPerformance?: boolean;
   initialMyMetrics?: PerformanceMetrics | null;
   initialTeamMetrics?: TeamMember[];
+  managedByParent?: boolean;
 }
 
 export function PerformanceMetrics({
@@ -48,7 +50,8 @@ export function PerformanceMetrics({
   userId,
   canViewTeamPerformance = false,
   initialMyMetrics = null,
-  initialTeamMetrics = []
+  initialTeamMetrics = [],
+  managedByParent = false
 }: PerformanceMetricsProps) {
   const router = useRouter();
   const [myMetrics, setMyMetrics] = useState<PerformanceMetrics | null>(null);
@@ -56,6 +59,12 @@ export function PerformanceMetrics({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (managedByParent) {
+      setMyMetrics(initialMyMetrics);
+      setTeamMetrics(canViewTeamPerformance ? initialTeamMetrics : []);
+      setLoading(false);
+      return;
+    }
     if (initialMyMetrics) {
       setMyMetrics(initialMyMetrics);
       setTeamMetrics(canViewTeamPerformance ? initialTeamMetrics : []);
@@ -66,7 +75,7 @@ export function PerformanceMetrics({
       return;
     }
     fetchPerformanceData(true);
-  }, [workspaceId, userId, canViewTeamPerformance, initialMyMetrics, initialTeamMetrics]);
+  }, [workspaceId, userId, canViewTeamPerformance, initialMyMetrics, initialTeamMetrics, managedByParent]);
 
   const fetchPerformanceData = async (includeMyPerformance = true) => {
     try {
@@ -76,7 +85,7 @@ export function PerformanceMetrics({
         requests.push(api.get(`/performance/me/workspace/${workspaceId}`));
       }
       if (canViewTeamPerformance) {
-        requests.push(api.get(`/performance/team/workspace/${workspaceId}`));
+        requests.push(api.get(`/v2/workspaces/${workspaceId}/analytics/team-performance?page=1&limit=100&sort=totalTasksFinished&order=desc`));
       }
 
       const responses = await Promise.all(requests);
@@ -86,7 +95,7 @@ export function PerformanceMetrics({
         responseIndex += 1;
       }
       if (canViewTeamPerformance) {
-        setTeamMetrics(responses[responseIndex]?.data?.data || []);
+        setTeamMetrics(responses[responseIndex]?.data?.data?.items || []);
       } else {
         setTeamMetrics([]);
       }

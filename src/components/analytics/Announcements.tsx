@@ -25,6 +25,7 @@ interface AnnouncementsProps {
   canCreateAnnouncement: boolean;
   canDeleteAnnouncement: boolean;
   initialAnnouncements?: Announcement[];
+  managedByParent?: boolean;
 }
 
 export function Announcements({
@@ -32,6 +33,7 @@ export function Announcements({
   canCreateAnnouncement,
   canDeleteAnnouncement,
   initialAnnouncements = [],
+  managedByParent = false,
 }: AnnouncementsProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [text, setText] = useState('');
@@ -39,8 +41,8 @@ export function Announcements({
 
   const fetchAnnouncements = async () => {
     try {
-      const res = await api.get(`/workspaces/${workspaceId}/announcements`);
-      setAnnouncements(res.data.data || []);
+      const res = await api.get(`/v2/workspaces/${workspaceId}/analytics/announcements?page=1&limit=20`);
+      setAnnouncements(res.data?.data?.items || []);
     } catch (error) {
       console.error('Failed to fetch announcements:', error);
       toast.error('Failed to load announcements');
@@ -86,6 +88,10 @@ export function Announcements({
   };
 
   useEffect(() => {
+    if (managedByParent) {
+      setAnnouncements(initialAnnouncements);
+      return;
+    }
     if (initialAnnouncements.length > 0) {
       setAnnouncements(initialAnnouncements);
       return;

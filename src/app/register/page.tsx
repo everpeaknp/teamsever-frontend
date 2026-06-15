@@ -192,6 +192,19 @@ export default function RegisterPage() {
               </>
             )}
           </button>
+          <div className="mt-3">
+            <button
+              type="button"
+              disabled
+              className="flex items-center justify-center gap-2 w-full h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl opacity-60 cursor-not-allowed"
+              title="Apple sign up is available on the login screen"
+            >
+              <svg className="w-4 h-4 dark:fill-white fill-black" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M16.365 1.43c0 1.14-.45 2.24-1.2 3.05-.82.9-2.18 1.6-3.32 1.5-.13-1.1.4-2.28 1.16-3.08.84-.88 2.28-1.54 3.36-1.47zM20.5 17.5c-.55 1.26-.83 1.8-1.55 2.9-1 1.53-2.41 3.43-4.15 3.44-1.55.02-1.96-1.02-4.06-1.01-2.1.01-2.55 1.03-4.11 1-1.75-.02-3.1-1.74-4.1-3.27-2.79-4.28-3.08-9.3-1.37-11.92 1.22-1.9 3.16-3.02 4.99-3.02 1.88 0 3.06 1.03 4.6 1.03 1.5 0 2.41-1.03 4.57-1.03 1.63 0 3.36.89 4.58 2.43-3.98 2.18-3.34 7.8.1 9.45z"/>
+              </svg>
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Apple</span>
+            </button>
+          </div>
         </div>
 
         {/* Compact Footer */}
@@ -204,9 +217,9 @@ export default function RegisterPage() {
           </p>
           
           <div className="flex items-center justify-center gap-4 text-[10px] text-slate-400 dark:text-slate-600 font-bold uppercase tracking-[0.2em] pt-4">
-            <span>Privacy</span>
+            <Link href="/privacy-policy" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Privacy</Link>
             <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-800" />
-            <span>Terms</span>
+            <Link href="/terms-and-conditions" className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors">Terms</Link>
             <div className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-800" />
             <span>© 2026</span>
           </div>

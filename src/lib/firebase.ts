@@ -3,6 +3,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   GithubAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   Auth,
   fetchSignInMethodsForEmail,
@@ -49,6 +50,11 @@ googleProvider.setCustomParameters({
 export const githubProvider = new GithubAuthProvider();
 githubProvider.addScope('read:user');
 githubProvider.addScope('user:email');
+
+// Apple Auth Provider
+export const appleProvider = new OAuthProvider('apple.com');
+appleProvider.addScope('email');
+appleProvider.addScope('name');
 
 // Sign in with Google
 export const signInWithGoogle = async () => {
@@ -102,6 +108,17 @@ export const signInWithGithub = async () => {
     }
 
     console.error('GitHub Sign-In Error:', error);
+    throw error;
+  }
+};
+
+// Sign in with Apple
+export const signInWithApple = async () => {
+  try {
+    const result = await signInWithPopup(auth, appleProvider);
+    return result;
+  } catch (error: any) {
+    console.error('Apple Sign-In Error:', error);
     throw error;
   }
 };

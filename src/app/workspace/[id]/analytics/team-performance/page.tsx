@@ -13,8 +13,9 @@ interface TeamMember {
   user: {
     _id: string;
     name: string;
-    email: string;
+    email?: string;
     avatar?: string;
+    profilePicture?: string;
   };
   metrics: {
     totalTasksFinished: number;
@@ -73,9 +74,13 @@ export default function TeamPerformanceDetailsPage() {
         const params = new URLSearchParams();
         if (from) params.set('from', from);
         if (to) params.set('to', to);
+        params.set('page', '1');
+        params.set('limit', '100');
+        params.set('sort', 'totalTasksFinished');
+        params.set('order', 'desc');
         const qs = params.toString();
-        const res = await api.get(`/performance/team/workspace/${workspaceId}${qs ? `?${qs}` : ''}`);
-        setTeamMetrics(res.data?.data || []);
+        const res = await api.get(`/v2/workspaces/${workspaceId}/analytics/team-performance${qs ? `?${qs}` : ''}`);
+        setTeamMetrics(res.data?.data?.items || []);
       } catch (error: any) {
         if (error?.response?.status === 403) {
           router.push(`/workspace/${workspaceId}/analytics`);
@@ -107,7 +112,7 @@ export default function TeamPerformanceDetailsPage() {
       const m = member.metrics;
       return {
         name: member.user.name,
-        email: member.user.email,
+        email: member.user.email || '',
         tasksDone: m.totalTasksFinished,
         assignedCompletion: typeof m.completionRate === 'number' ? `${m.completionRate}%` : 'N/A',
         assignedDone: `${m.assignedTasksDone ?? 0}/${m.assignedTasksTotal ?? 0}`,

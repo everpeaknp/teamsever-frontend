@@ -70,8 +70,8 @@ export function Header() {
           </Button>
           
           <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Image src="/teamsever_logo.png" alt="Teamsever Logo" width={24} height={24} className="rounded-md" />
-            <h1 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">Teamsever</h1>
+            <Image src="/teamsever_logo.png" alt="TeamsEver Logo" width={24} height={24} className="rounded-md" />
+            <h1 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">TeamsEver</h1>
           </Link>
         </div>
 

@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useParams, useSearchParams, usePathname, useRouter } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/axios';
 import {
-    TrendingUp, Users, CheckCircle2, Rocket,
+    TrendingUp, Users, CheckCircle2, Rocket, Loader2,
     BarChart3
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,8 +14,10 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Task } from '@/types';
 import { useRef } from 'react';
+import { TaskStatusChart } from '@/components/analytics/TaskStatusChart';
 
 type AnalyticsView = 'workspace' | 'personal';
+type RangeKey = 'today' | '7d' | '30d' | '90d' | 'all' | 'custom';
 
 // Dynamic imports for heavy chart components - reduces initial bundle size
 const CompletionTrendChart = dynamic(
@@ -23,14 +25,6 @@ const CompletionTrendChart = dynamic(
     { 
         ssr: false,
         loading: () => <Card><CardContent className="pt-6"><Skeleton className="h-[300px] w-full" /></CardContent></Card>
-    }
-);
-
-const TaskStatusChart = dynamic(
-    () => import('@/components/analytics/TaskStatusChart').then(mod => ({ default: mod.TaskStatusChart })),
-    { 
-        ssr: false,
-        loading: () => <Card><CardContent className="pt-6"><Skeleton className="h-[200px] w-full" /></CardContent></Card>
     }
 );
 
@@ -87,8 +81,6 @@ const PerformanceMetrics = dynamic(
 export default function AnalyticsPage() {
     const params = useParams();
     const searchParams = useSearchParams();
-    const pathname = usePathname();
-    const router = useRouter();
     const workspaceId = params.id as string;
     const focusMode = searchParams.get('focus');
     const isDelayedFocus = focusMode === 'delayed-open';
@@ -104,10 +96,20 @@ export default function AnalyticsPage() {
     const [announcements, setAnnouncements] = useState<any[]>([]);
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
     const [performanceData, setPerformanceData] = useState<{ user?: any; team?: any[] } | null>(null);
+    const [trendData, setTrendData] = useState<Array<{ name: string; created: number; completed: number }>>([]);
+    const [trendLoading, setTrendLoading] = useState(false);
+    const [taskStatusSummary, setTaskStatusSummary] = useState<{
+        totalTasks: number;
+        completed: number;
+        delayed: number;
+        distribution: Array<{ label?: string; value?: number }>;
+    } | null>(null);
     const [loading, setLoading] = useState(true);
+    const [summaryLoading, setSummaryLoading] = useState(false);
     const [userId, setUserId] = useState<string>('');
     const [userStatus, setUserStatus] = useState<'active' | 'inactive'>('inactive');
     const [runningTimer, setRunningTimer] = useState<any>(null);
+    const [timeTrackingSummary, setTimeTrackingSummary] = useState<any>(null);
     const [canViewWorkspaceAnalytics, setCanViewWorkspaceAnalytics] = useState(false);
     const [announcementPermissions, setAnnouncementPermissions] = useState({
         canViewAnnouncements: true,
@@ -115,12 +117,21 @@ export default function AnalyticsPage() {
         canDeleteAnnouncements: false,
     });
     const [availableViews, setAvailableViews] = useState<AnalyticsView[]>(['personal']);
+    const initialRangeParam = searchParams.get('range');
+    const initialRange: RangeKey =
+        initialRangeParam === '7d' || initialRangeParam === '30d' || initialRangeParam === '90d' || initialRangeParam === 'all' || initialRangeParam === 'custom'
+            ? initialRangeParam
+            : 'today';
     const [selectedView, setSelectedView] = useState<AnalyticsView>(initialView);
     const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
-    const [range, setRange] = useState<'7d' | '30d' | '90d' | 'all' | 'custom'>('30d');
-    const [customFrom, setCustomFrom] = useState('');
-    const [customTo, setCustomTo] = useState('');
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const [range, setRange] = useState<RangeKey>(initialRange);
+    const [customFrom, setCustomFrom] = useState(todayStr);
+    const [customTo, setCustomTo] = useState(todayStr);
     const backgroundRefreshDoneRef = useRef<Set<string>>(new Set());
+    const viewChangeFromUIRef = useRef(false);
+    const requestSeqRef = useRef(0);
+    const lastFetchedKeyRef = useRef<string>('');
     
     const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
     const CACHE_KEY = `analytics_cache_${workspaceId}_${selectedView}_${range}_${customFrom}_${customTo}`;
@@ -128,6 +139,9 @@ export default function AnalyticsPage() {
     const getPresetDates = useCallback(() => {
         if (range === 'all') return { from: '', to: '' };
         if (range === 'custom') return { from: customFrom, to: customTo };
+        if (range === 'today') {
+            return { from: todayStr, to: todayStr };
+        }
         const now = new Date();
         const from = new Date(now);
         const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
@@ -136,7 +150,7 @@ export default function AnalyticsPage() {
             from: from.toISOString().slice(0, 10),
             to: now.toISOString().slice(0, 10),
         };
-    }, [range, customFrom, customTo]);
+    }, [range, customFrom, customTo, todayStr]);
 
     // Define fetch function with useCallback so it can be passed to children safely
     const fetchAnalyticsData = useCallback(async (force = false) => {
@@ -170,6 +184,9 @@ export default function AnalyticsPage() {
                             setUserId(parsed.userId || '');
                             setUserStatus(parsed.userStatus || 'inactive');
                             setRunningTimer(parsed.runningTimer || null);
+                            setTimeTrackingSummary(parsed.timeTrackingSummary || null);
+                            setTaskStatusSummary(parsed.taskStatusSummary || null);
+                            setTrendData(parsed.trendData || []);
                             setCanViewWorkspaceAnalytics(parsed.canViewWorkspaceAnalytics || false);
                             setAnnouncementPermissions(parsed.announcementPermissions || {
                                 canViewAnnouncements: true,
@@ -178,8 +195,9 @@ export default function AnalyticsPage() {
                             });
                             setAvailableViews(parsed.availableViews || ['personal']);
                             const cachedView: AnalyticsView = parsed.selectedView === 'personal' ? 'personal' : 'workspace';
-                            if (cachedView !== selectedView) {
-                                setSelectedView(cachedView);
+                            const resolvedCachedView: AnalyticsView = cachedView;
+                            if (resolvedCachedView !== selectedView) {
+                                setSelectedView(resolvedCachedView);
                             }
                             setAccessDeniedMessage(null);
                             setStickyNote(parsed.stickyNote || null);
@@ -202,46 +220,59 @@ export default function AnalyticsPage() {
                     }
                 }
                 
-                setLoading(true);
+                setSummaryLoading(true);
             }
             
             const localUserId = localStorage.getItem('userId') || '';
             if (localUserId) setUserId(localUserId);
 
-            // THE GRAND UNIFIED FETCH - Single call replaces 3 parallel calls + N+1 loop
-            console.log('[Analytics] Fetching unified analytics data from backend');
+            // Fast first paint: summary first, heavy blocks second
+            console.log('[Analytics] Fetching analytics v2 summary');
             const { from, to } = getPresetDates();
             const query = new URLSearchParams();
-            query.set('t', String(Date.now()));
             query.set('view', selectedView);
             if (from) query.set('from', from);
             if (to) query.set('to', to);
-            const response = await api.get(`/workspaces/${workspaceId}/analytics?${query.toString()}`);
-            const { 
-                workspace: workspaceData, 
-                stats: statsData, 
-                hierarchy: spacesData, 
-                members: membersData, 
-                tasks: tasksData,
-                currentRunningTimer,
-                stickyNote: stickyNoteData,
-                announcements: announcementsData,
-                recentActivity: recentActivityData,
-                performance,
-                permissions,
-                view
-            } = response.data.data;
+            const currentRequestSeq = ++requestSeqRef.current;
+            const response = await api.get(`/v2/workspaces/${workspaceId}/analytics?${query.toString()}`);
+            if (currentRequestSeq !== requestSeqRef.current) return;
+            const summary = response.data?.data || {};
+            const summaryMembers = [
+                ...(summary?.teamAvailability?.liveNow || []),
+                ...(summary?.teamAvailability?.clockedOut || [])
+            ];
 
-            setMembers(membersData || []);
-            setRunningTimer(currentRunningTimer || null);
-            setSpaces(spacesData || []);
-            setWorkspace(workspaceData || null);
-            setStats(statsData || null);
-            setTasks(tasksData || []);
-            setStickyNote(stickyNoteData || null);
-            setAnnouncements(announcementsData || []);
-            setRecentActivity(recentActivityData || []);
-            setPerformanceData(performance || null);
+            setMembers(summaryMembers);
+            setRunningTimer(summary?.timeTracking?.currentRunningTimer || null);
+            setTimeTrackingSummary(summary?.timeTracking?.summary || null);
+            setTrendLoading(true);
+            setSpaces(
+                (summary?.projectHealth?.spaces || []).map((space: any) => ({
+                    _id: space.spaceId,
+                    name: space.name,
+                    totalTasks: space.total,
+                    completedTasks: space.done
+                }))
+            );
+            setWorkspace({ id: summary?.scope?.workspaceId || workspaceId });
+            setStats({
+                totalTasks: summary?.taskStatus?.totalTasks || 0,
+                completedTasks: summary?.taskStatus?.completed || 0,
+                delayedOpenTasks: summary?.taskStatus?.delayed || 0,
+                deadlineCompletionRate: summary?.summary?.onTimeCompletionRate || 0,
+                priorityPerformance: summary?.priorityDistribution || {},
+                statusDistribution: summary?.taskStatus?.distribution || []
+            });
+            setTaskStatusSummary({
+                totalTasks: summary?.taskStatus?.totalTasks || 0,
+                completed: summary?.taskStatus?.completed || 0,
+                delayed: summary?.taskStatus?.delayed || 0,
+                distribution: summary?.taskStatus?.distribution || [],
+            });
+            setPerformanceData({
+                user: performanceData?.user || null,
+                team: summary?.teamPerformancePreview || []
+            });
             setAccessDeniedMessage(null);
 
             // Determine current user's status
@@ -250,56 +281,137 @@ export default function AnalyticsPage() {
             
             if (localUserId) {
                 // Determine Status from members array
-                const currentMember = membersData?.find((m: any) => {
+                const currentMember = summaryMembers?.find((m: any) => {
                     const mId = typeof m.user === 'string' ? m.user : m.user?._id;
-                    return mId === localUserId;
+                    return mId === localUserId || m._id === localUserId;
                 });
                 currentUserStatus = currentMember?.status || 'inactive';
                 setUserStatus(currentUserStatus);
 
             }
-            currentCanViewWorkspaceAnalytics = !!view?.canViewWorkspaceAnalytics;
+            currentCanViewWorkspaceAnalytics = !!summary?.scope?.view?.canViewWorkspaceAnalytics;
             setCanViewWorkspaceAnalytics(currentCanViewWorkspaceAnalytics);
             setAnnouncementPermissions({
-                canViewAnnouncements: permissions?.canViewAnnouncements !== false,
-                canCreateAnnouncements: !!permissions?.canCreateAnnouncements,
-                canDeleteAnnouncements: !!permissions?.canDeleteAnnouncements,
+                canViewAnnouncements: summary?.permissions?.canViewAnnouncements !== false,
+                canCreateAnnouncements: !!summary?.permissions?.canCreateAnnouncements,
+                canDeleteAnnouncements: !!summary?.permissions?.canDeleteAnnouncements,
             });
-            const responseAvailableViews: AnalyticsView[] = Array.isArray(view?.available)
-                ? view.available.filter((item: string) => item === 'workspace' || item === 'personal')
+            const responseAvailableViews: AnalyticsView[] = Array.isArray(summary?.scope?.view?.available)
+                ? summary.scope.view.available.filter((item: string) => item === 'workspace' || item === 'personal')
                 : ['personal'];
             setAvailableViews(responseAvailableViews.length ? responseAvailableViews : ['personal']);
 
-            const effectiveView: AnalyticsView = view?.effective === 'workspace' ? 'workspace' : 'personal';
-            if (effectiveView !== selectedView) {
-                setSelectedView(effectiveView);
+            const effectiveView: AnalyticsView = summary?.scope?.view?.effective === 'workspace' ? 'workspace' : 'personal';
+            const resolvedView: AnalyticsView = effectiveView;
+            if (resolvedView !== selectedView) {
+                setSelectedView(resolvedView);
             }
-            
-            // Cache the consolidated data
-            const cacheData = {
-                timestamp: Date.now(),
-                tasks: tasksData,
-                spaces: spacesData,
-                members: membersData,
-                workspace: workspaceData,
-                stats: statsData,
-                userId: localUserId,
-                userStatus: currentUserStatus,
-                runningTimer: currentRunningTimer,
-                canViewWorkspaceAnalytics: currentCanViewWorkspaceAnalytics,
-                announcementPermissions: {
-                    canViewAnnouncements: permissions?.canViewAnnouncements !== false,
-                    canCreateAnnouncements: !!permissions?.canCreateAnnouncements,
-                    canDeleteAnnouncements: !!permissions?.canDeleteAnnouncements,
-                },
-                availableViews: responseAvailableViews,
-                selectedView: effectiveView,
-                stickyNote: stickyNoteData,
-                announcements: announcementsData || [],
-                recentActivity: recentActivityData || [],
-                performance: performance || null
+
+            setSummaryLoading(false);
+
+            // Heavy details load after first paint
+            const scheduleDetailsLoad = () => {
+                api.get(`/v2/workspaces/${workspaceId}/analytics/completion-trend?${query.toString()}`)
+                    .then((trendRes) => {
+                        if (currentRequestSeq !== requestSeqRef.current) return;
+                        const trend = trendRes.data?.data || {};
+                        setTrendData(Array.isArray(trend?.chartData) ? trend.chartData : []);
+                    })
+                    .catch((trendError) => {
+                        console.error('[Analytics] Failed to load completion trend:', trendError);
+                    })
+                    .finally(() => {
+                        if (currentRequestSeq === requestSeqRef.current) setTrendLoading(false);
+                    });
+
+                api.get(`/v2/workspaces/${workspaceId}/analytics/details?${query.toString()}`)
+                    .then((detailsRes) => {
+                        if (currentRequestSeq !== requestSeqRef.current) return;
+                        const details = detailsRes.data?.data || {};
+                        setMembers(details?.members || summaryMembers);
+                        setRunningTimer(details?.currentRunningTimer || summary?.timeTracking?.currentRunningTimer || null);
+                        setTimeTrackingSummary(details?.timeTrackingSummary || summary?.timeTracking?.summary || null);
+                        setSpaces(details?.hierarchy || []);
+                        setWorkspace(details?.workspace || { id: summary?.scope?.workspaceId || workspaceId });
+                        setStats(details?.stats || {
+                            totalTasks: summary?.taskStatus?.totalTasks || 0,
+                            completedTasks: summary?.taskStatus?.completed || 0,
+                            delayedOpenTasks: summary?.taskStatus?.delayed || 0,
+                            deadlineCompletionRate: summary?.summary?.onTimeCompletionRate || 0,
+                            priorityPerformance: summary?.priorityDistribution || {}
+                        });
+                        setTaskStatusSummary({
+                            totalTasks: details?.stats?.totalTasks ?? (summary?.taskStatus?.totalTasks || 0),
+                            completed: details?.stats?.completedTasks ?? (summary?.taskStatus?.completed || 0),
+                            delayed: details?.stats?.delayedOpenTasks ?? (summary?.taskStatus?.delayed || 0),
+                            distribution: Array.isArray(details?.stats?.statusDistribution)
+                                ? details.stats.statusDistribution
+                                : (summary?.taskStatus?.distribution || []),
+                        });
+                        setTasks(details?.tasks || []);
+                        setStickyNote(details?.stickyNote || null);
+                        setAnnouncements(details?.announcements || []);
+                        setRecentActivity(details?.recentActivity || []);
+                        setPerformanceData({
+                            user: details?.performance?.user || performanceData?.user || null,
+                            team: Array.isArray(details?.performance?.team) && details.performance.team.length > 0
+                                ? details.performance.team
+                                : (summary?.teamPerformancePreview || [])
+                        });
+
+                        const cacheData = {
+                            timestamp: Date.now(),
+                            tasks: details?.tasks || [],
+                            spaces: details?.hierarchy || [],
+                            members: details?.members || summaryMembers,
+                            workspace: details?.workspace || { id: summary?.scope?.workspaceId || workspaceId },
+                            stats: details?.stats || null,
+                            taskStatusSummary: {
+                                totalTasks: details?.stats?.totalTasks ?? (summary?.taskStatus?.totalTasks || 0),
+                                completed: details?.stats?.completedTasks ?? (summary?.taskStatus?.completed || 0),
+                                delayed: details?.stats?.delayedOpenTasks ?? (summary?.taskStatus?.delayed || 0),
+                                distribution: Array.isArray(details?.stats?.statusDistribution)
+                                    ? details.stats.statusDistribution
+                                    : (summary?.taskStatus?.distribution || []),
+                            },
+                            trendData,
+                            userId: localUserId,
+                            userStatus: currentUserStatus,
+                            runningTimer: details?.currentRunningTimer || summary?.timeTracking?.currentRunningTimer || null,
+                            timeTrackingSummary: details?.timeTrackingSummary || summary?.timeTracking?.summary || null,
+                            canViewWorkspaceAnalytics: currentCanViewWorkspaceAnalytics,
+                            announcementPermissions: {
+                                canViewAnnouncements: summary?.permissions?.canViewAnnouncements !== false,
+                                canCreateAnnouncements: !!summary?.permissions?.canCreateAnnouncements,
+                                canDeleteAnnouncements: !!summary?.permissions?.canDeleteAnnouncements,
+                            },
+                            availableViews: responseAvailableViews,
+                            selectedView: resolvedView,
+                            stickyNote: details?.stickyNote || null,
+                            announcements: details?.announcements || [],
+                            recentActivity: details?.recentActivity || [],
+                            performance: {
+                                user: details?.performance?.user || null,
+                                team: Array.isArray(details?.performance?.team) && details.performance.team.length > 0
+                                    ? details.performance.team
+                                    : (summary?.teamPerformancePreview || [])
+                            }
+                        };
+                        sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+                    })
+                    .catch((detailError) => {
+                        console.error('[Analytics] Failed to load v2 details block:', detailError);
+                    });
             };
-            sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+
+            const loadDelay = force ? 250 : 600;
+            if ('requestIdleCallback' in window) {
+                (window as any).requestIdleCallback(() => {
+                    setTimeout(scheduleDetailsLoad, loadDelay);
+                }, { timeout: 1200 });
+            } else {
+                setTimeout(scheduleDetailsLoad, loadDelay);
+            }
 
         } catch (error: any) {
             console.error('Failed to fetch analytics data:', error);
@@ -313,41 +425,35 @@ export default function AnalyticsPage() {
             }
         } finally {
             setLoading(false);
+            setSummaryLoading(false);
         }
-    }, [workspaceId, CACHE_DURATION, CACHE_KEY, getPresetDates, selectedView]);
+    }, [workspaceId, CACHE_DURATION, CACHE_KEY, getPresetDates, selectedView, performanceData]);
 
     useEffect(() => {
+        const key = `${workspaceId}:${selectedView}:${range}:${range === 'custom' ? customFrom : ''}:${range === 'custom' ? customTo : ''}`;
+        if (key === lastFetchedKeyRef.current) return;
+        lastFetchedKeyRef.current = key;
+
         fetchAnalyticsData();
-    }, [fetchAnalyticsData]);
+    }, [workspaceId, selectedView, range, customFrom, customTo, fetchAnalyticsData]);
 
     useEffect(() => {
-        const currentViewParam = searchParams.get('view');
         const shouldBePersonal = selectedView === 'personal';
-        const isAlreadySynced = shouldBePersonal
-            ? currentViewParam === 'personal'
-            : !currentViewParam;
-
-        if (isAlreadySynced) return;
-
-        const params = new URLSearchParams(searchParams.toString());
+        const params = new URLSearchParams();
         if (shouldBePersonal) {
             params.set('view', 'personal');
-        } else {
-            params.delete('view');
+        }
+        params.set('range', range);
+        if (range === 'custom') {
+            params.set('from', customFrom);
+            params.set('to', customTo);
         }
 
-        const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-        router.replace(nextUrl, { scroll: false });
-    }, [selectedView, pathname, router, searchParams]);
-
-    useEffect(() => {
-        const explicitView = searchParams.get('view');
-        if (!explicitView) return;
-        const urlView: AnalyticsView = explicitView === 'personal' ? 'personal' : 'workspace';
-        if (urlView !== selectedView) {
-            setSelectedView(urlView);
-        }
-    }, [searchParams, selectedView]);
+        const nextUrl = params.toString()
+            ? `${window.location.pathname}?${params.toString()}`
+            : window.location.pathname;
+        window.history.replaceState(null, '', nextUrl);
+    }, [selectedView, range, customFrom, customTo]);
 
     // Listen for storage events to detect cache invalidation from other tabs/components
     useEffect(() => {
@@ -402,6 +508,20 @@ export default function AnalyticsPage() {
     }, [tasks, spaces, members, stats]);
 
     const statusStats = useMemo(() => {
+        const distribution = Array.isArray(taskStatusSummary?.distribution) ? taskStatusSummary.distribution : Array.isArray(stats?.statusDistribution) ? stats.statusDistribution : [];
+        if (distribution.length > 0) {
+            const get = (label: string) => {
+                const row = distribution.find((item: any) => String(item?.label || '').toLowerCase() === label.toLowerCase());
+                return Number(row?.value || 0);
+            };
+            return {
+                todo: get('To Do'),
+                inprogress: get('In Progress'),
+                review: get('Review'),
+                done: get('Done'),
+                delayed: Number(taskStatusSummary?.delayed ?? stats?.delayedOpenTasks ?? 0),
+            };
+        }
         const now = new Date();
         return {
             todo: tasks.filter(t => t.status === 'todo').length,
@@ -415,7 +535,7 @@ export default function AnalyticsPage() {
                 return new Date(t.deadline) < now;
             }).length,
         };
-    }, [tasks]);
+    }, [tasks, stats, taskStatusSummary]);
 
     const priorityStats = useMemo(() => {
         const fallback = {
@@ -492,15 +612,6 @@ export default function AnalyticsPage() {
         return () => window.removeEventListener('focusDelayedOpenTasks', handleFocusDelayed);
     }, []);
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <BarChart3 className="w-12 h-12 animate-pulse text-primary mr-2" />
-                <p className="text-muted-foreground">Loading dashboard...</p>
-            </div>
-        );
-    }
-
     if (accessDeniedMessage) {
         return (
             <div className="min-h-screen flex items-center justify-center px-4">
@@ -509,7 +620,7 @@ export default function AnalyticsPage() {
                     <h1 className="text-2xl font-bold text-foreground">Analytics unavailable</h1>
                     <p className="mt-3 text-sm text-muted-foreground">{accessDeniedMessage}</p>
                     <div className="mt-6 flex items-center justify-center gap-3">
-                        <Button variant="outline" onClick={() => router.back()}>
+                        <Button variant="outline" onClick={() => window.history.back()}>
                             Go back
                         </Button>
                         <Button onClick={() => fetchAnalyticsData(true)}>
@@ -526,6 +637,12 @@ export default function AnalyticsPage() {
             <main className="max-w-[1440px] mx-auto px-6 py-5">
                 {/* Header Actions */}
                 <div className="flex flex-wrap items-center justify-end gap-3 mb-6">
+                    {(loading || summaryLoading) && (
+                        <div className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-xs text-muted-foreground">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Updating
+                        </div>
+                    )}
                     {announcementPermissions.canCreateAnnouncements && (
                         <Button 
                             variant="outline" 
@@ -536,11 +653,26 @@ export default function AnalyticsPage() {
                             Time Tracking
                         </Button>
                     )}
+                    {availableViews.length > 1 && (
+                        <select
+                            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                            value={selectedView}
+                            onChange={(e) => {
+                                setSelectedView(e.target.value as AnalyticsView);
+                            }}
+                        >
+                            {availableViews.includes('workspace') && <option value="workspace">Workspace View</option>}
+                            {availableViews.includes('personal') && <option value="personal">Personal View</option>}
+                        </select>
+                    )}
                     <select
                         className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                         value={range}
-                        onChange={(e) => setRange(e.target.value as '7d' | '30d' | '90d' | 'all' | 'custom')}
+                        onChange={(e) => {
+                            setRange(e.target.value as RangeKey);
+                        }}
                     >
+                        <option value="today">Today</option>
                         <option value="7d">Last 7 days</option>
                         <option value="30d">Last 30 days</option>
                         <option value="90d">Last 90 days</option>
@@ -567,43 +699,83 @@ export default function AnalyticsPage() {
 
                 {/* Metrics Row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <MetricCard title="Total Team" value={metrics.totalTeam} icon={<Users className="w-5 h-5"/>} color="blue" badge={`+${metrics.clockedIn} Clocked in`} />
-                    <MetricCard title="Total Tasks" value={metrics.totalTasks} icon={<CheckCircle2 className="w-5 h-5"/>} color="primary" subtext={`${metrics.completedTasks} done`} />
-                    <MetricCard title="On-time Completion Rate" value={`${metrics.deadlineCompletionRate}%`} icon={<TrendingUp className="w-5 h-5"/>} color="emerald" subtext={`${metrics.completedTasks} done`} />
-                    <MetricCard title="Active Projects" value={metrics.activeProjects} icon={<Rocket className="w-5 h-5"/>} color="amber" />
+                    {loading && !stats ? (
+                        <>
+                            <Skeleton className="h-[128px] w-full rounded-2xl" />
+                            <Skeleton className="h-[128px] w-full rounded-2xl" />
+                            <Skeleton className="h-[128px] w-full rounded-2xl" />
+                            <Skeleton className="h-[128px] w-full rounded-2xl" />
+                        </>
+                    ) : (
+                        <>
+                            <MetricCard title="Total Team" value={metrics.totalTeam} icon={<Users className="w-5 h-5"/>} color="blue" badge={`+${metrics.clockedIn} Clocked in`} />
+                            <MetricCard title="Total Tasks" value={metrics.totalTasks} icon={<CheckCircle2 className="w-5 h-5"/>} color="primary" subtext={`${metrics.completedTasks} done`} />
+                            <MetricCard title="On-time Completion Rate" value={`${metrics.deadlineCompletionRate}%`} icon={<TrendingUp className="w-5 h-5"/>} color="emerald" subtext={`${metrics.completedTasks} done`} />
+                            <MetricCard title="Active Projects" value={metrics.activeProjects} icon={<Rocket className="w-5 h-5"/>} color="amber" />
+                        </>
+                    )}
                 </div>
 
                 {/* Clock In & Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <ClockInOut
-                        workspaceId={workspaceId}
-                        currentStatus={userStatus}
-                        runningTimer={runningTimer}
-                        onStatusChange={fetchAnalyticsData}
-                    />
-                    <TaskStatusChart stats={statusStats} totalTasks={metrics.totalTasks} />
-                    <PriorityDistribution stats={priorityStats} />
+                    {loading && !stats ? (
+                        <>
+                            <Skeleton className="h-[400px] w-full rounded-2xl" />
+                            <Skeleton className="h-[400px] w-full rounded-2xl" />
+                            <Skeleton className="h-[400px] w-full rounded-2xl" />
+                        </>
+                    ) : (
+                        <>
+                            <ClockInOut
+                                workspaceId={workspaceId}
+                                currentStatus={userStatus}
+                                runningTimer={runningTimer}
+                                timeTrackingSummary={timeTrackingSummary}
+                                onStatusChange={fetchAnalyticsData}
+                            />
+                            <TaskStatusChart stats={statusStats} totalTasks={metrics.totalTasks} />
+                            <PriorityDistribution stats={priorityStats} />
+                        </>
+                    )}
                 </div>
 
                 {/* Team & Tasks */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <TeamAvailability members={members} />
-                    <div id="your-assigned-work" ref={yourTasksRef} className="lg:col-span-2">
-                        <YourTasks
-                            tasks={isDelayedFocus ? delayedOpenTasks : tasks}
-                            userId={userId}
-                            workspaceId={workspaceId}
-                            mode={isDelayedFocus ? 'delayed-open' : 'all'}
-                        />
-                    </div>
+                    {loading && !stats ? (
+                        <>
+                            <Skeleton className="h-[400px] w-full rounded-2xl" />
+                            <Skeleton className="h-[400px] w-full rounded-2xl lg:col-span-2" />
+                        </>
+                    ) : (
+                        <>
+                            <TeamAvailability members={members} />
+                            <div id="your-assigned-work" ref={yourTasksRef} className="lg:col-span-2">
+                                <YourTasks
+                                    tasks={isDelayedFocus ? delayedOpenTasks : tasks}
+                                    userId={userId}
+                                    workspaceId={workspaceId}
+                                    mode={isDelayedFocus ? 'delayed-open' : 'all'}
+                                />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Health & Trends */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    <ProjectHealth spaces={spaces} tasks={tasks} />
-                    <div className="lg:col-span-2">
-                        <CompletionTrendChart tasks={tasks} />
-                    </div>
+                    {loading && !stats ? (
+                        <>
+                            <Skeleton className="h-[400px] w-full rounded-2xl" />
+                            <Skeleton className="h-[400px] w-full rounded-2xl lg:col-span-2" />
+                        </>
+                    ) : (
+                        <>
+                            <ProjectHealth spaces={spaces} tasks={tasks} />
+                            <div className="lg:col-span-2">
+                                <CompletionTrendChart tasks={tasks} trendData={trendData} loading={trendLoading} />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Utilities */}
@@ -613,6 +785,7 @@ export default function AnalyticsPage() {
                         canCreateAnnouncement={announcementPermissions.canCreateAnnouncements}
                         canDeleteAnnouncement={announcementPermissions.canDeleteAnnouncements}
                         initialAnnouncements={announcements}
+                        managedByParent={true}
                     />
                     <StickyNotes 
                         workspaceId={workspaceId} 
@@ -627,6 +800,7 @@ export default function AnalyticsPage() {
                         workspaceId={workspaceId}
                         userId={userId}
                         initialActivities={recentActivity}
+                        managedByParent={true}
                     />
                 </div>
 
@@ -638,6 +812,7 @@ export default function AnalyticsPage() {
                         canViewTeamPerformance={selectedView === 'workspace' && canViewWorkspaceAnalytics}
                         initialMyMetrics={performanceData?.user || null}
                         initialTeamMetrics={Array.isArray(performanceData?.team) ? performanceData?.team : []}
+                        managedByParent={true}
                     />
                 </div>
             </main>

@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { clearAuthData } from '@/lib/auth';
 
 // Validation schemas
 const profileSchema = z.object({
@@ -444,6 +445,25 @@ export default function AccountSettingsPage() {
     setNotificationPrefs(normalizeNotificationPrefs((currentUser as any).notificationPreferences));
     
     toast.info('Changes cancelled');
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      'Delete your account? This soft deletes the account and logs you out.'
+    );
+    if (!confirmed) return;
+
+    try {
+      await api.delete('/users/me', {
+        data: { reason: 'Deleted from account settings UI' },
+      });
+      clearAuthData();
+      toast.success('Your account has been deleted.');
+      router.push('/');
+    } catch (error: any) {
+      console.error('Failed to delete account:', error);
+      toast.error(error.response?.data?.message || 'Failed to delete account');
+    }
   };
 
   // Get user initials
@@ -1064,6 +1084,20 @@ export default function AccountSettingsPage() {
                 </Button>
               </div>
             )}
+
+            <section className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-sm border border-slate-200 dark:border-[#262626] p-6 mb-10">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Delete account</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Soft delete your account and remove local access from this device.
+                  </p>
+                </div>
+                <Button variant="destructive" onClick={handleDeleteAccount}>
+                  Delete Account
+                </Button>
+              </div>
+            </section>
           </div>
         </div>
       </main>

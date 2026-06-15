@@ -12,10 +12,17 @@ interface ClockInOutProps {
   workspaceId: string;
   currentStatus: 'active' | 'inactive';
   runningTimer: any;
+  timeTrackingSummary?: {
+    todayTracked?: string;
+    weekTracked?: string;
+    weekProgressPercent?: number;
+    lastCheckIn?: string | null;
+    lastCheckOut?: string | null;
+  } | null;
   onStatusChange: (force?: boolean) => void | Promise<void>;
 }
 
-export function ClockInOut({ workspaceId, currentStatus, runningTimer, onStatusChange }: ClockInOutProps) {
+export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrackingSummary, onStatusChange }: ClockInOutProps) {
   const { user } = useAuthStore();
   const currentUserId = user?._id || (typeof window !== 'undefined' ? localStorage.getItem('userId') : null);
   const [loading, setLoading] = useState(false);
@@ -54,101 +61,30 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, onStatusC
     return () => clearInterval(timer);
   }, [optimisticStatus, runningTimer?.startTime]);
 
-  const todayDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const weekRange = useMemo(() => {
-    const now = new Date();
-    const day = now.getDay();
-    const diffToMonday = day === 0 ? 6 : day - 1;
-    const start = new Date(now);
-    start.setDate(now.getDate() - diffToMonday);
-    return {
-      start: start.toISOString().slice(0, 10),
-      end: now.toISOString().slice(0, 10),
-    };
-  }, []);
-
   useEffect(() => {
-    const fetchAttendanceSummary = async () => {
-      try {
-        if (!workspaceId || !currentUserId) {
-          setTodayTracked('0h 0m');
-          setWeekTracked('0h 0m');
-          setWeekProgressPercent(0);
-          setLastCheckIn('—');
-          setLastCheckOut('—');
-          return;
-        }
-        const todayResponse = await api.get(
-          `/attendance/workspace/${workspaceId}/report?startDate=${todayDate}&endDate=${todayDate}&userId=${currentUserId}`
-        );
-        const rawEntries = Array.isArray(todayResponse.data?.data) ? todayResponse.data.data : [];
-        const entries = rawEntries.filter((entry: any) => {
-          const entryUserId =
-            (typeof entry?.user === 'object' ? entry?.user?._id : entry?.user) ||
-            entry?.userId ||
-            entry?._id;
-          return String(entryUserId || '') === String(currentUserId);
-        });
+    if (!workspaceId || !currentUserId) {
+      setTodayTracked('0h 0m');
+      setWeekTracked('0h 0m');
+      setWeekProgressPercent(0);
+      setLastCheckIn('—');
+      setLastCheckOut('—');
+      return;
+    }
 
-        let totalSeconds = 0;
-        let latestIn: string | null = null;
-        let latestOut: string | null = null;
-
-        for (const entry of entries) {
-          const hours = Number(entry?.totalHours || 0);
-          if (!Number.isNaN(hours)) totalSeconds += Math.round(hours * 3600);
-
-          if (entry?.clockIn) {
-            if (!latestIn || new Date(entry.clockIn) > new Date(latestIn)) latestIn = entry.clockIn;
-          }
-          if (entry?.clockOut && entry.clockOut !== 'Running') {
-            if (!latestOut || new Date(entry.clockOut) > new Date(latestOut)) latestOut = entry.clockOut;
-          }
-        }
-
-        const totalMinutes = Math.floor(totalSeconds / 60);
-        const h = Math.floor(totalMinutes / 60);
-        const m = totalMinutes % 60;
-        setTodayTracked(`${h}h ${m}m`);
-        setLastCheckIn(latestIn ? new Date(latestIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—');
-        setLastCheckOut(latestOut ? new Date(latestOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—');
-
-        const weekResponse = await api.get(
-          `/attendance/workspace/${workspaceId}/report?startDate=${weekRange.start}&endDate=${weekRange.end}&userId=${currentUserId}`
-        );
-        const rawWeekEntries = Array.isArray(weekResponse.data?.data) ? weekResponse.data.data : [];
-        const weekEntries = rawWeekEntries.filter((entry: any) => {
-          const entryUserId =
-            (typeof entry?.user === 'object' ? entry?.user?._id : entry?.user) ||
-            entry?.userId ||
-            entry?._id;
-          return String(entryUserId || '') === String(currentUserId);
-        });
-        let weekSeconds = 0;
-        for (const entry of weekEntries) {
-          const hours = Number(entry?.totalHours || 0);
-          if (!Number.isNaN(hours)) weekSeconds += Math.round(hours * 3600);
-        }
-        const weekMinutes = Math.floor(weekSeconds / 60);
-        const weekH = Math.floor(weekMinutes / 60);
-        const weekM = weekMinutes % 60;
-        setWeekTracked(`${weekH}h ${weekM}m`);
-
-        const weeklyTargetHours = 40;
-        const weekHoursExact = weekSeconds / 3600;
-        const progress = Math.max(0, Math.min(100, Math.round((weekHoursExact / weeklyTargetHours) * 100)));
-        setWeekProgressPercent(progress);
-      } catch {
-        setTodayTracked('0h 0m');
-        setWeekTracked('0h 0m');
-        setWeekProgressPercent(0);
-        setLastCheckIn('—');
-        setLastCheckOut('—');
-      }
-    };
-
-    fetchAttendanceSummary();
-  }, [workspaceId, currentUserId, todayDate, weekRange.start, weekRange.end, currentStatus, runningTimer]);
+    setTodayTracked(timeTrackingSummary?.todayTracked || '0h 0m');
+    setWeekTracked(timeTrackingSummary?.weekTracked || '0h 0m');
+    setWeekProgressPercent(Number(timeTrackingSummary?.weekProgressPercent || 0));
+    setLastCheckIn(
+      timeTrackingSummary?.lastCheckIn
+        ? new Date(timeTrackingSummary.lastCheckIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '—'
+    );
+    setLastCheckOut(
+      timeTrackingSummary?.lastCheckOut
+        ? new Date(timeTrackingSummary.lastCheckOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '—'
+    );
+  }, [workspaceId, currentUserId, timeTrackingSummary]);
 
   const handleClockToggle = async () => {
     if (loading) return;

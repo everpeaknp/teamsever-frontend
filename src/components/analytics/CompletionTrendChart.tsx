@@ -7,10 +7,15 @@ import { Task } from '@/types';
 
 interface CompletionTrendChartProps {
   tasks: Task[];
+  trendData?: Array<{ name: string; created: number; completed: number }>;
+  loading?: boolean;
 }
 
-export function CompletionTrendChart({ tasks }: CompletionTrendChartProps) {
-  const chartData = useMemo(() => {
+export function CompletionTrendChart({ tasks, trendData, loading = false }: CompletionTrendChartProps) {
+  const computedChartData = useMemo(() => {
+    if (Array.isArray(trendData) && trendData.length > 0) {
+      return trendData;
+    }
     // Build last 4 full 7-day buckets ending today.
     // "created" is based on createdAt, "completed" is based on completedAt.
     const weeks = [];
@@ -47,14 +52,14 @@ export function CompletionTrendChart({ tasks }: CompletionTrendChartProps) {
     }
 
     return weeks;
-  }, [tasks]);
+  }, [tasks, trendData]);
 
   const summary = useMemo(() => {
-    const totalCreated = chartData.reduce((acc, item) => acc + item.created, 0);
-    const totalCompleted = chartData.reduce((acc, item) => acc + item.completed, 0);
+    const totalCreated = computedChartData.reduce((acc, item) => acc + item.created, 0);
+    const totalCompleted = computedChartData.reduce((acc, item) => acc + item.completed, 0);
     const delta = totalCompleted - totalCreated;
     return { totalCreated, totalCompleted, delta };
-  }, [chartData]);
+  }, [computedChartData]);
 
   return (
     <Card>
@@ -80,7 +85,7 @@ export function CompletionTrendChart({ tasks }: CompletionTrendChartProps) {
           </div>
         </div>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
+          <LineChart data={computedChartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-border/60" />
             <XAxis dataKey="name" stroke="#64748b" />
             <YAxis stroke="#64748b" allowDecimals={false} />
