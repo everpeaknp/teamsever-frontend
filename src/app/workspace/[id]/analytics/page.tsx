@@ -119,9 +119,9 @@ export default function AnalyticsPage() {
     const [availableViews, setAvailableViews] = useState<AnalyticsView[]>(['personal']);
     const initialRangeParam = searchParams.get('range');
     const initialRange: RangeKey =
-        initialRangeParam === '7d' || initialRangeParam === '30d' || initialRangeParam === '90d' || initialRangeParam === 'all' || initialRangeParam === 'custom'
+        initialRangeParam === 'today' || initialRangeParam === '7d' || initialRangeParam === '30d' || initialRangeParam === '90d' || initialRangeParam === 'all' || initialRangeParam === 'custom'
             ? initialRangeParam
-            : 'today';
+            : '30d';
     const [selectedView, setSelectedView] = useState<AnalyticsView>(initialView);
     const [accessDeniedMessage, setAccessDeniedMessage] = useState<string | null>(null);
     const todayStr = new Date().toISOString().slice(0, 10);
