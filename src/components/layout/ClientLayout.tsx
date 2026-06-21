@@ -57,7 +57,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   const isDashboardPage = pathname === '/dashboard';
   const isSuperAdminPage = pathname?.startsWith('/super-admin');
-  const isStandalonePage = isDashboardPage || isSuperAdminPage || pathname === '/';
+  const isStandalonePage = isDashboardPage || isSuperAdminPage || pathname === '/' || pathname === '/pricing';
   const showShell = !isAuthPage && !isStandalonePage;
 
   const { initializeFCM, syncPermission } = useNotificationStore();

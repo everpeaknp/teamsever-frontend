@@ -23,19 +23,14 @@ function Header() {
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-neutral-100">
       <div className={`${C} flex h-16 items-center justify-between`}>
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/teamsever_logo.png" alt="TeamsEver" width={140} height={36} priority className="h-8 w-auto" />
+          <Image src="/teamsever_logo.png" alt="TeamsEver" width={32} height={32} priority className="h-8 w-auto" />
+          <span className="text-xl font-bold tracking-tight text-neutral-900">TeamsEver</span>
         </Link>
 
         <nav className="hidden items-center gap-7 md:flex">
-          {['Features', 'Roles', 'Pricing'].map((item) => (
-            <Link
-              key={item}
-              href={item === 'Pricing' ? '/pricing' : '#'}
-              className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
-            >
-              {item}
-            </Link>
-          ))}
+          <Link href="#features" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Features</Link>
+          <Link href="#roles" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Roles</Link>
+          <Link href="/pricing" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Pricing</Link>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -44,7 +39,7 @@ function Header() {
           </Link>
           <Link
             href="/register"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
           >
             Get started <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -79,7 +74,7 @@ function Hero() {
         <div className="mt-9 flex flex-wrap items-center gap-4">
           <Link
             href="/register"
-            className="inline-flex items-center gap-2 rounded-lg bg-neutral-900 px-5 py-3 text-sm font-medium text-white hover:bg-neutral-700 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#2563EB] px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
           >
             Start for free <ArrowRight className="h-4 w-4" />
           </Link>
@@ -116,7 +111,7 @@ function DashboardPreview() {
             {/* Stats row */}
             <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
               {[
-                { label: 'Active tasks', value: '24', pct: '68%', color: 'bg-neutral-900' },
+                { label: 'Active tasks', value: '24', pct: '68%', color: 'bg-[#2563EB]' },
                 { label: 'In review', value: '8', pct: '42%', color: 'bg-neutral-400' },
                 { label: 'Completed', value: '51', pct: '86%', color: 'bg-emerald-500' },
               ].map((s) => (
@@ -233,7 +228,7 @@ function PermissionsSection() {
   const cols = ['Admin', 'Manager', 'QA', 'Member', 'Client'];
 
   return (
-    <section className="py-20 border-t border-neutral-100">
+    <section id="roles" className="py-20 border-t border-neutral-100">
       <div className={`${C} grid gap-14 lg:grid-cols-2 items-start`}>
         <div>
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
@@ -249,7 +244,7 @@ function PermissionsSection() {
               'Scale operations with consistent permissions',
             ].map((b) => (
               <li key={b} className="flex items-start gap-2.5 text-sm text-neutral-600">
-                <Check className="h-4 w-4 text-neutral-900 mt-0.5 shrink-0" />
+                <Check className="h-4 w-4 text-[#2563EB] mt-0.5 shrink-0" />
                 {b}
               </li>
             ))}
@@ -273,7 +268,7 @@ function PermissionsSection() {
                   {values.map((v, idx) => (
                     <td key={idx} className="px-3 py-3.5 text-center">
                       {v ? (
-                        <Check className="mx-auto h-3.5 w-3.5 text-neutral-900" />
+                        <Check className="mx-auto h-3.5 w-3.5 text-[#2563EB]" />
                       ) : (
                         <span className="text-neutral-200">—</span>
                       )}
@@ -323,25 +318,25 @@ function CTA() {
   return (
     <section className="py-20 border-t border-neutral-100">
       <div className={C}>
-        <div className="rounded-2xl border border-neutral-200 bg-neutral-900 px-8 py-14 sm:px-14 text-center">
+        <div className="rounded-2xl border border-[#1e3a8a] bg-[#0f1c3f] px-8 py-14 sm:px-14 text-center">
           <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
             Bring your team together.
           </h2>
-          <p className="mt-4 max-w-lg mx-auto text-base leading-relaxed text-neutral-400">
+          <p className="mt-4 max-w-lg mx-auto text-base leading-relaxed text-blue-100">
             Create your first workspace, invite your team, and start managing work with clarity today.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-medium text-neutral-900 hover:bg-neutral-100 transition-colors"
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-medium text-[#2563EB] hover:bg-blue-50 transition-colors"
             >
               Start for free <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link href="#" className="text-sm font-medium text-neutral-500 hover:text-neutral-300 transition-colors">
+            <Link href="#" className="text-sm font-medium text-blue-100 hover:text-white transition-colors">
               Contact us →
             </Link>
           </div>
-          <p className="mt-6 text-xs text-neutral-600">No credit card required. Free to start.</p>
+          <p className="mt-6 text-xs text-blue-200">No credit card required. Free to start.</p>
         </div>
       </div>
     </section>
@@ -360,7 +355,10 @@ function Footer() {
     <footer className="border-t border-neutral-100 bg-white py-14">
       <div className={`${C} grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]`}>
         <div>
-          <Image src="/teamsever_logo.png" alt="Teamsever" width={140} height={36} className="h-8 w-auto" />
+          <div className="flex items-center gap-2.5">
+            <Image src="/teamsever_logo.png" alt="Teamsever" width={32} height={32} className="h-8 w-auto" />
+            <span className="text-xl font-bold tracking-tight text-neutral-900">TeamsEver</span>
+          </div>
           <p className="mt-4 max-w-xs text-sm leading-[1.7] text-neutral-400">
             Workspaces, tasks, roles, and progress — all in one place.
           </p>

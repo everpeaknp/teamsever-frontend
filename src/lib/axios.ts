@@ -26,7 +26,8 @@ api.interceptors.request.use(
       const isPublicEndpoint = 
         isAuthEndpoint || 
         (config.method === 'get' && config.url?.includes('/super-admin/settings')) ||
-        config.url?.includes('/subscription/next-plan');
+        config.url?.includes('/subscription/next-plan') ||
+        config.url?.includes('/plans');
 
       if (isPublicEndpoint) {
         // Allow public and expected semi-public requests to proceed without token
@@ -68,6 +69,7 @@ api.interceptors.request.use(
           currentPath.includes('/register') ||
           currentPath.includes('/auth/forgot-password') ||
           currentPath.includes('/auth/reset-password') ||
+          currentPath.includes('/pricing') ||
           currentPath === '/';
         
         if (!isPaymentPage && !isPublicPage) {
@@ -115,6 +117,7 @@ api.interceptors.response.use(
           currentPath.includes('/register') ||
           currentPath.includes('/auth/forgot-password') ||
           currentPath.includes('/auth/reset-password') ||
+          currentPath.includes('/pricing') ||
           currentPath === '/';
         
         if (!isPaymentPage && !isPublicPage) {
