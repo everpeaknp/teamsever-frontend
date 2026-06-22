@@ -54,11 +54,7 @@ function Hero() {
   return (
     <section className="pt-20 pb-16 sm:pt-28 sm:pb-20">
       <div className={C}>
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3.5 py-1.5 text-xs font-medium text-neutral-600 mb-7">
-          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Free to start · No credit card required
-        </div>
+
 
         {/* Headline */}
         <h1 className="max-w-3xl text-[40px] sm:text-[52px] lg:text-[64px] font-semibold leading-[1.05] tracking-[-0.02em] text-neutral-900">
@@ -336,7 +332,7 @@ function CTA() {
               Contact us →
             </Link>
           </div>
-          <p className="mt-6 text-xs text-blue-200">No credit card required. Free to start.</p>
+
         </div>
       </div>
     </section>
