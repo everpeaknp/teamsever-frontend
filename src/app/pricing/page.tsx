@@ -95,7 +95,7 @@ function Footer() {
       </div>
       <div className={`${C} mt-10 border-t border-neutral-100 pt-6 flex items-center justify-between`}>
         <p className="text-xs text-neutral-400">© 2026 Teamsever. All rights reserved.</p>
-        <p className="text-xs text-neutral-400">Made with care.</p>
+        <p className="text-xs text-neutral-400">A flagship product of Everacy Tech.</p>
       </div>
     </footer>
   );
