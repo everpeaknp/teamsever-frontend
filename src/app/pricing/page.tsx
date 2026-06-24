@@ -282,16 +282,7 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* FAQ or Trust Section */}
-        <section className="border-t border-neutral-100 py-20 bg-neutral-50">
-          <div className={`${C} text-center max-w-2xl`}>
-            <h2 className="text-2xl font-semibold text-neutral-900">Secure Payments</h2>
-            <p className="mt-4 text-neutral-500 text-sm leading-relaxed">
-              All payments are securely processed through eSewa, Nepal's most trusted digital wallet. 
-              Your billing information is never stored on our servers.
-            </p>
-          </div>
-        </section>
+
 
       </main>
 
