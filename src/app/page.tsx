@@ -81,7 +81,7 @@ function Hero() {
 
         {/* Social proof line */}
         <p className="mt-10 text-sm text-neutral-400">
-          Used by product teams, ops leads, and project managers.
+          Trusted by high-performance teams worldwide.
         </p>
       </div>
     </section>
