@@ -441,7 +441,18 @@ const getRoute = () => {
                         </>
                       )}
                       {item.type === 'folder' && (
-                         <DropdownMenuItem
+                        <>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openModal('githubWebhook', item._id, 'folder', item.name);
+                            }}
+                          >
+                            <Github className="h-4 w-4 mr-2" strokeWidth={1.5} />
+                            GitHub Webhook
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={(e) => {
                               e.preventDefault();
@@ -453,6 +464,7 @@ const getRoute = () => {
                             <Trash2 className="h-4 w-4 mr-2" strokeWidth={1.5} />
                             Delete folder
                           </DropdownMenuItem>
+                        </>
                       )}
                       {item.type === 'space' && canManageSpaceSettings && (
                         <>

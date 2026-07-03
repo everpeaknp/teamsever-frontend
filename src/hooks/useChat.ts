@@ -46,11 +46,12 @@ interface UseChatOptions {
   conversationId?: string;
   userId?: string;
   type: 'workspace' | 'direct';
-  filterUserId?: string; // NEW: Filter by specific user
+  filterUserId?: string; // Filter by specific user
+  filterFolderId?: string; // Filter by folder
   onInitialLoad?: () => void;
 }
 
-export const useChat = ({ workspaceId, channelId, conversationId, userId, type, filterUserId, onInitialLoad }: UseChatOptions) => {
+export const useChat = ({ workspaceId, channelId, conversationId, userId, type, filterUserId, filterFolderId, onInitialLoad }: UseChatOptions) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -93,7 +94,10 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
 
       let response;
       const limit = 50;
-      const filterQuery = filterUserId ? `&userId=${filterUserId}` : '';
+      const filters = [];
+      if (filterUserId) filters.push(`userId=${filterUserId}`);
+      if (filterFolderId) filters.push(`folderId=${filterFolderId}`);
+      const filterQuery = filters.length > 0 ? `&${filters.join('&')}` : '';
       
       if (type === 'workspace' && channelId && channelId !== 'general') {
         response = await api.get(`/chat/channels/${channelId}/messages?page=${pageNum}&limit=${limit}${filterQuery}`);
@@ -130,7 +134,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [workspaceId, channelId, conversationId, type, filterUserId]);
+  }, [workspaceId, channelId, conversationId, type, filterUserId, filterFolderId]);
 
   // Send message
   const sendMessage = useCallback(async (content: string, mentions: string[] = []) => {
@@ -255,7 +259,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       setMessages([]); // Clear messages when switching channels
       fetchMessages(1, false);
     }
-  }, [fetchMessages, type, workspaceId, channelId, conversationId, filterUserId]);
+  }, [fetchMessages, type, workspaceId, channelId, conversationId, filterUserId, filterFolderId]);
 
   return {
     messages,

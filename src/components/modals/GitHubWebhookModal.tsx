@@ -36,7 +36,7 @@ const webhookSchema = z.object({
 type WebhookFormValues = z.infer<typeof webhookSchema>;
 
 export function GitHubWebhookModal() {
-  const { isOpen, type, parentId, closeModal } = useModalStore();
+  const { isOpen, type, parentId, parentType, closeModal } = useModalStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [webhookData, setWebhookData] = useState<{ webhookUrl: string; secret: string } | null>(null);
 
@@ -52,8 +52,10 @@ export function GitHubWebhookModal() {
     const fetchWebhookDetails = async () => {
       if (isOpen && type === 'githubWebhook' && parentId) {
         try {
+          const basePath = parentType === 'folder' ? `/folders/${parentId}` : `/spaces/${parentId}`;
+          
           // Fetch existing webhook details
-          const response = await api.get(`/spaces/${parentId}/webhook`);
+          const response = await api.get(`${basePath}/webhook`);
           const data = response.data.data;
           
           if (data) {
@@ -63,11 +65,11 @@ export function GitHubWebhookModal() {
               secret: data.secret,
             });
           } else {
-            // No webhook yet, fetch space details just for the repo name if needed
-            const spaceResponse = await api.get(`/spaces/${parentId}`);
-            const space = spaceResponse.data.data;
-            if (space.githubRepoName) {
-              form.setValue('githubRepoName', space.githubRepoName);
+            // No webhook yet, fetch parent details just for the repo name if needed
+            const parentResponse = await api.get(`${basePath}`);
+            const parentData = parentResponse.data.data;
+            if (parentData.githubRepoName) {
+              form.setValue('githubRepoName', parentData.githubRepoName);
             }
           }
         } catch (error) {
@@ -77,7 +79,7 @@ export function GitHubWebhookModal() {
     };
 
     fetchWebhookDetails();
-  }, [isOpen, type, parentId, form]);
+  }, [isOpen, type, parentId, parentType, form]);
 
   // Handle form submission
   const onSubmit = async (values: WebhookFormValues) => {
@@ -86,7 +88,8 @@ export function GitHubWebhookModal() {
     setIsSubmitting(true);
 
     try {
-      const response = await api.post(`/spaces/${parentId}/webhook`, {
+      const basePath = parentType === 'folder' ? `/folders/${parentId}` : `/spaces/${parentId}`;
+      const response = await api.post(`${basePath}/webhook`, {
         githubRepoName: values.githubRepoName,
       });
 

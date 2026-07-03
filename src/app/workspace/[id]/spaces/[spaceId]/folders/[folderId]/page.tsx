@@ -15,6 +15,7 @@ import {
   Activity,
   Clock3,
   Search,
+  Github,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -290,29 +291,39 @@ export default function FolderHomePage() {
               </div>
             </div>
             {canManage && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <Users className="w-4 h-4 mr-2" />
-                    Members
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      await fetchFolderMembers();
-                      setShowInviteModal(true);
-                    }}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Invite Members
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShowFolderPermissions(true)}>
-                    <Users className="w-4 h-4 mr-2" />
-                    Folder Access
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => openModal('githubWebhook', folder._id, 'folder')}
+                  title="GitHub Webhook"
+                >
+                  <Github className="w-4 h-4 mr-2" />
+                  Webhook
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline">
+                      <Users className="w-4 h-4 mr-2" />
+                      Members
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await fetchFolderMembers();
+                        setShowInviteModal(true);
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Invite Members
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowFolderPermissions(true)}>
+                      <Users className="w-4 h-4 mr-2" />
+                      Folder Access
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             )}
           </div>
         </div>

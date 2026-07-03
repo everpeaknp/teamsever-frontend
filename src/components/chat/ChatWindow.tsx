@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, Filter, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User } from 'lucide-react';
+import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, Filter, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { useProfileModalStore } from '@/store/useProfileModalStore';
+import { useWorkspaceStore } from '@/store/useWorkspaceStore';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -35,6 +36,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | 'week' | 'custom'>('all');
   const [customDate, setCustomDate] = useState<Date | undefined>(new Date());
   const [filterUserId, setFilterUserId] = useState<string>('all');
+  const [filterFolderId, setFilterFolderId] = useState<string>('all');
   const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -71,7 +73,9 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     clearUnread
   } = useChatStore();
   const { openProfile } = useProfileModalStore();
+  const { hierarchy } = useWorkspaceStore();
   
+  const workspaceFolders = hierarchy?.spaces.flatMap((s) => s.folders) || [];
   // Get or create room
   useEffect(() => {
     if (userId && !currentUserId) return; // Wait for current userId
@@ -170,6 +174,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     userId, 
     type,
     filterUserId: filterUserId === 'all' ? undefined : filterUserId,
+    filterFolderId: filterFolderId === 'all' ? undefined : filterFolderId,
     onInitialLoad: handleInitialLoad
   });
 
@@ -700,6 +705,51 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                         </button>
                       );
                     })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              <div className="w-[1px] h-4 bg-border/40 mx-1 hidden sm:block" />
+
+              {/* Folder Filter Dropdown */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "px-2.5 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap",
+                      filterFolderId !== 'all' 
+                        ? "bg-background text-primary shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+                    )}
+                  >
+                    <Folder className="w-3 h-3" />
+                    {filterFolderId === 'all' ? 'Folders' : workspaceFolders.find(f => f._id === filterFolderId)?.name || 'Folder'}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-1" align="end">
+                  <div className="max-h-60 overflow-y-auto">
+                    <button
+                      onClick={() => setFilterFolderId('all')}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-[11px] font-medium rounded-md transition-colors",
+                        filterFolderId === 'all' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                      )}
+                    >
+                      All Folders
+                    </button>
+                    {workspaceFolders.map((folder) => (
+                      <button
+                        key={folder._id}
+                        onClick={() => setFilterFolderId(folder._id)}
+                        className={cn(
+                          "w-full text-left px-3 py-2 text-[11px] font-medium rounded-md transition-colors flex items-center gap-2",
+                          filterFolderId === folder._id ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                        )}
+                      >
+                        <Folder className="h-4 w-4 text-muted-foreground" />
+                        <span className="truncate">{folder.name}</span>
+                      </button>
+                    ))}
                   </div>
                 </PopoverContent>
               </Popover>
