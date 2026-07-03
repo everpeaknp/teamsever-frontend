@@ -60,9 +60,10 @@ export default function FolderHomePage() {
   const [memberPermissions, setMemberPermissions] = useState<Record<string, SpacePermissionLevel>>({});
   const [searchMemberQuery, setSearchMemberQuery] = useState('');
 
-  const { isAdmin, isOwner } = usePermission(spacePermissionLevel);
+  const { isAdmin, isOwner, can } = usePermission(spacePermissionLevel, folderPermissionLevel);
   const openModal = useModalStore((state) => state.openModal);
   const canManage = isAdmin || isOwner || spacePermissionLevel === 'FULL' || folderPermissionLevel === 'FULL';
+  const canManageWebhooks = canManage || can('MANAGE_WEBHOOKS');
 
   const folder = useMemo(
     () => folderData || folders.find((f) => f._id === folderId) || null,
@@ -290,8 +291,8 @@ export default function FolderHomePage() {
                 <p className="text-sm text-muted-foreground">{folderLists.length} lists</p>
               </div>
             </div>
-            {canManage && (
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              {canManageWebhooks && (
                 <Button
                   variant="outline"
                   onClick={() => openModal('githubWebhook', folder._id, 'folder')}
@@ -300,6 +301,8 @@ export default function FolderHomePage() {
                   <Github className="w-4 h-4 mr-2" />
                   Webhook
                 </Button>
+              )}
+              {canManage && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline">
@@ -323,8 +326,8 @@ export default function FolderHomePage() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </header>

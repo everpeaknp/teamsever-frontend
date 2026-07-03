@@ -48,6 +48,7 @@ export type PermissionAction =
   | "CREATE_FOLDER"
   | "DELETE_FOLDER"
   | "UPDATE_FOLDER"
+  | "MANAGE_WEBHOOKS"
   | "VIEW_FOLDER"
   
   // List actions
@@ -82,6 +83,7 @@ const SPACE_PERMISSION_ACTIONS: Record<SpacePermissionLevel, PermissionAction[]>
     "CREATE_FOLDER",
     "DELETE_FOLDER",
     "UPDATE_FOLDER",
+    "MANAGE_WEBHOOKS",
     "VIEW_FOLDER",
     "CREATE_LIST",
     "DELETE_LIST",
@@ -128,6 +130,7 @@ const SPACE_PERMISSION_ACTIONS: Record<SpacePermissionLevel, PermissionAction[]>
 const FOLDER_PERMISSION_ACTIONS: Record<FolderPermissionLevel, PermissionAction[]> = {
   FULL: [
     "UPDATE_FOLDER",
+    "MANAGE_WEBHOOKS",
     "VIEW_FOLDER",
     "CREATE_LIST",
     "DELETE_LIST",
@@ -228,6 +231,7 @@ const ROLE_PERMISSIONS: Record<string, PermissionAction[]> = {
     "CREATE_FOLDER",
     "DELETE_FOLDER",
     "UPDATE_FOLDER",
+    "MANAGE_WEBHOOKS",
     "VIEW_FOLDER",
     
     // List
@@ -275,6 +279,7 @@ const ROLE_PERMISSIONS: Record<string, PermissionAction[]> = {
     "CREATE_FOLDER",
     "DELETE_FOLDER",
     "UPDATE_FOLDER",
+    "MANAGE_WEBHOOKS",
     "VIEW_FOLDER",
     
     // List
@@ -320,6 +325,7 @@ const ROLE_PERMISSIONS: Record<string, PermissionAction[]> = {
     "CREATE_FOLDER",
     "DELETE_FOLDER",
     "UPDATE_FOLDER",
+    "MANAGE_WEBHOOKS",
     "VIEW_FOLDER",
 
     // List
@@ -362,6 +368,7 @@ const ROLE_PERMISSIONS: Record<string, PermissionAction[]> = {
     "CREATE_FOLDER",
     "DELETE_FOLDER",
     "UPDATE_FOLDER",
+    "MANAGE_WEBHOOKS",
     "VIEW_FOLDER",
 
     // List
