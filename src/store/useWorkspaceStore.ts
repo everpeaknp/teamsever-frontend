@@ -24,6 +24,7 @@ export interface Folder {
   spaceId: string;
   color?: string;
   icon?: string;
+  githubRepoName?: string | null;
   lists: List[];
   type: 'folder';
   createdAt?: string;
@@ -37,6 +38,7 @@ export interface Space {
   color?: string;
   icon?: string;
   status: string;
+  githubRepoName?: string | null;
   members?: any[];
   folders: Folder[];
   lists: List[]; // Changed from listsWithoutFolder to match backend

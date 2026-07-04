@@ -17,6 +17,10 @@ export interface HierarchyFolder {
   type: 'folder';
   space: string;
   lists: HierarchyList[];
+  color?: string;
+  icon?: string;
+  folderPermissionLevel?: string | null;
+  githubRepoName?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -28,6 +32,10 @@ export interface HierarchySpace {
   workspace: string;
   folders: HierarchyFolder[];
   lists: HierarchyList[]; // Changed from listsWithoutFolder to match backend
+  color?: string;
+  icon?: string;
+  spacePermissionLevel?: string | null;
+  githubRepoName?: string | null;
   members?: any[];
   createdAt?: string;
   updatedAt?: string;
