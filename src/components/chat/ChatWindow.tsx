@@ -945,11 +945,11 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                         <span>{message.metadata?.repoName}</span>
                         <span className="text-border">/</span>
                         <span className="text-primary/70">{message.metadata?.branchName || 'main'}</span>
-                        {(message.metadata?.folderName || message.metadata?.spaceName) && (
+                        {(message.metadata?.folderId || message.metadata?.folderName || message.metadata?.spaceName) && (
                           <>
                             <span className="mx-1 text-muted-foreground/30">•</span>
                             <span className="bg-muted px-1.5 py-0.5 rounded text-[9px] text-muted-foreground font-bold tracking-tight">
-                              {message.metadata.folderName || message.metadata.spaceName}
+                              {message.metadata.folderName || workspaceFolders.find(f => f._id === message.metadata?.folderId)?.name || message.metadata.spaceName}
                             </span>
                           </>
                         )}
