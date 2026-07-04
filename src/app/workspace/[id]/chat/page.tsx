@@ -28,6 +28,22 @@ export default function GroupChatPage() {
   // Chat selection state
   const [activeChannelId, setActiveChannelId] = useState<string>('general');
   const [chatType, setChatType] = useState<'workspace' | 'direct'>('workspace');
+
+  useEffect(() => {
+    if (workspaceId && typeof window !== 'undefined') {
+      const savedStateStr = localStorage.getItem(`active_chat_state_${workspaceId}`);
+      if (savedStateStr) {
+        try {
+          const savedState = JSON.parse(savedStateStr);
+          if (savedState.channelId) setActiveChannelId(savedState.channelId);
+          if (savedState.type) setChatType(savedState.type);
+          if (savedState.convId) setConversationId(savedState.convId);
+          if (savedState.uId) setDmUserId(savedState.uId);
+          if (savedState.name) setChatTitle(savedState.name);
+        } catch (e) {}
+      }
+    }
+  }, [workspaceId]);
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [dmUserId, setDmUserId] = useState<string | undefined>();
   const [chatTitle, setChatTitle] = useState('General');
@@ -95,11 +111,16 @@ export default function GroupChatPage() {
     uId?: string
   ) => {
     setActiveChannelId(channelId);
+    if (workspaceId && typeof window !== 'undefined') {
+      localStorage.setItem(`active_chat_state_${workspaceId}`, JSON.stringify({
+        channelId, type, convId, uId, name
+      }));
+    }
     setChatType(type);
     setConversationId(convId);
     setDmUserId(uId);
     setChatTitle(name);
-  }, []);
+  }, [workspaceId]);
 
   useEffect(() => {
     if (!workspaceId || typeof window === 'undefined') return;

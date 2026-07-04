@@ -740,7 +740,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                       All Folders
                     </button>
                     {workspaceFolders
-                      .filter(folder => filterFolderId !== 'all' || localMessages.some(m => m.type === 'github_commit' && m.metadata?.folderId === folder._id))
+                      .filter(folder => filterFolderId !== 'all' || folder.githubRepoName || localMessages.some(m => m.type === 'github_commit' && m.metadata?.folderId === folder._id))
                       .map((folder) => (
                       <button
                         key={folder._id}
@@ -787,7 +787,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                       All Spaces
                     </button>
                     {(hierarchy?.spaces || [])
-                      .filter(space => filterSpaceName !== 'all' || localMessages.some(m => m.type === 'github_commit' && m.metadata?.spaceName === space.name && !m.metadata?.folderId))
+                      .filter(space => filterSpaceName !== 'all' || space.githubRepoName || localMessages.some(m => m.type === 'github_commit' && m.metadata?.spaceName === space.name && !m.metadata?.folderId))
                       .map((space) => (
                       <button
                         key={space._id}
