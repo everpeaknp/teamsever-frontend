@@ -37,6 +37,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const [customDate, setCustomDate] = useState<Date | undefined>(new Date());
   const [filterUserId, setFilterUserId] = useState<string>('all');
   const [filterFolderId, setFilterFolderId] = useState<string>('all');
+  const [filterSpaceName, setFilterSpaceName] = useState<string>('all');
   const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -175,6 +176,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     type,
     filterUserId: filterUserId === 'all' ? undefined : filterUserId,
     filterFolderId: filterFolderId === 'all' ? undefined : filterFolderId,
+    filterSpaceName: filterSpaceName === 'all' ? undefined : filterSpaceName,
     onInitialLoad: handleInitialLoad
   });
 
@@ -738,7 +740,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                       All Folders
                     </button>
                     {workspaceFolders
-                      .filter(folder => localMessages.some(m => m.type === 'github_commit' && m.metadata?.folderId === folder._id))
+                      .filter(folder => filterFolderId !== 'all' || localMessages.some(m => m.type === 'github_commit' && m.metadata?.folderId === folder._id))
                       .map((folder) => (
                       <button
                         key={folder._id}
@@ -750,6 +752,53 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                       >
                         <Folder className="h-4 w-4 text-muted-foreground" />
                         <span className="truncate">{folder.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              <div className="w-[1px] h-4 bg-border/40 mx-1 hidden sm:block" />
+
+              {/* Space Filter Dropdown */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className={cn(
+                      "px-2.5 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap",
+                      filterSpaceName !== 'all' 
+                        ? "bg-background text-primary shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+                    )}
+                  >
+                    <Folder className="w-3 h-3" />
+                    {filterSpaceName === 'all' ? 'Spaces' : filterSpaceName}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-1" align="end">
+                  <div className="max-h-60 overflow-y-auto">
+                    <button
+                      onClick={() => setFilterSpaceName('all')}
+                      className={cn(
+                        "w-full text-left px-3 py-2 text-[11px] font-medium rounded-md transition-colors",
+                        filterSpaceName === 'all' ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                      )}
+                    >
+                      All Spaces
+                    </button>
+                    {(hierarchy?.spaces || [])
+                      .filter(space => filterSpaceName !== 'all' || localMessages.some(m => m.type === 'github_commit' && m.metadata?.spaceName === space.name && !m.metadata?.folderId))
+                      .map((space) => (
+                      <button
+                        key={space._id}
+                        onClick={() => setFilterSpaceName(space.name)}
+                        className={cn(
+                          "w-full text-left px-3 py-2 text-[11px] font-medium rounded-md transition-colors flex items-center gap-2",
+                          filterSpaceName === space.name ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                        )}
+                      >
+                        <Folder className="h-4 w-4 text-muted-foreground" />
+                        <span className="truncate">{space.name}</span>
                       </button>
                     ))}
                   </div>
