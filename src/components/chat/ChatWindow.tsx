@@ -737,7 +737,9 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                     >
                       All Folders
                     </button>
-                    {workspaceFolders.map((folder) => (
+                    {workspaceFolders
+                      .filter(folder => localMessages.some(m => m.type === 'github_commit' && m.metadata?.folderId === folder._id))
+                      .map((folder) => (
                       <button
                         key={folder._id}
                         onClick={() => setFilterFolderId(folder._id)}
