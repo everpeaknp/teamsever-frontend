@@ -48,10 +48,11 @@ interface UseChatOptions {
   type: 'workspace' | 'direct';
   filterUserId?: string; // Filter by specific user
   filterFolderId?: string; // Filter by folder
+  filterSpaceName?: string;
   onInitialLoad?: () => void;
 }
 
-export const useChat = ({ workspaceId, channelId, conversationId, userId, type, filterUserId, filterFolderId, onInitialLoad }: UseChatOptions) => {
+export const useChat = ({ workspaceId, channelId, conversationId, userId, type, filterUserId, filterFolderId, filterSpaceName, onInitialLoad }: UseChatOptions) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -97,7 +98,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       const filters = [];
       if (filterUserId) filters.push(`userId=${filterUserId}`);
       if (filterFolderId) filters.push(`folderId=${filterFolderId}`);
-      if ((options as any).filterSpaceName) filters.push(`spaceName=${(options as any).filterSpaceName}`);
+      if (filterSpaceName) filters.push(`spaceName=${filterSpaceName}`);
       const filterQuery = filters.length > 0 ? `&${filters.join('&')}` : '';
       
       if (type === 'workspace' && channelId && channelId !== 'general') {
