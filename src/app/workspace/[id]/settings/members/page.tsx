@@ -25,6 +25,9 @@ import {
   FolderOpen,
   Key,
   Settings2,
+  Bell,
+  ClipboardList,
+  X,
 } from 'lucide-react';
 import {
   Table,
@@ -90,6 +93,14 @@ export default function MembersPage() {
   const [generatedShortCode, setGeneratedShortCode] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const regenerateTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastGeneratedSettingsRef = useRef<{
+    role: string;
+    expiryHours: string;
+    spaceId: string;
+    spacePermission: string;
+  } | null>(null);
 
   // Custom roles state
   const [showCustomRoleModal, setShowCustomRoleModal] = useState(false);
@@ -103,6 +114,17 @@ export default function MembersPage() {
   const [availableCustomRoles, setAvailableCustomRoles] = useState<ICustomRole[]>([]);
   const initWorkspaceRef = useRef<string | null>(null);
 
+  // Access request state (owner/admin view)
+  const [accessRequests, setAccessRequests] = useState<any[]>([]);
+  const [resolvingRequest, setResolvingRequest] = useState<string | null>(null);
+
+  // Request access state (non-member view)
+  const [showRequestAccessModal, setShowRequestAccessModal] = useState(false);
+  const [requestAccessRole, setRequestAccessRole] = useState<string>('member');
+  const [requestAccessMessage, setRequestAccessMessage] = useState('');
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [myAccessRequest, setMyAccessRequest] = useState<any | null>(null);
+
   // Subscription state
   const { canInviteMember: globalCanInviteMember } = useSubscription();
   const { whatsappNumber } = useSystemSettings();
@@ -113,6 +135,11 @@ export default function MembersPage() {
     fetchMembers();
     fetchCustomRoles();
     checkCustomRoleEntitlement();
+    if (can('invite_member')) {
+      fetchAccessRequests();
+    } else {
+      fetchMyAccessRequest();
+    }
   }, [workspaceId]);
 
   const [maxMembers, setMaxMembers] = useState<number>(5);
@@ -141,9 +168,81 @@ export default function MembersPage() {
   };
 
   useEffect(() => {
-    if (!showInviteModal || spaces.length > 0) return;
+    if (!showInviteModal) return;
+    
+    // Fetch spaces fresh each time modal opens
     fetchSpaces();
-  }, [showInviteModal, spaces.length]);
+  }, [showInviteModal]);
+
+  // Auto-select space based on count when spaces load or modal opens
+  useEffect(() => {
+    if (!showInviteModal || spaces.length === 0) return;
+
+    // Determine default space selection based on space count
+    let defaultSpaceId = 'none'; // Default: no space
+
+    if (spaces.length === 1) {
+      // Single space: auto-select it
+      defaultSpaceId = spaces[0]._id;
+    } else if (spaces.length >= 2) {
+      // Multiple spaces: auto-select the first one
+      defaultSpaceId = spaces[0]._id;
+    }
+
+    // Only update if different to avoid unnecessary re-renders
+    if (inviteSpaceId !== defaultSpaceId) {
+      setInviteSpaceId(defaultSpaceId);
+    }
+  }, [showInviteModal, spaces]);
+
+  // Auto-regenerate invite code when settings change (debounced)
+  useEffect(() => {
+    // Only auto-regenerate if:
+    // 1. Modal is open and on "link" tab
+    // 2. A code has already been generated (lastGeneratedSettingsRef is set)
+    // 3. Not currently inviting/regenerating
+    if (!showInviteModal || inviteTab !== 'link' || !lastGeneratedSettingsRef.current || inviting || isRegenerating) {
+      return;
+    }
+
+    // Check if settings actually changed
+    const currentSettings = {
+      role: inviteRole,
+      expiryHours: inviteExpiryHours,
+      spaceId: inviteSpaceId,
+      spacePermission: inviteSpacePermission
+    };
+
+    const lastSettings = lastGeneratedSettingsRef.current;
+    const hasChanged = 
+      currentSettings.role !== lastSettings.role ||
+      currentSettings.expiryHours !== lastSettings.expiryHours ||
+      currentSettings.spaceId !== lastSettings.spaceId ||
+      currentSettings.spacePermission !== lastSettings.spacePermission;
+
+    if (!hasChanged) {
+      // Settings haven't changed, don't regenerate
+      return;
+    }
+
+    // Clear any existing timer
+    if (regenerateTimerRef.current) {
+      clearTimeout(regenerateTimerRef.current);
+    }
+
+    // Set a new timer to regenerate after 500ms of no changes
+    regenerateTimerRef.current = setTimeout(() => {
+      console.log('[Auto-Regenerate] Settings changed, regenerating invite code...');
+      handleGenerateLink(true); // Pass flag to indicate auto-regeneration
+    }, 500);
+
+    // Cleanup timer on unmount or when dependencies change
+    return () => {
+      if (regenerateTimerRef.current) {
+        clearTimeout(regenerateTimerRef.current);
+      }
+    };
+  }, [inviteRole, inviteExpiryHours, inviteSpaceId, inviteSpacePermission, showInviteModal, inviteTab, inviting, isRegenerating]);
 
   // Socket.IO listeners for real-time member updates
   useEffect(() => {
@@ -392,7 +491,7 @@ export default function MembersPage() {
     }
   };
 
-  const handleGenerateLink = async () => {
+  const handleGenerateLink = async (isAutoRegenerate = false) => {
     const currentMemberCount = members.length;
     if (!canInviteMember(currentMemberCount)) {
       setShowUpgradeModal(true);
@@ -401,7 +500,11 @@ export default function MembersPage() {
     }
 
     try {
-      setInviting(true);
+      if (isAutoRegenerate) {
+        setIsRegenerating(true);
+      } else {
+        setInviting(true);
+      }
       setError(null);
 
       const res = await api.post(`/workspaces/${workspaceId}/invites`, {
@@ -413,16 +516,39 @@ export default function MembersPage() {
 
       const token = res.data.data?.token;
       const shortCode = res.data.data?.shortCode;
+      
       if (token) {
         const link = `${window.location.origin}/join?token=${token}`;
         setGeneratedLink(link);
-        setGeneratedShortCode(shortCode);
-        toast.success('Invite link generated!');
+        setGeneratedShortCode(shortCode || null);
+        
+        // Save settings snapshot for comparison on next change
+        lastGeneratedSettingsRef.current = {
+          role: inviteRole,
+          expiryHours: inviteExpiryHours,
+          spaceId: inviteSpaceId,
+          spacePermission: inviteSpacePermission
+        };
+        
+        if (!isAutoRegenerate) {
+          toast.success('Invite link generated!');
+        } else {
+          console.log('[Auto-Regenerate] Code updated successfully');
+        }
+      } else {
+        throw new Error('No token received from backend');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to generate link');
+      console.error('Failed to generate invite link:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to generate link';
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
-      setInviting(false);
+      if (isAutoRegenerate) {
+        setIsRegenerating(false);
+      } else {
+        setInviting(false);
+      }
     }
   };
 
@@ -439,6 +565,7 @@ export default function MembersPage() {
     setGeneratedShortCode(null);
     setLinkCopied(false);
     setCodeCopied(false);
+    lastGeneratedSettingsRef.current = null; // Clear settings snapshot
     fetchMembers();
   };
 
@@ -455,6 +582,71 @@ export default function MembersPage() {
     } catch (error: any) {
       console.error('Failed to check custom role entitlement:', error);
       setCanUseCustomRoles(false);
+    }
+  };
+
+  // ─── Access request functions ───────────────────────────────────────────────
+
+  const fetchAccessRequests = async () => {
+    try {
+      const res = await api.get(`/workspaces/${workspaceId}/access-requests`);
+      setAccessRequests(res.data.data || []);
+    } catch {
+      // non-critical — owner may not have permission or feature not yet used
+    }
+  };
+
+  const fetchMyAccessRequest = async () => {
+    try {
+      const res = await api.get(`/workspaces/${workspaceId}/access-requests/my`);
+      setMyAccessRequest(res.data.data || null);
+    } catch {
+      // non-critical
+    }
+  };
+
+  const handleApproveRequest = async (requestId: string) => {
+    setResolvingRequest(requestId);
+    try {
+      await api.patch(`/workspaces/${workspaceId}/access-requests/${requestId}/approve`);
+      toast.success('Request approved — user has been added to the workspace');
+      setAccessRequests(prev => prev.filter(r => r._id !== requestId));
+      fetchMembers();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to approve request');
+    } finally {
+      setResolvingRequest(null);
+    }
+  };
+
+  const handleDenyRequest = async (requestId: string) => {
+    setResolvingRequest(requestId);
+    try {
+      await api.patch(`/workspaces/${workspaceId}/access-requests/${requestId}/deny`);
+      toast.success('Request denied');
+      setAccessRequests(prev => prev.filter(r => r._id !== requestId));
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to deny request');
+    } finally {
+      setResolvingRequest(null);
+    }
+  };
+
+  const handleSubmitAccessRequest = async () => {
+    setSubmittingRequest(true);
+    try {
+      const res = await api.post(`/workspaces/${workspaceId}/access-requests`, {
+        requestedRole: requestAccessRole,
+        message: requestAccessMessage.trim(),
+      });
+      setMyAccessRequest(res.data.data);
+      setShowRequestAccessModal(false);
+      setRequestAccessMessage('');
+      toast.success('Access request sent! The workspace owner has been notified.');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to submit request');
+    } finally {
+      setSubmittingRequest(false);
     }
   };
 
@@ -660,6 +852,38 @@ export default function MembersPage() {
                 </Button>
               </div>
             )}
+            {!can('invite_member') && (
+              <div className="flex-shrink-0">
+                {myAccessRequest?.status === 'pending' ? (
+                  <Badge variant="outline" className="flex items-center gap-2 px-3 py-2 text-sm bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-400">
+                    <Bell className="w-4 h-4" strokeWidth={1.5} />
+                    Request Pending
+                  </Badge>
+                ) : myAccessRequest?.status === 'approved' ? (
+                  <Badge variant="outline" className="flex items-center gap-2 px-3 py-2 text-sm bg-green-50 text-green-700 border-green-300">
+                    <Check className="w-4 h-4" strokeWidth={1.5} />
+                    Access Approved
+                  </Badge>
+                ) : myAccessRequest?.status === 'denied' ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => { setMyAccessRequest(null); setShowRequestAccessModal(true); }}
+                    className="flex items-center gap-2 min-h-[44px]"
+                  >
+                    <UserPlus className="w-4 h-4" strokeWidth={1.5} />
+                    Request Again
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => setShowRequestAccessModal(true)}
+                    className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]"
+                  >
+                    <UserPlus className="w-4 h-4" strokeWidth={1.5} />
+                    Request Access
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -670,6 +894,61 @@ export default function MembersPage() {
         {error && (
           <div className="mb-6 bg-destructive/10 border border-destructive/20 rounded-lg p-4">
             <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        {/* Pending Access Requests Panel — owner/admin only */}
+        {can('invite_member') && accessRequests.length > 0 && (
+          <div className="mb-6 bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-border flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/20">
+              <Bell className="w-4 h-4 text-yellow-600 dark:text-yellow-400" strokeWidth={1.5} />
+              <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">
+                Pending Access Requests ({accessRequests.length})
+              </h3>
+            </div>
+            <div className="divide-y divide-border">
+              {accessRequests.map((req: any) => (
+                <div key={req._id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {req.requester?.name || 'Unknown'}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">{req.requester?.email}</p>
+                    {req.message && (
+                      <p className="text-xs text-muted-foreground mt-0.5 italic">"{req.message}"</p>
+                    )}
+                  </div>
+                  <Badge variant="outline" className="capitalize text-xs shrink-0">
+                    {req.requestedRole.replace(/_/g, ' ')}
+                  </Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      onClick={() => handleApproveRequest(req._id)}
+                      disabled={resolvingRequest === req._id}
+                      className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white text-xs"
+                    >
+                      {resolvingRequest === req._id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Check className="w-3 h-3 mr-1" />
+                      )}
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDenyRequest(req._id)}
+                      disabled={resolvingRequest === req._id}
+                      className="h-8 px-3 text-destructive border-destructive/30 hover:bg-destructive/10 text-xs"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Deny
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -1216,44 +1495,41 @@ export default function MembersPage() {
                         <p className="text-xs text-[#135bec] font-semibold flex items-center gap-1.5">
                           <Key className="w-3.5 h-3.5" /> Mobile Invite Code
                         </p>
-                        <Badge variant="outline" className="bg-white text-[10px] py-0 border-[#135bec]/20 text-[#135bec]">READY</Badge>
+                        <Badge variant="outline" className={`text-[10px] py-0 ${isRegenerating ? 'bg-yellow-50 border-yellow-300 text-yellow-700' : 'bg-white border-[#135bec]/20 text-[#135bec]'}`}>
+                          {isRegenerating ? 'UPDATING...' : 'READY'}
+                        </Badge>
                       </div>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 text-2xl font-mono font-bold tracking-[0.2em] text-[#135bec] text-center bg-white/50 py-2 rounded border border-[#135bec]/5">{generatedShortCode}</code>
+                        {isRegenerating ? (
+                          <div className="flex-1 text-2xl font-mono font-bold tracking-[0.2em] text-[#135bec] text-center bg-white/50 py-2 rounded border border-[#135bec]/5 flex items-center justify-center gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span className="opacity-50">Updating...</span>
+                          </div>
+                        ) : (
+                          <code className="flex-1 text-2xl font-mono font-bold tracking-[0.2em] text-[#135bec] text-center bg-white/50 py-2 rounded border border-[#135bec]/5">{generatedShortCode}</code>
+                        )}
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(generatedShortCode);
                             setCodeCopied(true);
                             setTimeout(() => setCodeCopied(false), 2000);
                           }}
-                          className="flex-shrink-0 p-2.5 rounded bg-[#135bec] text-white hover:bg-[#135bec]/90 transition-colors shadow-sm"
+                          disabled={isRegenerating}
+                          className="flex-shrink-0 p-2.5 rounded bg-[#135bec] text-white hover:bg-[#135bec]/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Copy code"
                         >
                           {codeCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                         </button>
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-3 text-center">Mobile users can enter this code in their dashboard to join instantly.</p>
+                      <p className="text-[10px] text-muted-foreground mt-3 text-center">
+                        {isRegenerating 
+                          ? 'Generating new code with updated settings...' 
+                          : 'Mobile users can enter this code in their dashboard to join instantly.'}
+                      </p>
                     </div>
                   )}
 
-                  <div className="bg-muted rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground mb-2 font-medium">Or share link:</p>
-                    <div className="flex items-center gap-2">
-                      <code className="flex-1 text-[10px] break-all text-muted-foreground truncate">{generatedLink}</code>
-                      <button
-                        onClick={() => {
-                          if (generatedLink) {
-                            navigator.clipboard.writeText(generatedLink);
-                            setLinkCopied(true);
-                            setTimeout(() => setLinkCopied(false), 2000);
-                          }
-                        }}
-                        className="flex-shrink-0 p-1.5 rounded hover:bg-accent transition-colors"
-                      >
-                        {linkCopied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                  </div>
+
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -1277,11 +1553,17 @@ export default function MembersPage() {
                     </Button>
                   ) : (
                     <Button
-                      onClick={handleGenerateLink}
-                      disabled={inviting || !!generatedLink}
+                      onClick={() => handleGenerateLink(false)}
+                      disabled={inviting || isRegenerating}
                       className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]"
                     >
-                      {inviting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : generatedLink ? 'Code Ready ✓' : 'Generate Invite Code'}
+                      {inviting || isRegenerating ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isRegenerating ? 'Updating...' : 'Generating...'}</>
+                      ) : generatedLink ? (
+                        'Regenerate Code'
+                      ) : (
+                        'Generate Invite Code'
+                      )}
                     </Button>
                   )}
                 </div>
@@ -1299,6 +1581,98 @@ export default function MembersPage() {
             workspaceName="Workspace"
             whatsappNumber={whatsappNumber}
           />
+
+          {/* Request Access Modal */}
+          {showRequestAccessModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+              <div className="bg-card rounded-2xl p-6 w-full max-w-md border border-border shadow-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-card-foreground flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-primary" strokeWidth={1.5} />
+                    Request Workspace Access
+                  </h3>
+                  <button
+                    onClick={() => setShowRequestAccessModal(false)}
+                    className="p-1.5 hover:bg-accent rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+                  </button>
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-4">
+                  Submit a request to join this workspace. The owner will be notified and can approve or deny it.
+                </p>
+
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="requestRole">Requested Role</Label>
+                    <Select value={requestAccessRole} onValueChange={setRequestAccessRole} disabled={submittingRequest}>
+                      <SelectTrigger className="min-h-[44px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="admin">
+                          <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-blue-500" />Admin</div>
+                        </SelectItem>
+                        <SelectItem value="project_manager">
+                          <div className="flex items-center gap-2"><FolderOpen className="w-4 h-4 text-purple-500" />Project Manager</div>
+                        </SelectItem>
+                        <SelectItem value="developer">
+                          <div className="flex items-center gap-2"><Key className="w-4 h-4 text-green-500" />Developer</div>
+                        </SelectItem>
+                        <SelectItem value="qa">
+                          <div className="flex items-center gap-2"><Check className="w-4 h-4 text-amber-500" />QA</div>
+                        </SelectItem>
+                        <SelectItem value="member">
+                          <div className="flex items-center gap-2"><UserIcon className="w-4 h-4 text-emerald-500" />Member</div>
+                        </SelectItem>
+                        <SelectItem value="guest">
+                          <div className="flex items-center gap-2"><Eye className="w-4 h-4 text-gray-500" />Guest</div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="requestMessage">Message <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <textarea
+                      id="requestMessage"
+                      value={requestAccessMessage}
+                      onChange={(e) => setRequestAccessMessage(e.target.value)}
+                      placeholder="Briefly explain why you need access..."
+                      maxLength={500}
+                      rows={3}
+                      disabled={submittingRequest}
+                      className="w-full mt-1.5 px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1 text-right">{requestAccessMessage.length}/500</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowRequestAccessModal(false)}
+                    disabled={submittingRequest}
+                    className="flex-1 min-h-[44px]"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSubmitAccessRequest}
+                    disabled={submittingRequest}
+                    className="flex-1 min-h-[44px]"
+                  >
+                    {submittingRequest ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Sending...</>
+                    ) : (
+                      'Send Request'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }

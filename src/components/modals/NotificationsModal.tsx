@@ -53,15 +53,19 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
   }, [isOpen]);
 
   const fetchNotifications = async () => {
-    if (!scopedWorkspaceId) {
-      setNotifications([]);
-      setLoading(false);
-      return;
-    }
     try {
-      const response = await api.get(`/notifications?workspaceId=${scopedWorkspaceId}`);
-      setNotifications(response.data.data || []);
-    } catch (error) {
+      setLoading(true);
+      
+      // Build URL - if in workspace, filter by workspace; otherwise get all notifications
+      let url = '/notifications?limit=50';
+      if (scopedWorkspaceId) {
+        url += `&workspaceId=${scopedWorkspaceId}`;
+      }
+      
+      const response = await api.get(url);
+      const fetchedNotifications = response.data.data || [];
+      setNotifications(fetchedNotifications);
+    } catch (error: any) {
       console.error('Failed to fetch notifications:', error);
     } finally {
       setLoading(false);
@@ -69,7 +73,6 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
   };
 
   const handleMarkAsRead = async (notificationId: string, notificationType: string) => {
-    if (!scopedWorkspaceId) return;
     try {
       await api.patch(`/notifications/${notificationId}/read`);
       
@@ -88,7 +91,11 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
         markAsRead(notificationId);
       }
       
-      const response = await api.get(`/notifications/unread-count?workspaceId=${scopedWorkspaceId}`);
+      // Fetch unread count - works with or without workspace
+      const url = scopedWorkspaceId 
+        ? `/notifications/unread-count?workspaceId=${scopedWorkspaceId}`
+        : `/notifications/unread-count`;
+      const response = await api.get(url);
       const { setUnreadCount } = useNotificationStore.getState();
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {
@@ -97,7 +104,11 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
   };
 
   const handleMarkAllAsRead = async () => {
-    if (!scopedWorkspaceId) return;
+    if (!scopedWorkspaceId) {
+      toast.error('Mark all as read requires a workspace context');
+      return;
+    }
+    
     try {
       await api.patch(`/notifications/read-all?workspaceId=${scopedWorkspaceId}`);
       markAllAsRead();

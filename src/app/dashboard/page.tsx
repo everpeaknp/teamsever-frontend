@@ -29,6 +29,7 @@ import { useSocket } from '@/contexts/SocketContext';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 import { Progress } from '@/components/ui/progress';
 import {
   DropdownMenu,
@@ -192,10 +193,15 @@ export default function DashboardPage() {
   // Fetch unread notifications count
   const fetchNotificationCount = async () => {
     try {
-      // Dashboard is global (no active workspace scope), so avoid strict scoped endpoint calls here.
-      setUnreadNotifications(0);
+      // Dashboard is global (no workspace context), so fetch global unread count
+      // Don't pass workspaceId parameter at all - backend will return global count
+      const response = await api.get('/notifications/unread-count');
+      const count = response.data?.data?.unreadCount || 0;
+      setUnreadNotifications(count);
     } catch (error) {
       console.error('Failed to fetch notification count:', error);
+      // Silently fail - don't break the dashboard if notifications fail
+      setUnreadNotifications(0);
     }
   };
 
@@ -298,18 +304,29 @@ export default function DashboardPage() {
     try {
       const response = await api.post('/invites/redeem', { code });
       const data = response.data.data;
-      setRedeemSuccess(response.data.message || 'Joined successfully!');
-      // Redirect after short delay
-      setTimeout(() => {
-        setShowInviteCodeModal(false);
-        setInviteCode('');
-        setRedeemSuccess(null);
-        if (data.spaceId) {
-          router.push(`/workspace/${data.workspace._id}/spaces/${data.spaceId}`);
-        } else {
-          router.push(`/workspace/${data.workspace._id}`);
-        }
-      }, 1500);
+      
+      // Show appropriate toast message based on space membership status
+      if (data.spaceId && data.spaceAlreadyMember) {
+        // User was already a space member
+        toast.info(`You're already a member of ${data.spaceName}.`);
+      } else if (data.spaceId && !data.spaceAlreadyMember) {
+        // User was newly added to the space
+        toast.success(`Added to ${data.spaceName}.`);
+      } else {
+        // No space assignment, just workspace join
+        toast.success(response.data.message || 'Joined successfully!');
+      }
+      
+      // Close modal and redirect immediately
+      setShowInviteCodeModal(false);
+      setInviteCode('');
+      setRedeemSuccess(null);
+      
+      if (data.spaceId) {
+        router.push(`/workspace/${data.workspace._id}/spaces/${data.spaceId}`);
+      } else {
+        router.push(`/workspace/${data.workspace._id}`);
+      }
     } catch (err: any) {
       setRedeemError(err.response?.data?.message || 'Invalid or expired invite code');
     } finally {
