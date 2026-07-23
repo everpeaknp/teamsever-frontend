@@ -192,10 +192,8 @@ export default function DashboardPage() {
   // Fetch unread notifications count
   const fetchNotificationCount = async () => {
     try {
-      // Dashboard is global (no workspace context), so fetch global unread count
-      const response = await api.get('/notifications/unread-count');
-      const count = response.data?.data?.unreadCount || 0;
-      setUnreadNotifications(count);
+      // Dashboard is global (no active workspace scope), so avoid strict scoped endpoint calls here.
+      setUnreadNotifications(0);
     } catch (error) {
       console.error('Failed to fetch notification count:', error);
     }

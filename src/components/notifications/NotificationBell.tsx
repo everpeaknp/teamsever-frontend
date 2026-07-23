@@ -36,12 +36,11 @@ export function NotificationBell() {
   const workspaceMatch = pathname?.match(/\/workspace\/([^/]+)/);
   const scopedWorkspaceId = workspaceMatch?.[1];
 
-  // Fetch notifications on mount and poll periodically
+  // Fetch notifications on mount
   useEffect(() => {
     // Check if user is authenticated before fetching
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      
       if (!token || token === 'undefined' || token === 'null') {
         // User not authenticated, skip fetch
         return;
@@ -50,17 +49,7 @@ export function NotificationBell() {
     
     fetchNotifications();
     fetchUnreadCount();
-
-    // Poll for new notifications every 10 seconds (always, not just when bell is open)
-    const interval = setInterval(() => {
-      fetchNotifications();
-      fetchUnreadCount();
-    }, 10000);
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
+  }, [scopedWorkspaceId]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -80,6 +69,11 @@ export function NotificationBell() {
   }, [isOpen]);
 
   const fetchNotifications = async () => {
+    if (!scopedWorkspaceId) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
     try {
       // Check if user is authenticated
       if (typeof window !== 'undefined') {
@@ -90,21 +84,10 @@ export function NotificationBell() {
       }
       
       setLoading(true);
-      
-      // If we have a workspace context, fetch workspace-specific notifications
-      // Otherwise fetch all notifications without workspace filter
-      let url;
-      if (scopedWorkspaceId) {
-        url = `/notifications?limit=20&unreadOnly=true&workspaceId=${scopedWorkspaceId}&t=${Date.now()}`;
-      } else {
-        // Fetch all unread notifications across all workspaces
-        url = `/notifications?limit=20&unreadOnly=true&t=${Date.now()}`;
-      }
-      
-      const response = await api.get(url);
-      const notifications = response.data.data || [];
-      setNotifications(notifications);
-    } catch (error: any) {
+      // Only fetch unread notifications for the bell dropdown
+      const response = await api.get(`/notifications?limit=20&unreadOnly=true&workspaceId=${scopedWorkspaceId}`);
+      setNotifications(response.data.data || []);
+    } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
       setLoading(false);
@@ -112,6 +95,10 @@ export function NotificationBell() {
   };
 
   const fetchUnreadCount = async () => {
+    if (!scopedWorkspaceId) {
+      setUnreadCount(0);
+      return;
+    }
     try {
       // Check if user is authenticated
       if (typeof window !== 'undefined') {
@@ -121,19 +108,9 @@ export function NotificationBell() {
         }
       }
       
-      // If we have a workspace context, fetch workspace-specific unread count
-      // Otherwise fetch all unread notifications across all workspaces
-      let url;
-      if (scopedWorkspaceId) {
-        url = `/notifications/unread-count?workspaceId=${scopedWorkspaceId}&t=${Date.now()}`;
-      } else {
-        // Fetch all unread notifications count across all workspaces
-        url = `/notifications/unread-count?t=${Date.now()}`;
-      }
-      
-      const response = await api.get(url);
+      const response = await api.get(`/notifications/unread-count?workspaceId=${scopedWorkspaceId}`);
       setUnreadCount(response.data.data.unreadCount || 0);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to fetch unread count:', error);
     }
   };
