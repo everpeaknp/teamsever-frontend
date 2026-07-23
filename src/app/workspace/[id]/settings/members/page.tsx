@@ -93,6 +93,14 @@ export default function MembersPage() {
   const [generatedShortCode, setGeneratedShortCode] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const regenerateTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastGeneratedSettingsRef = useRef<{
+    role: string;
+    expiryHours: string;
+    spaceId: string;
+    spacePermission: string;
+  } | null>(null);
 
   // Custom roles state
   const [showCustomRoleModal, setShowCustomRoleModal] = useState(false);
@@ -160,9 +168,81 @@ export default function MembersPage() {
   };
 
   useEffect(() => {
-    if (!showInviteModal || spaces.length > 0) return;
+    if (!showInviteModal) return;
+    
+    // Fetch spaces fresh each time modal opens
     fetchSpaces();
-  }, [showInviteModal, spaces.length]);
+  }, [showInviteModal]);
+
+  // Auto-select space based on count when spaces load or modal opens
+  useEffect(() => {
+    if (!showInviteModal || spaces.length === 0) return;
+
+    // Determine default space selection based on space count
+    let defaultSpaceId = 'none'; // Default: no space
+
+    if (spaces.length === 1) {
+      // Single space: auto-select it
+      defaultSpaceId = spaces[0]._id;
+    } else if (spaces.length >= 2) {
+      // Multiple spaces: auto-select the first one
+      defaultSpaceId = spaces[0]._id;
+    }
+
+    // Only update if different to avoid unnecessary re-renders
+    if (inviteSpaceId !== defaultSpaceId) {
+      setInviteSpaceId(defaultSpaceId);
+    }
+  }, [showInviteModal, spaces]);
+
+  // Auto-regenerate invite code when settings change (debounced)
+  useEffect(() => {
+    // Only auto-regenerate if:
+    // 1. Modal is open and on "link" tab
+    // 2. A code has already been generated (lastGeneratedSettingsRef is set)
+    // 3. Not currently inviting/regenerating
+    if (!showInviteModal || inviteTab !== 'link' || !lastGeneratedSettingsRef.current || inviting || isRegenerating) {
+      return;
+    }
+
+    // Check if settings actually changed
+    const currentSettings = {
+      role: inviteRole,
+      expiryHours: inviteExpiryHours,
+      spaceId: inviteSpaceId,
+      spacePermission: inviteSpacePermission
+    };
+
+    const lastSettings = lastGeneratedSettingsRef.current;
+    const hasChanged = 
+      currentSettings.role !== lastSettings.role ||
+      currentSettings.expiryHours !== lastSettings.expiryHours ||
+      currentSettings.spaceId !== lastSettings.spaceId ||
+      currentSettings.spacePermission !== lastSettings.spacePermission;
+
+    if (!hasChanged) {
+      // Settings haven't changed, don't regenerate
+      return;
+    }
+
+    // Clear any existing timer
+    if (regenerateTimerRef.current) {
+      clearTimeout(regenerateTimerRef.current);
+    }
+
+    // Set a new timer to regenerate after 500ms of no changes
+    regenerateTimerRef.current = setTimeout(() => {
+      console.log('[Auto-Regenerate] Settings changed, regenerating invite code...');
+      handleGenerateLink(true); // Pass flag to indicate auto-regeneration
+    }, 500);
+
+    // Cleanup timer on unmount or when dependencies change
+    return () => {
+      if (regenerateTimerRef.current) {
+        clearTimeout(regenerateTimerRef.current);
+      }
+    };
+  }, [inviteRole, inviteExpiryHours, inviteSpaceId, inviteSpacePermission, showInviteModal, inviteTab, inviting, isRegenerating]);
 
   // Socket.IO listeners for real-time member updates
   useEffect(() => {
@@ -411,7 +491,7 @@ export default function MembersPage() {
     }
   };
 
-  const handleGenerateLink = async () => {
+  const handleGenerateLink = async (isAutoRegenerate = false) => {
     const currentMemberCount = members.length;
     if (!canInviteMember(currentMemberCount)) {
       setShowUpgradeModal(true);
@@ -420,7 +500,11 @@ export default function MembersPage() {
     }
 
     try {
-      setInviting(true);
+      if (isAutoRegenerate) {
+        setIsRegenerating(true);
+      } else {
+        setInviting(true);
+      }
       setError(null);
 
       const res = await api.post(`/workspaces/${workspaceId}/invites`, {
@@ -432,16 +516,39 @@ export default function MembersPage() {
 
       const token = res.data.data?.token;
       const shortCode = res.data.data?.shortCode;
+      
       if (token) {
         const link = `${window.location.origin}/join?token=${token}`;
         setGeneratedLink(link);
-        setGeneratedShortCode(shortCode);
-        toast.success('Invite link generated!');
+        setGeneratedShortCode(shortCode || null);
+        
+        // Save settings snapshot for comparison on next change
+        lastGeneratedSettingsRef.current = {
+          role: inviteRole,
+          expiryHours: inviteExpiryHours,
+          spaceId: inviteSpaceId,
+          spacePermission: inviteSpacePermission
+        };
+        
+        if (!isAutoRegenerate) {
+          toast.success('Invite link generated!');
+        } else {
+          console.log('[Auto-Regenerate] Code updated successfully');
+        }
+      } else {
+        throw new Error('No token received from backend');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to generate link');
+      console.error('Failed to generate invite link:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to generate link';
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
-      setInviting(false);
+      if (isAutoRegenerate) {
+        setIsRegenerating(false);
+      } else {
+        setInviting(false);
+      }
     }
   };
 
@@ -458,6 +565,7 @@ export default function MembersPage() {
     setGeneratedShortCode(null);
     setLinkCopied(false);
     setCodeCopied(false);
+    lastGeneratedSettingsRef.current = null; // Clear settings snapshot
     fetchMembers();
   };
 
@@ -1387,23 +1495,37 @@ export default function MembersPage() {
                         <p className="text-xs text-[#135bec] font-semibold flex items-center gap-1.5">
                           <Key className="w-3.5 h-3.5" /> Mobile Invite Code
                         </p>
-                        <Badge variant="outline" className="bg-white text-[10px] py-0 border-[#135bec]/20 text-[#135bec]">READY</Badge>
+                        <Badge variant="outline" className={`text-[10px] py-0 ${isRegenerating ? 'bg-yellow-50 border-yellow-300 text-yellow-700' : 'bg-white border-[#135bec]/20 text-[#135bec]'}`}>
+                          {isRegenerating ? 'UPDATING...' : 'READY'}
+                        </Badge>
                       </div>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 text-2xl font-mono font-bold tracking-[0.2em] text-[#135bec] text-center bg-white/50 py-2 rounded border border-[#135bec]/5">{generatedShortCode}</code>
+                        {isRegenerating ? (
+                          <div className="flex-1 text-2xl font-mono font-bold tracking-[0.2em] text-[#135bec] text-center bg-white/50 py-2 rounded border border-[#135bec]/5 flex items-center justify-center gap-2">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span className="opacity-50">Updating...</span>
+                          </div>
+                        ) : (
+                          <code className="flex-1 text-2xl font-mono font-bold tracking-[0.2em] text-[#135bec] text-center bg-white/50 py-2 rounded border border-[#135bec]/5">{generatedShortCode}</code>
+                        )}
                         <button
                           onClick={() => {
                             navigator.clipboard.writeText(generatedShortCode);
                             setCodeCopied(true);
                             setTimeout(() => setCodeCopied(false), 2000);
                           }}
-                          className="flex-shrink-0 p-2.5 rounded bg-[#135bec] text-white hover:bg-[#135bec]/90 transition-colors shadow-sm"
+                          disabled={isRegenerating}
+                          className="flex-shrink-0 p-2.5 rounded bg-[#135bec] text-white hover:bg-[#135bec]/90 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                           title="Copy code"
                         >
                           {codeCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                         </button>
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-3 text-center">Mobile users can enter this code in their dashboard to join instantly.</p>
+                      <p className="text-[10px] text-muted-foreground mt-3 text-center">
+                        {isRegenerating 
+                          ? 'Generating new code with updated settings...' 
+                          : 'Mobile users can enter this code in their dashboard to join instantly.'}
+                      </p>
                     </div>
                   )}
 
@@ -1431,11 +1553,17 @@ export default function MembersPage() {
                     </Button>
                   ) : (
                     <Button
-                      onClick={handleGenerateLink}
-                      disabled={inviting || !!generatedLink}
+                      onClick={() => handleGenerateLink(false)}
+                      disabled={inviting || isRegenerating}
                       className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 min-h-[44px]"
                     >
-                      {inviting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : generatedLink ? 'Code Ready ✓' : 'Generate Invite Code'}
+                      {inviting || isRegenerating ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isRegenerating ? 'Updating...' : 'Generating...'}</>
+                      ) : generatedLink ? (
+                        'Regenerate Code'
+                      ) : (
+                        'Generate Invite Code'
+                      )}
                     </Button>
                   )}
                 </div>
