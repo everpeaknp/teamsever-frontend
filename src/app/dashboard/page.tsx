@@ -234,14 +234,7 @@ export default function DashboardPage() {
     e.preventDefault();
     if (!newWorkspaceName.trim()) return;
     
-    // Check workspace limit before creating
-    if (!canCreateWorkspace()) {
-      setUpgradeReason('workspace');
-      setShowUpgradeModal(true);
-      setShowCreateModal(false);
-      return;
-    }
-    
+    // Let backend handle limit checking - frontend check can be stale
     createWorkspace.mutate(
       { name: newWorkspaceName.trim() },
       {
