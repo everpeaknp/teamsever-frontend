@@ -143,6 +143,8 @@ const DEFAULT_PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { key: 'VIEW_ANALYTICS_TEAM', label: 'View Workspace Analytics', category: 'Analytics' },
   { key: 'VIEW_ACTIVITY_LOG', label: 'View Activity Log', category: 'Analytics' },
   { key: 'MANAGE_SETTINGS', label: 'Manage Workspace Settings', category: 'Workspace Settings' },
+  { key: 'MANAGE_LEAVES', label: 'Manage & Approve Leaves', category: 'HR & Leaves' },
+  { key: 'VIEW_LEAVES', label: 'View Team Leaves', category: 'HR & Leaves' },
 ];
 
 const PERMISSION_CATEGORIES = [
@@ -154,6 +156,7 @@ const PERMISSION_CATEGORIES = [
   'Announcements',
   'Analytics',
   'Workspace Settings',
+  'HR & Leaves',
 ];
 
 const LEGACY_PERMISSION_ALIASES: Record<string, string[]> = {
@@ -198,6 +201,8 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'VIEW_ACTIVITY_LOG',
     'MANAGE_CUSTOM_ROLES',
     'VIEW_ANNOUNCEMENT',
+    'MANAGE_LEAVES',
+    'VIEW_LEAVES',
   ],
   admin: [
     'UPDATE_WORKSPACE',
@@ -238,6 +243,8 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'VIEW_ANNOUNCEMENT',
     'CREATE_ANNOUNCEMENT',
     'DELETE_ANNOUNCEMENT',
+    'MANAGE_LEAVES',
+    'VIEW_LEAVES',
   ],
   operations_manager: [
     'VIEW_WORKSPACE',
@@ -272,6 +279,8 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'VIEW_ANALYTICS',
     'VIEW_ACTIVITY_LOG',
     'VIEW_ANNOUNCEMENT',
+    'MANAGE_LEAVES',
+    'VIEW_LEAVES',
   ],
   project_manager: [
     'VIEW_WORKSPACE',
@@ -691,7 +700,14 @@ export default function RolesPage() {
       }
 
       if (catalogRes.status === 'fulfilled') {
-        setPermissionCatalog(catalogRes.value.data?.data || DEFAULT_PERMISSION_CATALOG);
+        // Keep client-known permissions available when an older API deployment
+        // returns a catalog that has not been updated yet. API entries override
+        // fallback labels/categories for keys they already define.
+        const catalogByKey = new Map(DEFAULT_PERMISSION_CATALOG.map((permission) => [permission.key, permission]));
+        for (const permission of catalogRes.value.data?.data || []) {
+          catalogByKey.set(permission.key, permission);
+        }
+        setPermissionCatalog(Array.from(catalogByKey.values()));
       } else {
         setPermissionCatalog(DEFAULT_PERMISSION_CATALOG);
       }
@@ -1701,6 +1717,21 @@ export default function RolesPage() {
               <div className="rounded-3xl border border-dashed border-border bg-muted/20 p-4 text-sm text-muted-foreground">
                   Use this for one-off exceptions like “Operations Manager 1 can publish announcements” or “Operations Manager 2 should not be able to remove members in this workspace.”
                 </div>
+              </div>
+
+              <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-orange-500/20 bg-orange-500/5 px-4 py-3">
+                <span className="text-sm text-muted-foreground">Editing permissions for</span>
+                <span className="font-semibold text-foreground">{selectedMember?.name || 'Select a member'}</span>
+                {selectedMember ? (
+                  <Badge variant="outline" className="rounded-full border-orange-500/30 text-orange-700 dark:text-orange-300">
+                    {prettifyRole(selectedMember.role)}
+                  </Badge>
+                ) : null}
+                {selectedMember?.customRole && typeof selectedMember.customRole === 'object' ? (
+                  <Badge className="rounded-full bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300">
+                    {selectedMember.customRole.name || selectedMember.customRole.label || 'Custom role'}
+                  </Badge>
+                ) : null}
               </div>
 
               {loadingMemberPermissions ? (

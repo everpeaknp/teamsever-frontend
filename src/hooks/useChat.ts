@@ -18,7 +18,12 @@ export interface ChatMessage {
     profilePicture?: string;
   };
   content: string;
-  type?: 'text' | 'system' | 'github_commit';
+  type?: 'text' | 'system' | 'github_commit' | 'leave_request';
+  reactions?: Array<{
+    emoji: string;
+    users: string[];
+    count: number;
+  }>;
   metadata?: {
     repoName?: string;
     branchName?: string;
@@ -237,8 +242,25 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       });
     };
 
+    const handleReaction = (data: { messageId: string; reactions: any[] }) => {
+      setMessages(prev =>
+        prev.map(m => (m._id === data.messageId ? { ...m, reactions: data.reactions } : m))
+      );
+    };
+
+    const handleDMUpdated = (data: { message: ChatMessage }) => {
+      if (data.message) {
+        setMessages(prev =>
+          prev.map(m => (m._id === data.message._id ? { ...m, ...data.message } : m))
+        );
+      }
+    };
+
     socket.on('chat:new', handleNewMessage);
     socket.on('dm:new', handleNewMessage);
+    socket.on('chat:reaction', handleReaction);
+    socket.on('dm:reaction', handleReaction);
+    socket.on('dm:updated', handleDMUpdated);
     socket.on('chat:user_typing', handleUserTyping);
     socket.on('chat:user_stop_typing', handleUserStopTyping);
 
@@ -250,6 +272,9 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       }
       socket.off('chat:new', handleNewMessage);
       socket.off('dm:new', handleNewMessage);
+      socket.off('chat:reaction', handleReaction);
+      socket.off('dm:reaction', handleReaction);
+      socket.off('dm:updated', handleDMUpdated);
       socket.off('chat:user_typing', handleUserTyping);
       socket.off('chat:user_stop_typing', handleUserStopTyping);
     };

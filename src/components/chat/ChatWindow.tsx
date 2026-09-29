@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Smile, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, Filter, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder } from 'lucide-react';
+import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, Filter, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/axios';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { format, isToday, isYesterday, isWithinInterval, startOfDay, endOfDay, subDays, startOfWeek } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -30,9 +31,13 @@ interface ChatWindowProps {
 }
 
 import { EditChannelModal } from './EditChannelModal';
+import { LeaveCard } from './LeaveCard';
+import { RequestLeaveModal } from './RequestLeaveModal';
+import { MessageReactionsBar, InputEmojiPicker } from './MessageReactionsBar';
 
 export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, isAdmin, onMenuClick }: ChatWindowProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | 'week' | 'custom'>('all');
   const [customDate, setCustomDate] = useState<Date | undefined>(new Date());
   const [filterUserId, setFilterUserId] = useState<string>('all');
@@ -47,7 +52,9 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const shouldAutoScrollRef = useRef(true);
 
   // Get current user from store
-  const { user: currentUser } = useAuthStore();
+  const { user: currentUser, can, currentWorkspaceRole } = useAuthStore();
+  const canManageLeaves = can('MANAGE_LEAVES');
+  const isWorkspaceOwner = currentWorkspaceRole === 'owner';
   // Fall back to localStorage in case Zustand store hasn't been hydrated yet
   const currentUserId = currentUser?._id || (typeof window !== 'undefined' ? localStorage.getItem('userId') : null);
   const currentUserName = currentUser?.name || (typeof window !== 'undefined' ? localStorage.getItem('userName') : null);
@@ -522,6 +529,89 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     setTimeout(() => {
       textareaRef.current?.focus();
     }, 0);
+  };
+
+  // Handle message reaction (Fire, Pulse, Kudos, Love, Like, etc.)
+  const handleReact = useCallback(async (messageId: string, emoji: string) => {
+    try {
+      if (type === 'workspace') {
+        await api.post(`/chat/messages/${messageId}/react`, { emoji });
+      } else {
+        await api.post(`/dm/messages/${messageId}/react`, { emoji });
+      }
+    } catch (err: any) {
+      console.error('[ChatWindow] Failed to toggle reaction:', err);
+      toast.error('Failed to react to message');
+    }
+  }, [type]);
+
+  // Insert emoji at cursor position in textarea
+  const handleInsertEmoji = (emoji: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setInputValue((prev) => prev + emoji);
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = inputValue;
+    const newText = text.substring(0, start) + emoji + text.substring(end);
+    setInputValue(newText);
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const newPos = start + emoji.length;
+      textarea.setSelectionRange(newPos, newPos);
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    });
+  };
+
+  // Quick send a single emoji directly from the picker
+  const handleQuickSendEmoji = async (emoji: string) => {
+    if (sending || !currentUserId || !currentUserName) return;
+    const tempId = `temp_${Date.now()}_${Math.random()}`;
+
+    const optimisticMessage: ChatMessage = {
+      _id: tempId,
+      tempId: tempId,
+      sender: {
+        _id: currentUserId,
+        name: currentUserName,
+        email: currentUserEmail || '',
+        profilePicture: currentUser?.profilePicture,
+        avatar: currentUser?.avatar,
+      },
+      content: emoji,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      type: 'text',
+      sending: true,
+      failed: false,
+      ...(type === 'workspace' ? { workspace: workspaceId } : { conversation: conversationId }),
+    };
+
+    setOptimisticMessages((prev) => [...prev, optimisticMessage]);
+    addMessage(roomId, optimisticMessage);
+
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+
+    try {
+      await sendMessage(emoji);
+      setOptimisticMessages((prev) =>
+        prev.map((m) => (m._id === tempId ? { ...m, sending: false } : m))
+      );
+      updateMessage(roomId, tempId, { sending: false });
+    } catch (error) {
+      console.error('[ChatWindow] Failed to quick send emoji:', error);
+      setOptimisticMessages((prev) =>
+        prev.map((m) => (m._id === tempId ? { ...m, sending: false, failed: true } : m))
+      );
+      updateMessage(roomId, tempId, { sending: false, failed: true });
+    }
   };
 
   // Handle keyboard events - Enter to send
@@ -1007,13 +1097,37 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
               );
             }
 
+            // Leave Request Card Message (renders interactive card)
+            if (message.type === 'leave_request' || (message.metadata && message.metadata.leaveRequestId)) {
+              return (
+                <div
+                  key={message._id}
+                  className={cn(
+                    'flex gap-3 my-2',
+                    isOwnMessage ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  <LeaveCard
+                    message={message as any}
+                    currentUserId={currentUserId || ''}
+                    canManageLeaves={canManageLeaves}
+                    isWorkspaceOwner={isWorkspaceOwner}
+                    workspaceId={workspaceId || ''}
+                    onStatusUpdated={() => {
+                      // Status will sync via socket dm:updated
+                    }}
+                  />
+                </div>
+              );
+            }
+
             // Own messages on the right, others on the left
             if (isOwnMessage) {
               return (
                 <div
                   key={message._id}
                   className={cn(
-                    'flex gap-3 justify-end',
+                    'flex gap-2 justify-end items-end group/msg relative',
                     !showAvatar && 'mr-11'
                   )}
                 >
@@ -1064,6 +1178,16 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                         )}
                       </div>
                     </div>
+
+                    {/* Reactions Bar */}
+                    {!message.sending && !message.failed && (
+                      <MessageReactionsBar
+                        reactions={message.reactions as any}
+                        currentUserId={currentUserId || ''}
+                        onReact={(emoji) => handleReact(message._id, emoji)}
+                        className="justify-end"
+                      />
+                    )}
                   </div>
 
                   {showAvatar ? (
@@ -1084,14 +1208,14 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
               <div
                 key={message._id}
                 className={cn(
-                  'flex gap-3 items-start',
+                  'flex gap-2 items-end group/msg relative',
                   !showAvatar && 'ml-11'
                 )}
               >
                 {showAvatar && (
                   <UserAvatar 
                     user={message.sender} 
-                    className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" 
+                    className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity mb-1"
                     onClick={() => openProfile(message.sender._id)}
                   />
                 )}
@@ -1113,7 +1237,16 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                   <div className="bg-muted px-4 py-2 rounded-lg text-sm text-foreground whitespace-pre-wrap break-words w-fit min-w-[40px] max-w-full">
                     {message.content}
                   </div>
+
+                  {/* Reactions Bar */}
+                  <MessageReactionsBar
+                    reactions={message.reactions as any}
+                    currentUserId={currentUserId || ''}
+                    onReact={(emoji) => handleReact(message._id, emoji)}
+                    className="justify-start"
+                  />
                 </div>
+
               </div>
             );
           })
@@ -1144,14 +1277,28 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                 rows={1}
                 autoFocus
               />
-              <button
-                type="button"
-                className="absolute right-3 bottom-2.5 p-1 hover:bg-muted rounded-full transition-colors"
-                title="Add emoji"
-              >
-                <Smile className="h-5 w-5 text-muted-foreground/60" />
-              </button>
+              <InputEmojiPicker
+                onSelectEmoji={handleInsertEmoji}
+                onQuickSend={handleQuickSendEmoji}
+                className="absolute right-3 bottom-2"
+              />
             </div>
+
+            {/* In DMs: Add Request Leave trigger button */}
+            {type === 'direct' && userId && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsLeaveModalOpen(true)}
+                className="h-[44px] px-3 flex-shrink-0 rounded-xl gap-1.5 border-dashed border-border/80 hover:border-primary/50 text-xs font-semibold text-muted-foreground hover:text-primary transition-all"
+                title="Ask for holiday/leave in this DM"
+              >
+                <CalendarDays className="h-4 w-4" />
+                <span className="hidden sm:inline">Request Leave</span>
+              </Button>
+            )}
+
             <Button
               onClick={handleSend}
               disabled={!inputValue.trim() || sending}
@@ -1166,6 +1313,21 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
             <span className="sm:hidden">Press send to transmit</span>
           </div>
         </div>
+      )}
+
+      {/* Request Leave Modal in DMs */}
+      {type === 'direct' && userId && workspaceId && (
+        <RequestLeaveModal
+          isOpen={isLeaveModalOpen}
+          onClose={() => setIsLeaveModalOpen(false)}
+          workspaceId={workspaceId}
+          assignedManagerId={userId}
+          conversationId={conversationId}
+          managerName={title.replace(/^#\s*/, '')}
+          onRequestSubmitted={() => {
+            // New message will appear automatically via socket dm:new
+          }}
+        />
       )}
     </div>
   );

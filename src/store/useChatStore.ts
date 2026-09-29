@@ -12,7 +12,12 @@ export interface ChatMessage {
   createdAt: string;
   conversation?: string;
   workspace?: string;
-  type?: 'text' | 'system' | 'github_commit';
+  type?: 'text' | 'system' | 'github_commit' | 'leave_request';
+  reactions?: Array<{
+    emoji: string;
+    users: string[];
+    count: number;
+  }>;
   metadata?: {
     repoName?: string;
     branchName?: string;

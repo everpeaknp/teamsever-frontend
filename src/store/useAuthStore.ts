@@ -90,6 +90,10 @@ const PERMISSIONS = {
   view_activity_log: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa'],
   MANAGE_CUSTOM_ROLES: ['owner', 'admin'],
   MANAGE_SETTINGS: ['owner', 'admin'],
+  MANAGE_LEAVES: ['owner', 'admin', 'operations_manager'],
+  manage_leaves: ['owner', 'admin', 'operations_manager'],
+  VIEW_LEAVES: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
+  view_leaves: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
 } as const;
 
 type Permission = keyof typeof PERMISSIONS;

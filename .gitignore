@@ -40,6 +40,7 @@ coverage
 *.spec.ts
 *.spec.jsx
 *.spec.tsx
+!src/components/chat/LeaveCard.test.tsx
 __tests__
 __mocks__
 
