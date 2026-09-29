@@ -145,6 +145,7 @@ const DEFAULT_PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { key: 'MANAGE_SETTINGS', label: 'Manage Workspace Settings', category: 'Workspace Settings' },
   { key: 'MANAGE_LEAVES', label: 'Manage & Approve Leaves', category: 'HR & Leaves' },
   { key: 'VIEW_LEAVES', label: 'View Team Leaves', category: 'HR & Leaves' },
+  { key: 'MANAGE_ATTENDANCE_LOCATIONS', label: 'Manage Attendance Locations', category: 'Attendance' },
 ];
 
 const PERMISSION_CATEGORIES = [
@@ -157,6 +158,7 @@ const PERMISSION_CATEGORIES = [
   'Analytics',
   'Workspace Settings',
   'HR & Leaves',
+  'Attendance',
 ];
 
 const LEGACY_PERMISSION_ALIASES: Record<string, string[]> = {
@@ -203,6 +205,7 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'VIEW_ANNOUNCEMENT',
     'MANAGE_LEAVES',
     'VIEW_LEAVES',
+    'MANAGE_ATTENDANCE_LOCATIONS',
   ],
   admin: [
     'UPDATE_WORKSPACE',
@@ -245,6 +248,7 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'DELETE_ANNOUNCEMENT',
     'MANAGE_LEAVES',
     'VIEW_LEAVES',
+    'MANAGE_ATTENDANCE_LOCATIONS',
   ],
   operations_manager: [
     'VIEW_WORKSPACE',

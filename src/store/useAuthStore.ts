@@ -94,6 +94,7 @@ const PERMISSIONS = {
   manage_leaves: ['owner', 'admin', 'operations_manager'],
   VIEW_LEAVES: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
   view_leaves: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
+  MANAGE_ATTENDANCE_LOCATIONS: ['owner', 'admin'],
 } as const;
 
 type Permission = keyof typeof PERMISSIONS;
@@ -209,6 +210,8 @@ export const useAuthStore = create<AuthState>()(
         if (!currentWorkspaceRole) {
           return false;
         }
+
+        if (permission === 'MANAGE_ATTENDANCE_LOCATIONS' && currentWorkspaceRole === 'owner') return true;
 
         const normalizedPermission = String(permission).toLowerCase();
 

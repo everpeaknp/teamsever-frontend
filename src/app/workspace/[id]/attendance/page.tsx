@@ -1,16 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { AttendanceReport } from '@/components/analytics/AttendanceReport';
 import { LeaveManagementTab } from '@/components/attendance/LeaveManagementTab';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, CalendarDays } from 'lucide-react';
+import { Clock, CalendarDays, MapPin } from 'lucide-react';
+import { api } from '@/lib/axios';
+import { AttendanceLocationSettings } from '@/components/attendance/AttendanceLocationSettings';
+import { LocationReviewPanel } from '@/components/attendance/LocationReviewPanel';
+import { LocationSessionMonitor } from '@/components/attendance/LocationSessionMonitor';
 
 export default function AttendancePage() {
   const params = useParams();
   const workspaceId = params.id as string;
   const [activeTab, setActiveTab] = useState('attendance');
+  const [canManageLocations, setCanManageLocations] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get(`/attendance/workspace/${workspaceId}/location-policy`).then((response) => {
+      if (!cancelled) setCanManageLocations(!!response.data.data.canManage);
+    }).catch(() => { if (!cancelled) setCanManageLocations(false); });
+    return () => { cancelled = true; };
+  }, [workspaceId]);
 
   return (
     <div className="container mx-auto py-8 px-4 md:px-8 space-y-6">
@@ -33,15 +46,19 @@ export default function AttendancePage() {
             <CalendarDays className="h-4 w-4" />
             Leave Management & Records
           </TabsTrigger>
+          {canManageLocations && <TabsTrigger value="locations" className="rounded-lg gap-2 text-xs font-semibold data-[state=active]:bg-background"><MapPin className="h-4 w-4" />Locations & Assignments</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="attendance" className="mt-0">
+          <LocationSessionMonitor workspaceId={workspaceId} />
           <AttendanceReport workspaceId={workspaceId} />
+          <div className="mt-6"><LocationReviewPanel workspaceId={workspaceId} /></div>
         </TabsContent>
 
         <TabsContent value="leaves" className="mt-0">
           <LeaveManagementTab workspaceId={workspaceId} />
         </TabsContent>
+        {canManageLocations && <TabsContent value="locations" className="mt-0"><AttendanceLocationSettings workspaceId={workspaceId} /></TabsContent>}
       </Tabs>
     </div>
   );

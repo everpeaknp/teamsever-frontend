@@ -36,6 +36,19 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
   const [localClockStartTime, setLocalClockStartTime] = useState<string | null>(null);
   const [awaitingServerStatus, setAwaitingServerStatus] = useState(false);
   const [expectedServerStatus, setExpectedServerStatus] = useState<'active' | 'inactive' | null>(null);
+  const [locationPolicyEnabled, setLocationPolicyEnabled] = useState(false);
+  const [policyLoaded, setPolicyLoaded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get(`/attendance/workspace/${workspaceId}/location-policy`).then((response) => {
+      if (!cancelled) {
+        setLocationPolicyEnabled(!!response.data.data.policy.enabled);
+        setPolicyLoaded(true);
+      }
+    }).catch(() => { if (!cancelled) setPolicyLoaded(false); });
+    return () => { cancelled = true; };
+  }, [workspaceId]);
 
   useEffect(() => {
     if (awaitingServerStatus && expectedServerStatus) {
@@ -97,13 +110,22 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
     try {
       setLoading(true);
       const newStatus = optimisticStatus === 'active' ? 'inactive' : 'active';
-      setOptimisticStatus(newStatus);
-      setAwaitingServerStatus(true);
-      setExpectedServerStatus(newStatus);
+
+      let locationFix: { latitude: number; longitude: number; accuracyMeters: number; capturedAt: string } | undefined;
+      let enforceLocation = locationPolicyEnabled;
       if (newStatus === 'active') {
-        setLocalClockStartTime(new Date().toISOString());
-      } else {
-        setLocalClockStartTime(null);
+        if (!policyLoaded) throw new Error('Could not verify the workspace location policy. Please retry.');
+        const policyResponse = await api.get(`/attendance/workspace/${workspaceId}/location-policy`);
+        enforceLocation = !!policyResponse.data.data.policy.enabled;
+        setLocationPolicyEnabled(enforceLocation);
+      }
+      if (newStatus === 'active' && enforceLocation) {
+        if (!window.isSecureContext || !navigator.geolocation) throw new Error('Location-based clock-in requires HTTPS and browser location permission.');
+        locationFix = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
+          (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracyMeters: position.coords.accuracy, capturedAt: new Date(position.timestamp).toISOString() }),
+          () => reject(new Error('Location is unavailable or permission was denied. Allow location access and try again.')),
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        ));
       }
       
       console.log('[ClockInOut] Toggling clock:', { 
@@ -113,12 +135,17 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
       });
 
       const response = await api.post(`/workspaces/${workspaceId}/clock/toggle`, {
-        status: newStatus
+        status: newStatus,
+        ...(locationFix ? { locationFix } : {})
       });
       
       console.log('[ClockInOut] Toggle response:', response.data);
 
       if (response.data.success) {
+        setOptimisticStatus(newStatus);
+        setAwaitingServerStatus(true);
+        setExpectedServerStatus(newStatus);
+        setLocalClockStartTime(newStatus === 'active' ? response.data.data?.timeEntry?.startTime || new Date().toISOString() : null);
         const message = newStatus === 'active' ? 'Clocked in successfully!' : 'Clocked out successfully!';
         console.log('[ClockInOut] Success:', message);
         toast.success(message);
@@ -140,7 +167,7 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
         response: error.response?.data,
         status: error.response?.status
       });
-      toast.error(error.response?.data?.message || 'Failed to update status');
+      toast.error(error.response?.data?.message || error.message || 'Failed to update status');
     } finally {
       setLoading(false);
     }
@@ -219,6 +246,7 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
               </>
             )}
           </Button>
+          {locationPolicyEnabled && !clockedIn && <p className="mt-2 text-xs text-muted-foreground">This workspace checks your browser location at clock-in. While clocked in, checks continue only while the Attendance page stays open; if they stop, your shift remains unchanged and may be flagged for review.</p>}
         </div>
 
         <div className="rounded-xl border border-border/60 bg-muted/10 px-4 py-3 space-y-3">

@@ -275,17 +275,11 @@ export default function AnalyticsPage() {
             });
             setAccessDeniedMessage(null);
 
-            // Determine current user's status
-            let currentUserStatus: 'active' | 'inactive' = 'inactive';
+            // The running timer is authoritative; member.status can be stale after legacy clock transitions.
+            let currentUserStatus: 'active' | 'inactive' = summary?.timeTracking?.currentRunningTimer ? 'active' : 'inactive';
             let currentCanViewWorkspaceAnalytics = false;
             
             if (localUserId) {
-                // Determine Status from members array
-                const currentMember = summaryMembers?.find((m: any) => {
-                    const mId = typeof m.user === 'string' ? m.user : m.user?._id;
-                    return mId === localUserId || m._id === localUserId;
-                });
-                currentUserStatus = currentMember?.status || 'inactive';
                 setUserStatus(currentUserStatus);
 
             }
