@@ -1,5 +1,6 @@
 import { api } from './axios';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useNotificationStore } from '@/store/useNotificationStore';
 
 /**
  * Standardized auth response handler
@@ -96,6 +97,7 @@ function storeAuthData(authData: AuthResponse): void {
   
   // Clean up legacy token keys
   localStorage.removeItem('token');
+  useNotificationStore.getState().clearNotifications();
   
   // Also update the Zustand auth store so components get live user data
   try {
@@ -124,6 +126,7 @@ function storeAuthData(authData: AuthResponse): void {
 export function clearAuthData(): void {
   if (typeof window === 'undefined') return;
 
+  useNotificationStore.getState().clearNotifications();
   localStorage.removeItem('authToken');
   localStorage.removeItem('userId');
   localStorage.removeItem('userName');

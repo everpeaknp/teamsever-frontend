@@ -2,56 +2,47 @@
 
 ## Goal
 
-Add workspace-managed location rules to Teamsever's existing web clock-in flow. Members can clock in only when the browser's location reading matches an office area or a remote area assigned to that member. While clocked in, the web app periodically reports location-check status while it remains open. Missing or invalid updates create a visible review flag and never silently clock the member out or alter recorded time.
+Enforce location-aware web clock-in/out with one fixed workspace office, private member-specific remote places, approved date-bound remote exceptions, and a useful audit trail in the existing Attendance Report. All geofence authorization is server-side. Missing location updates during an active shift become visible review events; they do not rewrite time or silently clock anyone out.
 
-## Scope and sequence
+## Location model and permissions
 
-This spec covers the first, web-only phase. The current Next.js frontend and Express/Mongoose backend remain the product surfaces. Electron packaging, foreground-app detection, browser-tab or IDE details, and background location after the browser closes are later work and are not prerequisites for this phase.
+Each workspace has exactly one fixed office geofence. On-site members normally clock in only within 60 m of it. Each member has zero or more private remote geofences, stored on that member rather than in a workspace-wide catalog. Only the member and authorized address managers can view exact remote coordinates. Authorized managers can create/edit/deactivate a member's private areas in that member's settings. Remote members can clock in only inside one of their own active areas. A remote request that proposes a new address keeps its coordinates visible only to the requester and the one assigned approver until approved.
 
-The existing clock control is in `src/components/analytics/ClockInOut.tsx`. It calls `POST /api/workspaces/:id/clock/toggle`; the backend handler is currently `toggleWorkspaceClock` in `src/controllers/workspaceMemberController.ts`. The feature extends this flow rather than adding a second clock system.
+Use `MANAGE_LEAVES_AND_REMOTE` for leave and temporary-remote approval and `MANAGE_ADDRESSES` for office/member address administration. The workspace owner always retains override authority. Existing `MANAGE_LEAVES` and `MANAGE_ATTENDANCE_LOCATIONS` grants must remain backward-compatible during migration; permission catalog labels must expose the new permissions in role templates and member overrides. Address administration is independently checked and does not itself grant leave/remote approval authority.
 
-## Workspace configuration and authority
+## Temporary remote request
 
-Add an attendance-location policy to each workspace. It has a setup state and an enforcement state. Existing workspaces remain unenforced until an authorized manager has configured at least one office area and enabled enforcement. Once enforcement is enabled, the backend rejects clock-in if required location data or a valid assignment is missing; it must never fall back to the old location-free path.
+The existing DM action offers Leave or Remote. A Remote request captures start/end dates, reason, assigned approver, and either a selected already-approved private area or a proposed private address. An On-site member's baseline mode is unchanged. If a new address is proposed, approval atomically approves that private area and the date-bound remote entitlement. A request is not approvable by another manager merely because they have the same permission; only its assigned approver or the workspace owner can decide it. Reject/deny leaves both the baseline mode and approved areas unchanged. A remote request without an address is rejected. Leave behavior remains intact.
 
-An attendance area has a stable ID, display name, kind (`office` or `remote`), center coordinates, and radius in meters. A member has an assigned work mode (`onsite` or `remote`). On-site members may clock in at configured office areas. Remote members may clock in only at remote areas assigned to that member; a member may have multiple assigned remote areas. Members cannot grant themselves an area or change their assigned mode.
+During the approved date range, an On-site member may clock in at the selected approved private area; otherwise the office remains their only allowed area. Permanently remote members use their own areas without requiring a temporary request. Expired temporary approvals stop authorizing remote clock-in automatically.
 
-Add `MANAGE_ATTENDANCE_LOCATIONS` as a workspace permission for creating, editing, disabling, and assigning areas or modes. Workspace owners and admins receive this authority by default; other managers receive it only through the existing workspace permission system. Every management operation is scoped to the workspace in the URL and verifies the actor is an active member with the effective permission.
+## Clock transitions and stored audit data
 
-## Clock-in and location-check flow
+Clock-in requires a fresh, accurate browser location when enforcement is enabled. The backend resolves the effective work mode and eligible area (fixed office, private remote area, or date-bound approved exception), rejects unauthorized/out-of-radius points, and records the clock-in point and matched area on the time entry. Clock-out submits a fresh fix. If it is within 60 m of the exact clock-in point, clock-out succeeds normally. If the fix is missing or farther away, clock-out still succeeds so workers cannot become trapped clocked in, and the entry receives a review warning with the observed clock-out point when available. No failed location reading may silently alter recorded times.
 
-When a member clocks in, the frontend requests a fresh browser geolocation reading over HTTPS and submits latitude, longitude, reported accuracy, and capture time with the existing toggle request. The backend independently validates the authenticated member, workspace policy, assigned mode, area assignment, coordinate ranges, timestamp freshness, accuracy threshold, and distance to an eligible area. Client-side checks may explain errors early but never authorize a clock-in.
+During a shift, periodic checks continue while the web page is active. Outside, unavailable, or stale checks create review events and visible status. Recovery clears the active flag while retaining event history. Raw coordinates are stored only for the shift's clock-in and clock-out endpoints to satisfy the report/audit requirement; intermediate periodic events store area/decision/accuracy but no raw point. This is a deliberate exception to the prior data-minimization draft. Access to endpoint coordinates in reports is restricted to the member, workspace owner, and authorized address/attendance managers. Existing historical entries remain without fabricated coordinates.
 
-The initial implementation uses a workspace-configurable geofence radius (default 150 m) and maximum accepted reported accuracy (default 100 m). The measured point must be within the eligible area's radius and the reported accuracy must be at or below the configured maximum. Clock-out does not require location. Clock-in requests must not create duplicate running time entries; status and time-entry changes must leave a consistent result if either write fails.
+## Existing UI and report
 
-After successful clock-in, while the attendance page is open, the frontend watches for location changes and sends a check at least once per minute, using a fresh reading no older than two minutes. The backend stores check events as `inside`, `outside`, or `unavailable`. If the reading is outside all eligible areas, accuracy is unacceptable, permission is revoked, or updates are absent for more than two minutes, Teamsever shows the member a clear status and creates a review flag visible to authorized managers. A recovered valid reading clears the active flag while preserving its history. These events do not clock out the member, change the time entry, or imply misconduct.
+Replace the global remote area catalog/checkbox assignment UI with a single-office editor and per-member remote area map picker. Include quick-add at the current location, map center selection, radius control, member search, and clear private-address labeling. Members may see their own approved area names/status, while only authorized managers see coordinates of other members.
 
-If the browser is closed, suspended, offline, or location access is denied, continuous checking cannot be guaranteed by the web app. After the two-minute stale threshold, the state becomes `unavailable`; the clock and recorded time remain unchanged until the member clocks out. The review flag remains visible to the member and authorized location managers, and the app must explain this limitation before location tracking starts.
+Extend the existing Attendance Report rows with clock-in location and clock-out location (name, coordinates/map link where authorized, timestamp, and distance/status), effective mode, and mismatch/review warning. CSV and Excel exports include the same audit fields. Historical rows display “Location not recorded” where data does not exist.
 
-## Data minimization and interface behavior
+## Security and invariants
 
-Use coordinates only to make each server-side geofence decision. Persist the matched area ID, mode, check time, reported accuracy, decision, and review-flag state; do not persist raw latitude/longitude in the initial release. Preserve check-event history with attendance records so reviewers can understand when checks failed and recovered.
+- All routes scope workspace and member IDs together; every mutation checks active membership and effective permission on the server.
+- Remote addresses are never shared across members and are omitted from unauthorized API responses, sockets, notifications, and DM card data.
+- Only owner or the exact assigned approver can decide a remote request; owner override is explicit.
+- A temporary remote approval is date-bounded and bound to one approved private area.
+- The fixed office cannot be duplicated, and the on-site geofence default is 60 m.
+- Clock-out remains possible without a valid location and flags the record for review.
+- Existing workspaces stay in setup/un-enforced state until configured; there is no location-free bypass after enforcement is enabled.
+- Missing updates create `unavailable` review state and never change the shift's times/status.
 
-The clock-in UI explains why location is requested and presents actionable states for permission denied, location unavailable, stale reading, poor accuracy, outside eligible area, and missing assignment. Do not optimistically show a successful clock-in before the backend accepts it. The attendance view shows active location-check status and review flags to the member and authorized attendance managers, without exposing precise coordinates.
+## Verification
 
-The location settings UI supports creating and disabling areas, selecting a point on a map or entering coordinates, setting the radius, assigning member mode, assigning multiple remote areas, and enabling enforcement only after valid configuration. Changes are workspace-scoped and auditable.
+Backend tests cover per-member isolation, permission boundaries, owner/assigned-approver decisions, date bounds, private address approval, geofence boundaries, clock-out within/outside/missing GPS, coordinate privacy, report fields, exports, and stale/unavailable event handling. Frontend tests cover map selection/quick-add per member, leave/remote action selection, proposed-address privacy in the requester/approver DM, role-based settings, and location fields/warnings in report. Run targeted tests and both repository builds; record known unrelated failures without attributing them to this change.
 
-## Backend invariants and failure handling
+## Limits
 
-- Only the server decides whether a member can clock in under an enforced policy.
-- The clock-in request is rejected if location is absent, malformed, stale, too inaccurate, or outside the member's eligible areas.
-- Clock-out remains possible if the location service is unavailable.
-- A failed or missing active-session location check creates a review flag; it never silently changes clock status or time records.
-- Duplicate and concurrent clock-in/out requests cannot create multiple running time entries or desynchronize member status from the running entry.
-- Location management and review data are isolated by workspace and permission-checked on every request.
-- If a workspace policy is not enabled, existing clock-in behavior remains unchanged until an administrator completes setup and explicitly enables enforcement.
-
-## Verification criteria
-
-Backend tests cover eligible office and remote clock-ins, multiple remote assignments, unassigned areas, wrong workspace, missing or invalid coordinates, stale timestamps, poor accuracy, boundary decisions, disabled versus enforced policy, unauthorized area changes, clock-out without location, duplicate/concurrent transitions, and location-check transitions from inside to outside/unavailable and back to inside.
-
-Frontend tests cover geolocation permission and error states, no optimistic success on rejected requests, clear clock-in and clock-out behavior, active status while checks are missing, and review-flag visibility by role. Production builds and existing attendance/chat tests must pass.
-
-## Known limits
-
-Browser geolocation requires HTTPS and user permission. Location values originate from the member's device and can be spoofed by a determined user; backend geofencing prevents ordinary client-side bypasses but is not proof against device-level location spoofing. The web phase cannot keep checking location after its page is closed or suspended. Those limits must be clear in product copy and remain true regardless of the Electron phase.
+Web geolocation requires HTTPS and user permission. Browser checks stop when suspended/closed/offline; after the stale threshold this is shown as unavailable and flagged for review. Device GPS can be spoofed. Electron/background activity monitoring remains a later phase.

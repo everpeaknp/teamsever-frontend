@@ -31,6 +31,7 @@ export default function NotificationsPage() {
     setNotifications,
     markAsRead,
     markAllAsRead,
+    setUnreadCount,
     requestPermission,
   } = useNotificationStore();
 
@@ -45,6 +46,7 @@ export default function NotificationsPage() {
     try {
       const response = await api.get(`/notifications?workspaceId=${workspaceId}`);
       setNotifications(response.data.data || []);
+      setUnreadCount(response.data.pagination?.unreadCount ?? 0);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -64,7 +66,7 @@ export default function NotificationsPage() {
   const handleMarkAllAsRead = async () => {
     try {
       await api.patch(`/notifications/read-all?workspaceId=${workspaceId}`);
-      markAllAsRead();
+      markAllAsRead(workspaceId);
     } catch (error) {
       console.error('Failed to mark all as read:', error);
     }

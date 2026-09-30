@@ -35,6 +35,7 @@ export default function NotificationsPage() {
     setNotifications,
     markAsRead,
     markAllAsRead,
+    setUnreadCount,
     removeNotification,
     requestPermission,
     syncPermission,
@@ -94,14 +95,11 @@ export default function NotificationsPage() {
   }, [permission]);
 
   const fetchNotifications = async () => {
-    if (!scopedWorkspaceId) {
-      setNotifications([]);
-      setLoading(false);
-      return;
-    }
     try {
-      const response = await api.get(`/notifications?workspaceId=${scopedWorkspaceId}`);
+      const workspaceQuery = scopedWorkspaceId ? `&workspaceId=${scopedWorkspaceId}` : '';
+      const response = await api.get(`/notifications?limit=50${workspaceQuery}`);
       setNotifications(response.data.data || []);
+      setUnreadCount(response.data.pagination?.unreadCount ?? 0);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -145,7 +143,7 @@ export default function NotificationsPage() {
     if (!scopedWorkspaceId) return;
     try {
       await api.patch(`/notifications/read-all?workspaceId=${scopedWorkspaceId}`);
-      markAllAsRead();
+      markAllAsRead(scopedWorkspaceId);
       
       // Refresh unread count
       const response = await api.get(`/notifications/unread-count?workspaceId=${scopedWorkspaceId}`);

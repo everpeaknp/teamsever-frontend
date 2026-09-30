@@ -10,7 +10,7 @@ const securityHeaders = [
   // Control referrer info sent to other sites
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   // Disable access to sensitive browser features
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
 ];
 
 const nextConfig = {

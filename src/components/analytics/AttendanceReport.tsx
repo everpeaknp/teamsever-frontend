@@ -24,6 +24,11 @@ interface AttendanceEntry {
   totalHours: string;
   durationFormatted: string;
   description: string;
+  attendanceMode?: 'onsite' | 'remote';
+  clockInLocation?: { areaName?: string; latitude?: number; longitude?: number; accuracyMeters?: number } | null;
+  clockInVerificationMethod?: 'gps' | 'network_confirmed' | null;
+  clockOutLocation?: { latitude?: number; longitude?: number; distanceFromClockInMeters?: number; withinRange?: boolean } | null;
+  locationReviewReason?: string | null;
 }
 
 interface Member {
@@ -34,7 +39,7 @@ interface Member {
 }
 
 export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
-  const { user } = useAuthStore();
+  const { user, can } = useAuthStore();
   const [reportData, setReportData] = useState<AttendanceEntry[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +64,7 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
         const workspace = wsRes.data.data;
         
         const myMember = workspace.members.find((m: any) => m.user._id === user?._id || m.user === user?._id);
-        const adminStatus = myMember?.role === 'admin' || myMember?.role === 'owner' || workspace.owner === user?._id;
+        const adminStatus = myMember?.role === 'admin' || myMember?.role === 'owner' || workspace.owner === user?._id || can('MANAGE_ADDRESSES') || can('MANAGE_ATTENDANCE_LOCATIONS');
         setIsAdmin(adminStatus);
 
         if (adminStatus) {
@@ -273,12 +278,14 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
                   <TableHead>Clock In</TableHead>
                   <TableHead>Clock Out</TableHead>
                   <TableHead>Duration</TableHead>
+                  <TableHead>Clock-in location</TableHead>
+                  <TableHead>Clock-out location</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10">
+                    <TableCell colSpan={7} className="text-center py-10">
                       <div className="flex items-center justify-center gap-2 text-muted-foreground">
                         <Clock className="w-5 h-5 animate-spin" />
                         Loading report data...
@@ -287,7 +294,7 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
                   </TableRow>
                 ) : reportData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                       No attendance records found for the selected period.
                     </TableCell>
                   </TableRow>
@@ -332,6 +339,13 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
                           <Clock className="w-3 h-3" />
                           {entry.durationFormatted}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {entry.clockInLocation ? <div className="text-xs"><div>{entry.clockInLocation.areaName || (entry.attendanceMode === 'remote' ? 'Remote area' : 'Office')}</div><div className="text-muted-foreground">{entry.clockInLocation.latitude != null && entry.clockInLocation.longitude != null ? `${entry.clockInLocation.latitude.toFixed(5)}, ${entry.clockInLocation.longitude.toFixed(5)}` : 'Location hidden'}</div>{entry.clockInVerificationMethod === 'network_confirmed' && <div className="text-amber-500">Network confirmed · low GPS accuracy</div>}</div> : <span className="text-xs text-muted-foreground">Location not recorded</span>}
+                      </TableCell>
+                      <TableCell>
+                        {entry.clockOutLocation ? <div className="text-xs"><div>{entry.clockOutLocation.latitude != null && entry.clockOutLocation.longitude != null ? `${entry.clockOutLocation.latitude.toFixed(5)}, ${entry.clockOutLocation.longitude.toFixed(5)}` : 'Location hidden'}</div><div className={entry.clockOutLocation.withinRange ? 'text-emerald-600' : 'text-amber-600'}>{entry.clockOutLocation.distanceFromClockInMeters != null ? `${entry.clockOutLocation.distanceFromClockInMeters} m from clock-in` : 'Distance unavailable'}</div></div> : <span className="text-xs text-muted-foreground">{entry.clockOut === 'Running' ? '—' : 'Location not recorded'}</span>}
+                        {entry.locationReviewReason && <div className="mt-1 text-xs text-amber-600" title={entry.locationReviewReason}>Review: {entry.locationReviewReason}</div>}
                       </TableCell>
                     </TableRow>
                   ))

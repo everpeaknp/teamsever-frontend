@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { api } from '@/lib/axios';
-import { useNotificationStore, Notification } from '@/store/useNotificationStore';
+import { replaceBellNotifications, useNotificationStore, Notification } from '@/store/useNotificationStore';
 import { toast } from 'sonner';
 import {
   Bell,
@@ -22,10 +22,8 @@ export function NotificationBell() {
   const router = useRouter();
   const pathname = usePathname();
   const {
-    notifications,
+    notifications: bellNotifications,
     unreadCount,
-    setNotifications,
-    removeNotification,
     setUnreadCount,
     setLoading,
   } = useNotificationStore();
@@ -60,7 +58,7 @@ export function NotificationBell() {
     return () => {
       clearInterval(interval);
     };
-  }, []);
+  }, [scopedWorkspaceId]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -95,15 +93,15 @@ export function NotificationBell() {
       // Otherwise fetch all notifications without workspace filter
       let url;
       if (scopedWorkspaceId) {
-        url = `/notifications?limit=20&unreadOnly=true&workspaceId=${scopedWorkspaceId}&t=${Date.now()}`;
+        url = `/notifications?limit=20&workspaceId=${scopedWorkspaceId}&t=${Date.now()}`;
       } else {
         // Fetch all unread notifications across all workspaces
-        url = `/notifications?limit=20&unreadOnly=true&t=${Date.now()}`;
+        url = `/notifications?limit=20&t=${Date.now()}`;
       }
       
       const response = await api.get(url);
       const notifications = response.data.data || [];
-      setNotifications(notifications);
+      replaceBellNotifications(notifications);
     } catch (error: any) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -143,9 +141,8 @@ export function NotificationBell() {
       // Call backend API
       await api.patch(`/notifications/${notificationId}/read`);
       
-      // Always remove the notification from the bell dropdown
-      // (since we only show unread notifications in the bell)
-      removeNotification(notificationId);
+      // Keep read notifications visible in recent history.
+      useNotificationStore.getState().markAsRead(notificationId);
       
       // Refresh unread count from server
       await fetchUnreadCount();
@@ -239,9 +236,8 @@ export function NotificationBell() {
                     if (!scopedWorkspaceId) return;
                     await api.patch(`/notifications/read-all?workspaceId=${scopedWorkspaceId}`);
                     
-                    // Clear all notifications from the bell dropdown
-                    const { clearNotifications } = useNotificationStore.getState();
-                    clearNotifications();
+                    // Keep recent history visible after marking it read.
+                    useNotificationStore.getState().markAllAsRead(scopedWorkspaceId);
                     
                     // Refresh unread count (should be 0)
                     await fetchUnreadCount();
@@ -258,14 +254,14 @@ export function NotificationBell() {
 
           {/* Notifications List */}
           <div className="overflow-y-auto flex-1">
-            {notifications.length === 0 ? (
+            {bellNotifications.length === 0 ? (
               <div className="p-8 text-center">
                 <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">No notifications yet</p>
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {notifications.map((notification) => (
+                {bellNotifications.map((notification) => (
                   <div
                     key={notification._id}
                     className={`p-4 hover:bg-accent transition-colors ${

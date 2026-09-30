@@ -39,6 +39,7 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
     setNotifications,
     markAsRead,
     markAllAsRead,
+    setUnreadCount,
     removeNotification,
   } = useNotificationStore();
 
@@ -65,6 +66,7 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
       const response = await api.get(url);
       const fetchedNotifications = response.data.data || [];
       setNotifications(fetchedNotifications);
+      setUnreadCount(response.data.pagination?.unreadCount ?? 0);
     } catch (error: any) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -111,7 +113,7 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
     
     try {
       await api.patch(`/notifications/read-all?workspaceId=${scopedWorkspaceId}`);
-      markAllAsRead();
+      markAllAsRead(scopedWorkspaceId);
       
       const response = await api.get(`/notifications/unread-count?workspaceId=${scopedWorkspaceId}`);
       const { setUnreadCount } = useNotificationStore.getState();

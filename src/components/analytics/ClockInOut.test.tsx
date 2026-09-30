@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ClockInOut } from './ClockInOut';
 
 const { get, post, toastError, toastSuccess } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn() }));
@@ -11,8 +11,8 @@ describe('ClockInOut location enforcement', () => {
 
   it('sends a fresh location and does not show clock-in success when the server rejects it', async () => {
     Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
-    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { getCurrentPosition: (success: Function) => success({ coords: { latitude: 40, longitude: -74, accuracy: 12 }, timestamp: Date.now() }) } });
-    post.mockRejectedValue({ response: { data: { message: 'You are outside your allowed attendance area' } } });
+    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition: (success: Function) => { success({ coords: { latitude: 40, longitude: -74, accuracy: 12 }, timestamp: Date.now() }); return 1; }, clearWatch: vi.fn() } });
+    post.mockRejectedValue({ response: { status: 403, data: { message: 'You are outside your allowed attendance area' } } });
     render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
     await waitFor(() => expect(post).toHaveBeenCalled());
@@ -23,7 +23,7 @@ describe('ClockInOut location enforcement', () => {
 
   it('does not call the clock endpoint if location permission fails', async () => {
     Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
-    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { getCurrentPosition: (_success: Function, failure: Function) => failure(new Error('denied')) } });
+    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition: (_success: Function, failure: Function) => { failure(new Error('denied')); return 2; }, clearWatch: vi.fn() } });
     render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(expect.stringContaining('permission was denied')));
@@ -31,13 +31,43 @@ describe('ClockInOut location enforcement', () => {
     expect(screen.getByText('CLOCKED OUT')).toBeInTheDocument();
   });
 
-  it('allows clock-out without requesting a location fix', async () => {
+  it('sends a low-accuracy fix to the backend so it can check optional remote IP corroboration', async () => {
+    get.mockResolvedValue({ data: { data: { policy: { enabled: true, maxAccuracyMeters: 100 } } } });
+    post.mockResolvedValue({ data: { success: true, data: { timeEntry: { startTime: new Date().toISOString() } } } });
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition: (success: Function, failure: Function) => { success({ coords: { latitude: 28.2, longitude: 83.9, accuracy: 420 }, timestamp: Date.now() }); failure(new Error('provider finished')); return 3; }, clearWatch: vi.fn() } });
+    render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
+
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/workspaces/workspace-1/clock/toggle', {
+      status: 'active', locationFix: expect.objectContaining({ accuracyMeters: 420 }),
+    }));
+    expect(toastSuccess).toHaveBeenCalledWith('Clocked in successfully!');
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('retries policy verification on clock-in while the initial policy request is still pending', async () => {
+    let resolveInitialPolicy!: (value: any) => void;
+    get.mockImplementationOnce(() => new Promise((resolve) => { resolveInitialPolicy = resolve; }))
+      .mockResolvedValueOnce({ data: { data: { policy: { enabled: false } } } });
+    post.mockResolvedValue({ data: { success: true, data: { timeEntry: { startTime: new Date().toISOString() } } } });
+    render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clock In' }));
+
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/workspaces/workspace-1/clock/toggle', { status: 'active' }));
+    expect(get).toHaveBeenCalledTimes(2);
+    await act(async () => resolveInitialPolicy({ data: { data: { policy: { enabled: false } } } }));
+  });
+
+  it('submits a clock-out location fix so the server can compare it with clock-in', async () => {
     get.mockResolvedValue({ data: { data: { policy: { enabled: true } } } });
     post.mockResolvedValue({ data: { success: true, data: { timeEntry: null } } });
-    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { getCurrentPosition: vi.fn() } });
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition: (success: Function) => { success({ coords: { latitude: 40.0001, longitude: -74, accuracy: 12 }, timestamp: Date.now() }); return 4; }, clearWatch: vi.fn() } });
     render(<ClockInOut workspaceId="workspace-1" currentStatus="active" runningTimer={{ startTime: new Date().toISOString() }} onStatusChange={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Clock Out' }));
-    await waitFor(() => expect(post).toHaveBeenCalledWith('/workspaces/workspace-1/clock/toggle', { status: 'inactive' }));
-    expect(navigator.geolocation.getCurrentPosition).not.toHaveBeenCalled();
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/workspaces/workspace-1/clock/toggle', { status: 'inactive', locationFix: expect.objectContaining({ latitude: 40.0001 }) }));
   });
 });

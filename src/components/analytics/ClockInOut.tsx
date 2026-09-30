@@ -7,6 +7,7 @@ import { Clock, LogIn, LogOut } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/useAuthStore';
+import { readAccurateLocation } from './readAccurateLocation';
 
 interface ClockInOutProps {
   workspaceId: string;
@@ -37,16 +38,14 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
   const [awaitingServerStatus, setAwaitingServerStatus] = useState(false);
   const [expectedServerStatus, setExpectedServerStatus] = useState<'active' | 'inactive' | null>(null);
   const [locationPolicyEnabled, setLocationPolicyEnabled] = useState(false);
-  const [policyLoaded, setPolicyLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     api.get(`/attendance/workspace/${workspaceId}/location-policy`).then((response) => {
       if (!cancelled) {
         setLocationPolicyEnabled(!!response.data.data.policy.enabled);
-        setPolicyLoaded(true);
       }
-    }).catch(() => { if (!cancelled) setPolicyLoaded(false); });
+    }).catch(() => {});
     return () => { cancelled = true; };
   }, [workspaceId]);
 
@@ -112,20 +111,23 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
       const newStatus = optimisticStatus === 'active' ? 'inactive' : 'active';
 
       let locationFix: { latitude: number; longitude: number; accuracyMeters: number; capturedAt: string } | undefined;
+      let maxAccuracyMeters = 100;
       let enforceLocation = locationPolicyEnabled;
       if (newStatus === 'active') {
-        if (!policyLoaded) throw new Error('Could not verify the workspace location policy. Please retry.');
         const policyResponse = await api.get(`/attendance/workspace/${workspaceId}/location-policy`);
         enforceLocation = !!policyResponse.data.data.policy.enabled;
+        maxAccuracyMeters = Number(policyResponse.data.data.policy.maxAccuracyMeters) || 100;
         setLocationPolicyEnabled(enforceLocation);
       }
-      if (newStatus === 'active' && enforceLocation) {
-        if (!window.isSecureContext || !navigator.geolocation) throw new Error('Location-based clock-in requires HTTPS and browser location permission.');
-        locationFix = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(
-          (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracyMeters: position.coords.accuracy, capturedAt: new Date(position.timestamp).toISOString() }),
-          () => reject(new Error('Location is unavailable or permission was denied. Allow location access and try again.')),
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-        ));
+      if (enforceLocation) {
+        if ((!window.isSecureContext || !navigator.geolocation) && newStatus === 'active') throw new Error('Location-based clock-in requires HTTPS and browser location permission.');
+        try {
+          if (!window.isSecureContext || !navigator.geolocation) throw new Error('Geolocation unavailable');
+          locationFix = await readAccurateLocation(maxAccuracyMeters, navigator.geolocation, newStatus === 'active' ? 20_000 : 5_000);
+        } catch (locationError) {
+          if (newStatus === 'active') throw new Error('Location is unavailable or permission was denied. Allow location access and try again.');
+          toast.warning('Clocked out without a fresh location. This shift will be flagged for review.');
+        }
       }
       
       console.log('[ClockInOut] Toggling clock:', { 
@@ -148,7 +150,8 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
         setLocalClockStartTime(newStatus === 'active' ? response.data.data?.timeEntry?.startTime || new Date().toISOString() : null);
         const message = newStatus === 'active' ? 'Clocked in successfully!' : 'Clocked out successfully!';
         console.log('[ClockInOut] Success:', message);
-        toast.success(message);
+        if (response.data.data?.timeEntry?.locationReviewReason) toast.warning(`Clocked out. Review needed: ${response.data.data.timeEntry.locationReviewReason}`);
+        else toast.success(message);
         // Refresh parent data without blocking UI feedback
         Promise.resolve(onStatusChange(true)).catch((refreshErr) => {
           console.error('[ClockInOut] Failed to refresh status after toggle:', refreshErr);
@@ -161,13 +164,17 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
       setLocalClockStartTime(null);
       setAwaitingServerStatus(false);
       setExpectedServerStatus(null);
-      console.error('[ClockInOut] Failed to toggle clock status:', error);
-      console.error('[ClockInOut] Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      toast.error(error.response?.data?.message || error.message || 'Failed to update status');
+      const responseData = error?.response?.data;
+      const serverMessage = typeof responseData?.message === 'string'
+        ? responseData.message
+        : typeof responseData?.error === 'string' ? responseData.error : null;
+      const message = serverMessage || error.message || 'Failed to update status';
+      if (error?.response?.status >= 400 && error?.response?.status < 500) {
+        console.warn('[ClockInOut] Clock request rejected:', { status: error.response.status, message, code: error.code });
+      } else {
+        console.error('[ClockInOut] Failed to toggle clock status:', { message, status: error?.response?.status, code: error?.code });
+      }
+      toast.error(message);
     } finally {
       setLoading(false);
     }

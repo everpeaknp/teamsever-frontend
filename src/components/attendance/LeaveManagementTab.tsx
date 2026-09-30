@@ -46,6 +46,7 @@ interface LeaveItem {
 export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
   const [activeLeavesToday, setActiveLeavesToday] = useState<LeaveItem[]>([]);
   const [leaves, setLeaves] = useState<LeaveItem[]>([]);
+  const [remoteRequests, setRemoteRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'denied'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,18 +54,32 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
   const fetchLeaves = async () => {
     try {
       setLoading(true);
-      const [todayRes, allRes] = await Promise.all([
+      const [todayRes, allRes, remoteRes] = await Promise.allSettled([
         api.get(`/workspaces/${workspaceId}/leaves/today`),
         api.get(`/workspaces/${workspaceId}/leaves`),
+        api.get(`/workspaces/${workspaceId}/leaves/remote-requests`),
       ]);
-      setActiveLeavesToday(todayRes.data.data || []);
-      setLeaves(allRes.data.data || []);
+      setActiveLeavesToday(todayRes.status === 'fulfilled' ? todayRes.value.data.data || [] : []);
+      setLeaves(allRes.status === 'fulfilled' ? allRes.value.data.data || [] : []);
+      setRemoteRequests(remoteRes.status === 'fulfilled' ? remoteRes.value.data.data || [] : []);
+      if (todayRes.status === 'rejected' && allRes.status === 'rejected' && remoteRes.status === 'rejected') toast.error('You do not have permission to view attendance and leave records');
     } catch (err: any) {
       console.error('[LeaveManagementTab] Failed to fetch leaves:', err);
       toast.error('Failed to load leave records');
     } finally {
       setLoading(false);
     }
+  };
+
+  const decideRemoteRequest = async (requestId: string, decision: 'approve' | 'deny') => {
+    const denialInput = decision === 'deny' ? window.prompt('Optional reason for denying this remote request:') : undefined;
+    if (denialInput === null) return;
+    const denialReason = denialInput?.trim();
+    try {
+      await api.patch(`/workspaces/${workspaceId}/leaves/${requestId}/${decision}`, { denialReason });
+      toast.success(`Remote request ${decision === 'approve' ? 'approved' : 'denied'}`);
+      await fetchLeaves();
+    } catch (error: any) { toast.error(error.response?.data?.message || `Could not ${decision} remote request`); }
   };
 
   useEffect(() => {
@@ -94,6 +109,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="space-y-6">
+      {remoteRequests.length > 0 && <section className="space-y-3 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 sm:p-5"><div><h3 className="text-sm font-bold">Pending Remote requests assigned to you</h3><p className="text-xs text-muted-foreground">Only the assigned approver and workspace owner can review. Proposed places stay private to them and the requester.</p></div>{remoteRequests.map((request) => <div key={request._id} className="flex flex-wrap items-start justify-between gap-4 rounded-xl border bg-card p-3"><div className="min-w-0 space-y-1"><p className="text-sm font-semibold">{request.requester?.name} · {formatDate(request.startDate)} → {formatDate(request.endDate)}</p><p className="text-xs">{request.remoteAreaName || request.proposedRemoteArea?.name || 'Private remote place'}</p>{request.proposedRemoteArea && <p className="text-xs text-muted-foreground">Proposed pin: {request.proposedRemoteArea.latitude.toFixed(5)}, {request.proposedRemoteArea.longitude.toFixed(5)} · 60 m allowed radius</p>}<p className="text-xs text-muted-foreground">{request.reason}</p></div><div className="flex gap-2"><Button size="sm" onClick={() => void decideRemoteRequest(request._id, 'approve')}>Approve</Button><Button size="sm" variant="outline" onClick={() => void decideRemoteRequest(request._id, 'deny')}>Deny</Button></div></div>)}</section>}
       {/* 1. "Who's on Leave Today" Banner */}
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-card to-card border border-emerald-500/20 shadow-sm">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-3">

@@ -143,9 +143,9 @@ const DEFAULT_PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { key: 'VIEW_ANALYTICS_TEAM', label: 'View Workspace Analytics', category: 'Analytics' },
   { key: 'VIEW_ACTIVITY_LOG', label: 'View Activity Log', category: 'Analytics' },
   { key: 'MANAGE_SETTINGS', label: 'Manage Workspace Settings', category: 'Workspace Settings' },
-  { key: 'MANAGE_LEAVES', label: 'Manage & Approve Leaves', category: 'HR & Leaves' },
+  { key: 'MANAGE_LEAVES_AND_REMOTE', label: 'Manage Leave & Remote Requests', category: 'HR & Leaves' },
+  { key: 'MANAGE_ADDRESSES', label: 'Manage Office & Member Addresses', category: 'Attendance' },
   { key: 'VIEW_LEAVES', label: 'View Team Leaves', category: 'HR & Leaves' },
-  { key: 'MANAGE_ATTENDANCE_LOCATIONS', label: 'Manage Attendance Locations', category: 'Attendance' },
 ];
 
 const PERMISSION_CATEGORIES = [
@@ -163,6 +163,8 @@ const PERMISSION_CATEGORIES = [
 
 const LEGACY_PERMISSION_ALIASES: Record<string, string[]> = {
   VIEW_ANALYTICS: ['VIEW_ANALYTICS_PERSONAL', 'VIEW_ANALYTICS_TEAM'],
+  MANAGE_LEAVES_AND_REMOTE: ['MANAGE_LEAVES'],
+  MANAGE_ADDRESSES: ['MANAGE_ATTENDANCE_LOCATIONS'],
 };
 
 const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
@@ -203,9 +205,9 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'VIEW_ACTIVITY_LOG',
     'MANAGE_CUSTOM_ROLES',
     'VIEW_ANNOUNCEMENT',
-    'MANAGE_LEAVES',
+    'MANAGE_LEAVES_AND_REMOTE',
+    'MANAGE_ADDRESSES',
     'VIEW_LEAVES',
-    'MANAGE_ATTENDANCE_LOCATIONS',
   ],
   admin: [
     'UPDATE_WORKSPACE',
@@ -246,9 +248,9 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'VIEW_ANNOUNCEMENT',
     'CREATE_ANNOUNCEMENT',
     'DELETE_ANNOUNCEMENT',
-    'MANAGE_LEAVES',
+    'MANAGE_LEAVES_AND_REMOTE',
+    'MANAGE_ADDRESSES',
     'VIEW_LEAVES',
-    'MANAGE_ATTENDANCE_LOCATIONS',
   ],
   operations_manager: [
     'VIEW_WORKSPACE',
@@ -283,7 +285,7 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'VIEW_ANALYTICS',
     'VIEW_ACTIVITY_LOG',
     'VIEW_ANNOUNCEMENT',
-    'MANAGE_LEAVES',
+    'MANAGE_LEAVES_AND_REMOTE',
     'VIEW_LEAVES',
   ],
   project_manager: [

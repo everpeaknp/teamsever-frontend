@@ -65,7 +65,7 @@ interface UserSummary {
 }
 
 interface ProjectSummary {
-  project: Project;
+  project: Project | null;
   totalDuration: number;
   totalDurationFormatted: string;
   entryCount: number;
@@ -420,15 +420,15 @@ export default function TimesheetsPage() {
                 </TableHeader>
                 <TableBody>
                   {data.byProject.map((projectSummary) => (
-                    <TableRow key={projectSummary.project._id}>
+                    <TableRow key={projectSummary.project?._id ?? 'unassigned-project'}>
                       <TableCell>
                         <Badge
                           style={{
-                            backgroundColor: projectSummary.project.color + '20',
-                            color: projectSummary.project.color
+                            backgroundColor: (projectSummary.project?.color ?? '#6b7280') + '20',
+                            color: projectSummary.project?.color ?? '#6b7280'
                           }}
                         >
-                          {projectSummary.project.name}
+                          {projectSummary.project?.name ?? 'No project'}
                         </Badge>
                       </TableCell>
                       <TableCell>

@@ -53,7 +53,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
   // Get current user from store
   const { user: currentUser, can, currentWorkspaceRole } = useAuthStore();
-  const canManageLeaves = can('MANAGE_LEAVES');
+  const canManageLeaves = can('MANAGE_LEAVES') || can('MANAGE_LEAVES_AND_REMOTE');
   const isWorkspaceOwner = currentWorkspaceRole === 'owner';
   // Fall back to localStorage in case Zustand store hasn't been hydrated yet
   const currentUserId = currentUser?._id || (typeof window !== 'undefined' ? localStorage.getItem('userId') : null);
@@ -1284,7 +1284,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
               />
             </div>
 
-            {/* In DMs: Add Request Leave trigger button */}
+            {/* In DMs: create a leave or temporary remote request */}
             {type === 'direct' && userId && (
               <Button
                 type="button"
@@ -1292,10 +1292,10 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                 size="sm"
                 onClick={() => setIsLeaveModalOpen(true)}
                 className="h-[44px] px-3 flex-shrink-0 rounded-xl gap-1.5 border-dashed border-border/80 hover:border-primary/50 text-xs font-semibold text-muted-foreground hover:text-primary transition-all"
-                title="Ask for holiday/leave in this DM"
+                title="Request leave or remote work in this DM"
               >
                 <CalendarDays className="h-4 w-4" />
-                <span className="hidden sm:inline">Request Leave</span>
+                <span className="hidden sm:inline">Request</span>
               </Button>
             )}
 

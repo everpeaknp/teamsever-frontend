@@ -91,6 +91,8 @@ const PERMISSIONS = {
   MANAGE_CUSTOM_ROLES: ['owner', 'admin'],
   MANAGE_SETTINGS: ['owner', 'admin'],
   MANAGE_LEAVES: ['owner', 'admin', 'operations_manager'],
+  MANAGE_LEAVES_AND_REMOTE: ['owner', 'admin', 'operations_manager'],
+  MANAGE_ADDRESSES: ['owner', 'admin'],
   manage_leaves: ['owner', 'admin', 'operations_manager'],
   VIEW_LEAVES: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],
   view_leaves: ['owner', 'admin', 'operations_manager', 'project_manager', 'developer', 'qa', 'member'],

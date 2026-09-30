@@ -21,6 +21,9 @@ interface LeaveCardProps {
     };
     metadata?: {
       leaveRequestId?: string;
+      requestType?: 'leave' | 'remote';
+      proposedRemoteArea?: { name?: string; latitude?: number; longitude?: number };
+      remoteAreaName?: string;
       startDate?: string;
       endDate?: string;
       daysCount?: number;
@@ -54,6 +57,7 @@ export function LeaveCard({
   const meta = message.metadata || {};
   const status = meta.status || 'pending';
   const leaveRequestId = meta.leaveRequestId;
+  const isRemoteRequest = meta.requestType === 'remote';
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDenyPopover, setShowDenyPopover] = useState(false);
@@ -72,7 +76,7 @@ export function LeaveCard({
     setIsProcessing(true);
     try {
       await api.patch(`/workspaces/${workspaceId}/leaves/${leaveRequestId}/approve`);
-      toast.success('Leave request approved!');
+      toast.success(`${isRemoteRequest ? 'Remote work' : 'Leave'} request approved!`);
       if (onStatusUpdated) onStatusUpdated();
     } catch (err: any) {
       console.error('[LeaveCard] Approve error:', err);
@@ -114,7 +118,7 @@ export function LeaveCard({
       >
         <div className="flex items-center gap-1.5">
           <Calendar className="h-4 w-4" />
-          <span>Leave Request</span>
+          <span>{isRemoteRequest ? 'Remote Work Request' : 'Leave Request'}</span>
         </div>
 
         <div className="flex items-center gap-1">
@@ -156,6 +160,8 @@ export function LeaveCard({
             </span>
           </div>
         </div>
+
+        {isRemoteRequest && <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Private remote place</span><p className="mt-0.5 text-xs">{meta.proposedRemoteArea?.name || meta.remoteAreaName || 'Existing approved private place'}</p>{meta.proposedRemoteArea?.latitude != null && meta.proposedRemoteArea.longitude != null && <p className="text-[10px] text-muted-foreground">{meta.proposedRemoteArea.latitude.toFixed(5)}, {meta.proposedRemoteArea.longitude.toFixed(5)} · shared in this DM only</p>}</div>}
 
         {/* Reason (Compulsory) */}
         <div>

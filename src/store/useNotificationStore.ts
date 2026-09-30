@@ -24,6 +24,7 @@ export interface Notification {
 
 interface NotificationStore {
   notifications: Notification[];
+  bellNotifications: Notification[];
   unreadCount: number;
   permission: NotificationPermission;
   isLoading: boolean;
@@ -31,9 +32,10 @@ interface NotificationStore {
   processedNotificationIds: Set<string>;
   
   setNotifications: (notifications: Notification[]) => void;
+  setBellNotifications: (notifications: Notification[]) => void;
   addNotification: (notification: Notification) => void;
   markAsRead: (notificationId: string) => void;
-  markAllAsRead: () => void;
+  markAllAsRead: (workspaceId?: string) => void;
   removeNotification: (notificationId: string) => void;
   clearNotifications: () => void;
   setUnreadCount: (count: number) => void;
@@ -48,6 +50,7 @@ interface NotificationStore {
 
 export const useNotificationStore = create<NotificationStore>((set, get) => ({
   notifications: [],
+  bellNotifications: [],
   unreadCount: 0,
   permission: (typeof window !== 'undefined' && typeof Notification !== 'undefined') ? Notification.permission : 'default',
   isLoading: false,
@@ -62,16 +65,24 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     set({ notifications: deduped, unreadCount });
   },
 
+  setBellNotifications: (notifications) => {
+    const deduped = notifications.filter(
+      (n, idx, arr) => arr.findIndex((x) => x._id === n._id) === idx
+    );
+    set({ bellNotifications: deduped });
+  },
+
   addNotification: (notification) => {
-    const { notifications } = get();
+    const { notifications, bellNotifications } = get();
     // Prevent duplicate inserts when same event arrives via multiple paths.
     if (notifications.some((n) => n._id === notification._id)) {
       return;
     }
     const newNotifications = [notification, ...notifications];
+    const newBellNotifications = [notification, ...bellNotifications.filter((n) => n._id !== notification._id)];
     const unreadCount = newNotifications.filter((n) => !n.read).length;
     
-    set({ notifications: newNotifications, unreadCount });
+    set({ notifications: newNotifications, bellNotifications: newBellNotifications, unreadCount });
 
     // Backgrounded tab: use native/browser notification path.
     if (typeof document !== 'undefined' && document.hidden) {
@@ -92,32 +103,46 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   },
 
   markAsRead: (notificationId) => {
-    const { notifications } = get();
+    const { notifications, bellNotifications } = get();
     const updatedNotifications = notifications.map((n) =>
       n._id === notificationId ? { ...n, read: true } : n
     );
     const unreadCount = updatedNotifications.filter((n) => !n.read).length;
     
-    set({ notifications: updatedNotifications, unreadCount });
+    set({
+      notifications: updatedNotifications,
+      bellNotifications: bellNotifications.map((n) => n._id === notificationId ? { ...n, read: true } : n),
+      unreadCount,
+    });
   },
 
-  markAllAsRead: () => {
-    const { notifications } = get();
-    const updatedNotifications = notifications.map((n) => ({ ...n, read: true }));
+  markAllAsRead: (workspaceId) => {
+    const { notifications, bellNotifications } = get();
+    const isInScope = (n: Notification) => !workspaceId || n.data?.workspaceId === workspaceId;
+    const updatedNotifications = notifications.map((n) => isInScope(n) ? { ...n, read: true } : n);
+    const updatedBellNotifications = bellNotifications.map((n) => isInScope(n) ? { ...n, read: true } : n);
     
-    set({ notifications: updatedNotifications, unreadCount: 0 });
+    set({
+      notifications: updatedNotifications,
+      bellNotifications: updatedBellNotifications,
+      unreadCount: updatedNotifications.filter((n) => !n.read).length,
+    });
   },
 
   removeNotification: (notificationId) => {
-    const { notifications } = get();
+    const { notifications, bellNotifications } = get();
     const updatedNotifications = notifications.filter((n) => n._id !== notificationId);
     const unreadCount = updatedNotifications.filter((n) => !n.read).length;
     
-    set({ notifications: updatedNotifications, unreadCount });
+    set({
+      notifications: updatedNotifications,
+      bellNotifications: bellNotifications.filter((n) => n._id !== notificationId),
+      unreadCount,
+    });
   },
 
   clearNotifications: () => {
-    set({ notifications: [], unreadCount: 0 });
+    set({ notifications: [], bellNotifications: [], unreadCount: 0, processedNotificationIds: new Set() });
   },
 
   setUnreadCount: (count) => {
@@ -383,3 +408,13 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     }
   },
 }));
+
+// Use Zustand's stable store API for this cross-component update. In Next dev,
+// Fast Refresh can preserve an older store state whose action methods predate
+// the latest module, even though the component bundle has already updated.
+export const replaceBellNotifications = (notifications: Notification[]) => {
+  const deduped = notifications.filter(
+    (notification, index, all) => all.findIndex((item) => item._id === notification._id) === index
+  );
+  useNotificationStore.setState({ bellNotifications: deduped });
+};
