@@ -8,6 +8,8 @@ export interface DesktopReleaseAsset {
   browser_download_url: string;
 }
 
+export type DesktopPlatform = 'windows' | 'linux';
+
 export function getLatestReleaseApiUrl(): string | null {
   try {
     const releaseUrl = new URL(RELEASES_URL);
@@ -19,15 +21,8 @@ export function getLatestReleaseApiUrl(): string | null {
   }
 }
 
-export function getDesktopDownloadUrl(platform: string, assets: DesktopReleaseAsset[]): string | null {
-  const normalizedPlatform = platform.toLowerCase();
-  const expectedAsset = normalizedPlatform.startsWith('win')
-    ? 'TeamsEver-Setup.exe'
-    : normalizedPlatform.startsWith('linux')
-      ? 'TeamsEver.AppImage'
-      : null;
-
-  if (!expectedAsset) return null;
+export function getDesktopDownloadUrl(platform: DesktopPlatform, assets: DesktopReleaseAsset[]): string | null {
+  const expectedAsset = platform === 'windows' ? 'TeamsEver-Setup.exe' : 'TeamsEver.AppImage';
 
   const asset = assets.find((item) => item.name === expectedAsset);
   if (!asset) return null;

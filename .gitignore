@@ -44,6 +44,7 @@ coverage
 *.spec.jsx
 *.spec.tsx
 !src/components/chat/LeaveCard.test.tsx
+!src/components/layout/DesktopDownloadButton.spec.tsx
 !desktop/**/*.test.ts
 !desktop/**/*.test.tsx
 __tests__
