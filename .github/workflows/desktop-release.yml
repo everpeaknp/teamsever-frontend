@@ -81,8 +81,8 @@ jobs:
             desktop/release/TeamsEver.AppImage
           if-no-files-found: error
 
-  publish-draft:
-    name: Create draft GitHub Release
+  publish-release:
+    name: Publish GitHub Release
     needs: package
     runs-on: ubuntu-latest
     steps:
@@ -90,7 +90,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: release-assets
-      - name: Attach installers to a draft release
+      - name: Publish installers as a GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -98,4 +98,4 @@ jobs:
             --repo everpeaknp/teamsever-frontend \
             release-assets/windows-installer/TeamsEver-Setup.exe \
             release-assets/linux-installers/TeamsEver.AppImage \
-            --draft --generate-notes --verify-tag --title "$GITHUB_REF_NAME"
+            --generate-notes --verify-tag --title "$GITHUB_REF_NAME"
