@@ -28,3 +28,14 @@ export function isSafeExternalUrl(value: string): boolean {
     return false;
   }
 }
+
+export function isFirebaseAuthPopupUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:'
+      && url.hostname === 'teamsever-44340.firebaseapp.com'
+      && url.pathname === '/__/auth/handler';
+  } catch {
+    return false;
+  }
+}

@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import { foregroundAppSupport, getForegroundProcessName } from './foregroundProcess';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isAllowedWebUrl, isSafeExternalUrl, isSameOriginNavigation } from './security';
+import { isAllowedWebUrl, isFirebaseAuthPopupUrl, isSafeExternalUrl, isSameOriginNavigation } from './security';
 import { detectPresenceCapabilities, isWaylandSession } from './tracker';
 import { DesktopPresenceSession, type DesktopPresenceAuthorization } from './desktopPresenceSession';
 
@@ -233,6 +233,9 @@ function createWindow(): BrowserWindow {
   const appOrigin = appUrl?.origin;
   let showingFallback = false;
   window.webContents.setWindowOpenHandler(({ url }) => {
+    // Firebase signInWithPopup requires its handler to run in an Electron child window.
+    // Sending this URL to the system browser makes Firebase report auth/popup-blocked.
+    if (isFirebaseAuthPopupUrl(url)) return { action: 'allow' };
     void openExternalUrl(url);
     return { action: 'deny' };
   });
