@@ -11,6 +11,7 @@ import { api } from '@/lib/axios';
 import { useAuthStore } from '@/store/useAuthStore';
 
 import { useProfileModalStore } from '@/store/useProfileModalStore';
+import { AppUpdateNotifier } from '@/components/layout/AppUpdateNotifier';
 
 // Dynamic imports so these heavy components are excluded from pages that don't need them
 const AppSidebar = dynamic(
@@ -133,6 +134,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <GitHubWebhookModal />
       <UserProfileModal isOpen={isOpen} userId={userId} onClose={closeProfile} />
       <Toaster position="top-right" richColors />
+      <AppUpdateNotifier />
       {showShell && <GlobalTimer />}
 
       {showShell ? (

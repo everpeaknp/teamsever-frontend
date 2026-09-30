@@ -16,6 +16,15 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
 
+  // Embed a deployment-specific value in the client so an open tab can detect new deploys.
+  env: {
+    NEXT_PUBLIC_APP_BUILD_ID:
+      process.env.VERCEL_GIT_COMMIT_SHA ||
+      process.env.GITHUB_SHA ||
+      process.env.VERCEL_DEPLOYMENT_ID ||
+      'development',
+  },
+
   // Remove all console.* calls from production bundle
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production'
