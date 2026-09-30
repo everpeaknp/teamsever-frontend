@@ -26,8 +26,8 @@ Set `TEAMSEVER_WEB_URL` and `TEAMSEVER_API_URL` to the deployed TeamsEver HTTPS 
 
 ```sh
 cd desktop
-TEAMSEVER_WEB_URL=https://teamsever.everacy.com TEAMSEVER_API_URL=https://your-backend-origin.example npm run dist:linux
-TEAMSEVER_WEB_URL=https://teamsever.everacy.com TEAMSEVER_API_URL=https://your-backend-origin.example npm run dist:win
+TEAMSEVER_WEB_URL=https://teamsever.everacy.com TEAMSEVER_API_URL=https://teamseverbackend.everacy.com npm run dist:linux
+TEAMSEVER_WEB_URL=https://teamsever.everacy.com TEAMSEVER_API_URL=https://teamseverbackend.everacy.com npm run dist:win
 ```
 
 The Linux build creates `release/TeamsEver.AppImage`. The Windows build creates `release/TeamsEver-Setup.exe`. Build Windows installers on Windows and Linux packages on Linux.
@@ -36,6 +36,6 @@ The Linux build creates `release/TeamsEver.AppImage`. The Windows build creates 
 
 The `Desktop Release` GitHub Actions workflow runs when a `v*` tag points to a commit already merged into `main`. It builds Windows and Linux installers, then creates a **draft** GitHub Release with both assets attached. Review the draft and publish it in GitHub when ready. No signing certificate is configured yet, so Windows may show SmartScreen and Linux packages are unsigned.
 
-Before tagging a release, add repository Actions variables `TEAMSEVER_WEB_URL` and `TEAMSEVER_API_URL` in **Settings → Secrets and variables → Actions → Variables**. The workflow fails early if either is missing. To release, merge the tested branch to `main`, create a version tag such as `v0.1.0` on that merge commit, and push the tag. The navbar download icon downloads the matching Windows installer or Linux AppImage directly when that asset exists in the latest published release. It stays unavailable when no matching installer exists; it does not send users to the GitHub release page.
+Before tagging a release, add repository Actions variables `TEAMSEVER_WEB_URL` and `TEAMSEVER_API_URL` in **Settings → Secrets and variables → Actions → Variables**. The workflow fails early if either is missing. To release, merge the tested branch to `main`, create a version tag matching `desktop/package.json` (currently `v0.1.1`) on that merge commit, and push the tag. The navbar download icon downloads the matching Windows installer or Linux AppImage directly when that asset exists in the latest published release. It stays unavailable when no matching installer exists; it does not send users to the GitHub release page.
 
 The workflow creates a draft release only. It does not publish, sign, or auto-update installers. Windows may show SmartScreen and Linux packages are unsigned until signing is configured.
