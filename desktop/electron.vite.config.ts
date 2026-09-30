@@ -21,6 +21,8 @@ export default defineConfig({
   },
   renderer: {
     root: 'src/renderer',
+    // The Electron renderer uses plain CSS; don't inherit the web app's root PostCSS config.
+    css: { postcss: { plugins: [] } },
     build: {
       rollupOptions: {
         input: 'src/renderer/index.html',
