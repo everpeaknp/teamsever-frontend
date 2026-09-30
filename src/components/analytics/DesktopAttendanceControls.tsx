@@ -27,7 +27,7 @@ export function DesktopAttendanceControls() {
         setDeviceId(device.deviceId);
         setDevices(activeDevices);
         setMonitoringEnabled(!!saved?.activityMonitoringEnabled);
-        setMessage(device.capabilities.unavailableReason || (device.capabilities.foregroundMonitoringSupported ? 'App presence is recorded only while this desktop device is clocked in.' : 'Foreground app presence is unavailable on this platform.'));
+        setMessage([device.capabilities.foregroundMonitoringSupported ? 'Foreground app names can be detected.' : 'Foreground app detection is unavailable: ' + (device.capabilities.foregroundUnavailableReason || 'unsupported on this platform.'), device.capabilities.idleDetectionSupported ? 'AFK detection is available.' : 'AFK detection is unavailable: ' + (device.capabilities.idleDetectionUnavailableReason || 'the operating system did not provide an idle signal.')].join(' '));
         await window.teamseverDesktop?.setMonitoringEnabled(!!saved?.activityMonitoringEnabled);
       } catch (error: any) {
         if (!cancelled) setMessage(error?.response?.data?.message || error.message || 'Could not connect this desktop device.');
@@ -36,14 +36,18 @@ export function DesktopAttendanceControls() {
     return () => { cancelled = true; };
   }, []);
 
-  if (typeof window === 'undefined' || !window.teamseverDesktop) return null;
+  if (typeof window === 'undefined') return null;
+  if (!window.teamseverDesktop) return <section className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs" aria-label="Desktop presence settings">
+    <p className="font-medium">Desktop presence tracker</p>
+    <p className="text-muted-foreground">Active/AFK and foreground app tracking runs in the TeamsEver desktop app only, after you enable consent and clock in from that paired desktop. Browser clock-ins do not report laptop activity.</p>
+  </section>;
 
   const handleConsent = async (enabled: boolean) => {
     if (!deviceId) return;
     try {
       await setDesktopActivityConsent(deviceId, enabled);
       setMonitoringEnabled(enabled);
-      toast.success(enabled ? 'Foreground app presence enabled for clocked-in shifts.' : 'Foreground app presence paused.');
+      toast.success(enabled ? 'Desktop presence tracking enabled for clocked-in shifts.' : 'Desktop presence tracking paused.');
     } catch (error: any) { toast.error(error?.response?.data?.message || error.message || 'Could not update desktop tracking consent.'); }
   };
 
@@ -79,14 +83,14 @@ export function DesktopAttendanceControls() {
         <p className="text-muted-foreground">{message || 'Preparing secure device connection…'}</p>
       </div>
       <div className="flex items-center gap-3">
-        <label className="flex items-center gap-2" title="Share foreground app names only while clocked in. No window titles or document content are sent.">
+        <label className="flex items-center gap-2" title="Share foreground app names and active/AFK state only while clocked in. No key presses, mouse counts, window titles, or document content are recorded.">
           <input type="checkbox" checked={monitoringEnabled} disabled={!deviceId || loading} onChange={(event) => void handleConsent(event.target.checked)} />
-          Share app presence while clocked in
+          Share app and active/AFK presence while clocked in
         </label>
         <Button type="button" variant="outline" size="sm" disabled={!deviceId || loading} onClick={() => void handleDisconnect()}>Disconnect</Button>
       </div>
     </div>
-    {monitoringEnabled && <p className="mt-1 text-muted-foreground">Only the foreground app identifier is reported once per minute. Tracking stops when clocked out. Activity gaps never change attendance times.</p>}
+    {monitoringEnabled && <p className="mt-1 text-muted-foreground">Only the foreground app name and active/AFK state are reported. Keyboard and mouse details are never recorded. Tracking stops when clocked out or consent is withdrawn. Activity gaps never change attendance times.</p>}
     {devices.length > 1 && <ul className="mt-2 space-y-1 border-t border-border/60 pt-2">{devices.map((device) => <li key={String(device._id || device.id)} className="flex items-center justify-between gap-2"><span>{device.name} · {device.platform}{device.lastSeenAt ? ` · last seen ${new Date(device.lastSeenAt).toLocaleString()}` : ''}</span>{String(device._id || device.id) !== deviceId && <Button type="button" variant="outline" size="sm" onClick={() => void revokeDevice(String(device._id || device.id))}>Revoke</Button>}</li>)}</ul>}
   </section>;
 }
