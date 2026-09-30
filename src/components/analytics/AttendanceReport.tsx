@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/store/useAuthStore';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { DesktopActivityReport } from './DesktopActivityReport';
 
 interface AttendanceEntry {
   id: string;
@@ -25,6 +26,8 @@ interface AttendanceEntry {
   durationFormatted: string;
   description: string;
   attendanceMode?: 'onsite' | 'remote';
+  clockInSource?: 'web' | 'desktop';
+  clockOutSource?: 'web' | 'desktop' | null;
   clockInLocation?: { areaName?: string; latitude?: number; longitude?: number; accuracyMeters?: number } | null;
   clockInVerificationMethod?: 'gps' | 'network_confirmed' | null;
   clockOutLocation?: { latitude?: number; longitude?: number; distanceFromClockInMeters?: number; withinRange?: boolean } | null;
@@ -341,10 +344,10 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {entry.clockInLocation ? <div className="text-xs"><div>{entry.clockInLocation.areaName || (entry.attendanceMode === 'remote' ? 'Remote area' : 'Office')}</div><div className="text-muted-foreground">{entry.clockInLocation.latitude != null && entry.clockInLocation.longitude != null ? `${entry.clockInLocation.latitude.toFixed(5)}, ${entry.clockInLocation.longitude.toFixed(5)}` : 'Location hidden'}</div>{entry.clockInVerificationMethod === 'network_confirmed' && <div className="text-amber-500">Network confirmed · low GPS accuracy</div>}</div> : <span className="text-xs text-muted-foreground">Location not recorded</span>}
+                        <div className="text-xs"><div>{entry.clockInLocation?.areaName || (entry.attendanceMode === 'remote' ? 'Remote area' : 'Office')}</div><div className="text-muted-foreground">{entry.clockInLocation?.latitude != null && entry.clockInLocation?.longitude != null ? `${entry.clockInLocation.latitude.toFixed(5)}, ${entry.clockInLocation.longitude.toFixed(5)}` : entry.clockInLocation ? 'Location hidden' : 'Location not recorded'}</div><div className="text-muted-foreground">Source: {entry.clockInSource === 'desktop' ? 'Trusted desktop' : 'Web'}</div>{entry.clockInVerificationMethod === 'network_confirmed' && <div className="text-amber-500">Network confirmed · low GPS accuracy</div>}</div>
                       </TableCell>
                       <TableCell>
-                        {entry.clockOutLocation ? <div className="text-xs"><div>{entry.clockOutLocation.latitude != null && entry.clockOutLocation.longitude != null ? `${entry.clockOutLocation.latitude.toFixed(5)}, ${entry.clockOutLocation.longitude.toFixed(5)}` : 'Location hidden'}</div><div className={entry.clockOutLocation.withinRange ? 'text-emerald-600' : 'text-amber-600'}>{entry.clockOutLocation.distanceFromClockInMeters != null ? `${entry.clockOutLocation.distanceFromClockInMeters} m from clock-in` : 'Distance unavailable'}</div></div> : <span className="text-xs text-muted-foreground">{entry.clockOut === 'Running' ? '—' : 'Location not recorded'}</span>}
+                        {entry.clockOutLocation ? <div className="text-xs"><div>{entry.clockOutLocation.latitude != null && entry.clockOutLocation.longitude != null ? `${entry.clockOutLocation.latitude.toFixed(5)}, ${entry.clockOutLocation.longitude.toFixed(5)}` : 'Location hidden'}</div><div className={entry.clockOutLocation.withinRange ? 'text-emerald-600' : 'text-amber-600'}>{entry.clockOutLocation.distanceFromClockInMeters != null ? `${entry.clockOutLocation.distanceFromClockInMeters} m from clock-in` : 'Distance unavailable'}</div><div className="text-muted-foreground">Source: {entry.clockOutSource === 'desktop' ? 'Trusted desktop' : entry.clockOutSource === 'web' ? 'Web' : 'Not recorded'}</div></div> : <span className="text-xs text-muted-foreground">{entry.clockOut === 'Running' ? '—' : 'Location not recorded'}</span>}
                         {entry.locationReviewReason && <div className="mt-1 text-xs text-amber-600" title={entry.locationReviewReason}>Review: {entry.locationReviewReason}</div>}
                       </TableCell>
                     </TableRow>
@@ -355,6 +358,7 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
           </div>
         </CardContent>
       </Card>
+      <DesktopActivityReport workspaceId={workspaceId} userId={isAdmin ? filters.userId : String(user?._id || '')} startDate={filters.startDate} endDate={filters.endDate} />
     </div>
   );
 }

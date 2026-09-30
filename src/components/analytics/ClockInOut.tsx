@@ -8,6 +8,8 @@ import { api } from '@/lib/axios';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/useAuthStore';
 import { readAccurateLocation } from './readAccurateLocation';
+import { DesktopAttendanceControls } from './DesktopAttendanceControls';
+import { ensureTrustedDesktopDevice } from '@/lib/desktopAttendance';
 
 interface ClockInOutProps {
   workspaceId: string;
@@ -136,10 +138,15 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
         workspaceId 
       });
 
-      const response = await api.post(`/workspaces/${workspaceId}/clock/toggle`, {
-        status: newStatus,
-        ...(locationFix ? { locationFix } : {})
-      });
+      const response = window.teamseverDesktop
+        ? await (async () => {
+            await ensureTrustedDesktopDevice();
+            return window.teamseverDesktop!.toggleClock({ workspaceId, status: newStatus, ...(locationFix ? { locationFix } : {}) });
+          })()
+        : await api.post(`/workspaces/${workspaceId}/clock/toggle`, {
+            status: newStatus,
+            ...(locationFix ? { locationFix } : {})
+          });
       
       console.log('[ClockInOut] Toggle response:', response.data);
 
@@ -200,6 +207,7 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
         <h4 className="font-bold">Time Tracking</h4>
       </div>
       <CardContent className="p-6 h-[calc(100%-57px)] flex flex-col gap-3">
+        <DesktopAttendanceControls />
         <div
           className={`rounded-[20px] border px-4 py-4 ${
             clockedIn

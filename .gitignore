@@ -12,6 +12,9 @@ yarn-error.log*
 out
 out/
 build
+!desktop/build/
+!desktop/build/icon.png
+!desktop/build/icon.ico
 dist
 
 # Environment variables
@@ -41,12 +44,18 @@ coverage
 *.spec.jsx
 *.spec.tsx
 !src/components/chat/LeaveCard.test.tsx
+!desktop/**/*.test.ts
+!desktop/**/*.test.tsx
 __tests__
 __mocks__
 
 # Documentation
 *.md
 !README.md
+!docs/
+!docs/superpowers/
+!docs/superpowers/specs/
+!docs/superpowers/specs/2026-09-30-electron-desktop-design.md
 
 # Misc
 .DS_Store

@@ -9,6 +9,7 @@ import Image from 'next/image';
 import { useUIStore } from '@/store/useUIStore';
 import { SearchButton } from '@/components/search/SearchButton';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { DesktopDownloadButton } from '@/components/layout/DesktopDownloadButton';
 import { CustomizeModal } from '@/components/theme/CustomizeModal';
 import { HelpModal } from '@/components/modals/HelpModal';
 import { MobileSidebar } from '@/components/sidebar/MobileSidebar';
@@ -85,6 +86,8 @@ export function Header() {
         {/* Right Section */}
         <div className="flex items-center gap-3">
           <div className="h-6 w-px bg-slate-200 dark:bg-[#262626] hidden sm:block" />
+
+          <DesktopDownloadButton />
           
           <NotificationBell />
           

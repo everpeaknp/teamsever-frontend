@@ -2,12 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ClockInOut } from './ClockInOut';
 
-const { get, post, toastError, toastSuccess } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn() }));
+const { get, post, toastError, toastSuccess, desktopToggle, provision } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), desktopToggle: vi.fn(), provision: vi.fn() }));
 vi.mock('@/lib/axios', () => ({ api: { get, post } }));
 vi.mock('sonner', () => ({ toast: { error: toastError, success: toastSuccess } }));
+vi.mock('@/lib/desktopAttendance', () => ({ ensureTrustedDesktopDevice: provision, setDesktopActivityConsent: vi.fn(), disconnectDesktopDevice: vi.fn() }));
 
 describe('ClockInOut location enforcement', () => {
-  beforeEach(() => { vi.clearAllMocks(); get.mockResolvedValue({ data: { data: { policy: { enabled: true } } } }); });
+  beforeEach(() => { vi.clearAllMocks(); delete (window as any).teamseverDesktop; get.mockResolvedValue({ data: { data: { policy: { enabled: true } } } }); });
 
   it('sends a fresh location and does not show clock-in success when the server rejects it', async () => {
     Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
@@ -69,5 +70,17 @@ describe('ClockInOut location enforcement', () => {
     render(<ClockInOut workspaceId="workspace-1" currentStatus="active" runningTimer={{ startTime: new Date().toISOString() }} onStatusChange={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Clock Out' }));
     await waitFor(() => expect(post).toHaveBeenCalledWith('/workspaces/workspace-1/clock/toggle', { status: 'inactive', locationFix: expect.objectContaining({ latitude: 40.0001 }) }));
+  });
+
+  it('uses the trusted desktop bridge for desktop clock events', async () => {
+    get.mockResolvedValue({ data: { data: { policy: { enabled: false } } } });
+    provision.mockResolvedValue({ deviceId: 'device-1' });
+    desktopToggle.mockResolvedValue({ data: { success: true, data: { timeEntry: { startTime: new Date().toISOString() } } } });
+    Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: { toggleClock: desktopToggle } });
+    render(<ClockInOut workspaceId="0123456789abcdef01234567" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
+    await waitFor(() => expect(desktopToggle).toHaveBeenCalledWith({ workspaceId: '0123456789abcdef01234567', status: 'active' }));
+    expect(post).not.toHaveBeenCalled();
+    delete (window as any).teamseverDesktop;
   });
 });

@@ -1,0 +1,32 @@
+appId: com.everpeaknp.teamsever
+productName: TeamsEver
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+asar: true
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: TeamsEver-Setup.exe
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  category: Office
+  icon: build/icon.png
+  artifactName: TeamsEver.${ext}
+  syncDesktopName: true

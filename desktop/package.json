@@ -1,0 +1,34 @@
+{
+  "name": "teamsever-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TeamsEver desktop application",
+  "author": {
+    "name": "TeamsEver"
+  },
+  "desktopName": "com.everpeaknp.teamsever",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "validate:web-url": "node scripts/validate-web-url.mjs",
+    "validate:api-url": "node scripts/validate-api-url.mjs",
+    "validate:release-version": "node scripts/validate-release-version.mjs",
+    "dist:win": "npm run validate:web-url && npm run validate:api-url && npm run build && electron-builder --win nsis --publish never",
+    "dist:linux": "npm run validate:web-url && npm run validate:api-url && npm run build && electron-builder --linux AppImage --publish never",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.9.3"
+  }
+}

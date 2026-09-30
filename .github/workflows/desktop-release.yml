@@ -1,0 +1,101 @@
+name: Desktop Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  verify-tag:
+    name: Require a release from main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+      - run: npm run validate:release-version
+        working-directory: desktop
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+      - name: Verify tag points to main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "Release tags must point to a commit already merged into main."
+            exit 1
+          fi
+
+  package:
+    name: Package ${{ matrix.platform }}
+    needs: verify-tag
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-latest
+            script: dist:win
+          - platform: linux
+            runner: ubuntu-latest
+            script: dist:linux
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        working-directory: desktop
+    env:
+      TEAMSEVER_WEB_URL: ${{ vars.TEAMSEVER_WEB_URL }}
+      TEAMSEVER_API_URL: ${{ vars.TEAMSEVER_API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - name: Require configured production web URL
+        run: npm run validate:web-url && npm run validate:api-url
+      - name: Verify desktop code
+        run: npm run typecheck && npm test
+      - name: Build installer
+        run: npm run ${{ matrix.script }}
+      - name: Upload Windows installer
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: desktop/release/TeamsEver-Setup.exe
+          if-no-files-found: error
+      - name: Upload Linux AppImage
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: |
+            desktop/release/TeamsEver.AppImage
+          if-no-files-found: error
+
+  publish-draft:
+    name: Create draft GitHub Release
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+      - name: Attach installers to a draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo everpeaknp/teamsever-frontend \
+            release-assets/windows-installer/TeamsEver-Setup.exe \
+            release-assets/linux-installers/TeamsEver.AppImage \
+            --draft --generate-notes --verify-tag --title "$GITHUB_REF_NAME"
