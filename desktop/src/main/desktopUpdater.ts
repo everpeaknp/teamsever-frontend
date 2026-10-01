@@ -1,11 +1,6 @@
-export type DesktopUpdateState =
-  | { type: 'checking' }
-  | { type: 'available'; version: string }
-  | { type: 'downloading'; percent: number }
-  | { type: 'downloaded'; version: string }
-  | { type: 'not-available' }
-  | { type: 'deferred'; version: string; reason: 'clocked-in' | 'status-unavailable' }
-  | { type: 'error'; message: string };
+import type { DesktopUpdateState } from '../../../src/types/desktop';
+
+export type { DesktopUpdateState } from '../../../src/types/desktop';
 
 type UpdateEvent = 'checking-for-update' | 'update-available' | 'download-progress' | 'update-downloaded' | 'update-not-available' | 'error';
 type UpdateListener = (value?: any) => void;

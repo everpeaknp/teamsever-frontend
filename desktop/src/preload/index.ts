@@ -7,6 +7,15 @@ const desktop = Object.freeze({
   setMonitoringEnabled: (enabled: boolean) => ipcRenderer.invoke('desktop:set-monitoring', enabled),
   getStatus: () => ipcRenderer.invoke('desktop:get-status'),
   toggleClock: (input: { workspaceId: string; status: 'active' | 'inactive'; locationFix?: { latitude: number; longitude: number; accuracyMeters: number; capturedAt: string } }) => ipcRenderer.invoke('desktop:toggle-clock', input),
+  onUpdateState: (callback: (state: unknown) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state);
+    ipcRenderer.on('desktop:update-state', listener);
+    return () => ipcRenderer.removeListener('desktop:update-state', listener);
+  },
+  getUpdateState: () => ipcRenderer.invoke('desktop:get-update-state'),
+  installUpdate: () => ipcRenderer.invoke('desktop:install-update'),
+  checkForUpdates: () => ipcRenderer.invoke('desktop:check-updates'),
+  openLatestDownload: () => ipcRenderer.invoke('desktop:open-latest-download'),
 });
 
 contextBridge.exposeInMainWorld('teamseverDesktop', desktop);

@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { isAllowedWebUrl, isFirebaseAuthPopupUrl, isSafeExternalUrl, isSameOriginNavigation } from './security';
 import { detectPresenceCapabilities, isWaylandSession } from './tracker';
 import { DesktopPresenceSession, type DesktopPresenceAuthorization } from './desktopPresenceSession';
-import { DesktopUpdaterController, type DesktopUpdateState } from './desktopUpdater';
+import { DesktopUpdaterController } from './desktopUpdater';
+import type { DesktopUpdateState } from '../../../src/types/desktop';
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const developmentUrl = 'http://localhost:3000';

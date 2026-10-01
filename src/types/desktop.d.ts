@@ -1,3 +1,12 @@
+export type DesktopUpdateState =
+  | { type: 'checking' }
+  | { type: 'available'; version: string }
+  | { type: 'downloading'; percent: number }
+  | { type: 'downloaded'; version: string }
+  | { type: 'not-available' }
+  | { type: 'deferred'; version: string; reason: 'clocked-in' | 'status-unavailable' }
+  | { type: 'error'; message: string };
+
 export {};
 
 declare global {
@@ -9,6 +18,11 @@ declare global {
       setMonitoringEnabled: (enabled: boolean) => Promise<{ enabled: boolean }>;
       getStatus: () => Promise<{ clockedIn: boolean; workspaceId: string | null; timeEntryId: string | null; startTime: string | null; activityMonitoringEnabled: boolean }>;
       toggleClock: (input: { workspaceId: string; status: 'active' | 'inactive'; locationFix?: { latitude: number; longitude: number; accuracyMeters: number; capturedAt: string } }) => Promise<{ data: { success: boolean; data: { status: string; timeEntry?: any } } }>;
+      onUpdateState?: (callback: (state: DesktopUpdateState) => void) => () => void;
+      getUpdateState?: () => Promise<DesktopUpdateState | null>;
+      installUpdate?: () => Promise<boolean>;
+      checkForUpdates?: () => Promise<DesktopUpdateState | null>;
+      openLatestDownload?: () => Promise<void>;
     };
   }
 }

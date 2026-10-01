@@ -12,6 +12,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { AppUpdateNotifier } from '@/components/layout/AppUpdateNotifier';
+import { DesktopUpdateNotifier } from '@/components/layout/DesktopUpdateNotifier';
 
 // Dynamic imports so these heavy components are excluded from pages that don't need them
 const AppSidebar = dynamic(
@@ -135,6 +136,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <UserProfileModal isOpen={isOpen} userId={userId} onClose={closeProfile} />
       <Toaster position="top-right" richColors />
       <AppUpdateNotifier />
+      <DesktopUpdateNotifier />
       {showShell && <GlobalTimer />}
 
       {showShell ? (
