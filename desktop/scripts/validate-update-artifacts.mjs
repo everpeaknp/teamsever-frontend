@@ -1,5 +1,6 @@
 import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const platforms = {
   win: { manifest: 'latest.yml', installer: 'TeamsEver-Setup.exe' },
@@ -21,6 +22,11 @@ export function validateUpdateArtifacts(platform, assets) {
   return true;
 }
 
+export function isDirectExecution(moduleUrl, entryPath) {
+  if (!entryPath) return false;
+  return path.resolve(entryPath) === path.resolve(fileURLToPath(moduleUrl));
+}
+
 async function validateDirectory(platform, directory) {
   const names = await readdir(directory);
   const assets = {};
@@ -35,7 +41,7 @@ async function validateDirectory(platform, directory) {
   process.stdout.write(`Validated ${platform} update metadata in ${directory}\n`);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(new URL(import.meta.url).pathname)) {
+if (isDirectExecution(import.meta.url, process.argv[1])) {
   const [platform, directory = 'release'] = process.argv.slice(2);
   if (!platform) throw new Error('Usage: node scripts/validate-update-artifacts.mjs <win|linux> [directory]');
   await validateDirectory(platform, directory);

@@ -13,16 +13,18 @@ interface UpdaterAdapter {
 
 interface DesktopUpdaterDependencies {
   updater: UpdaterAdapter;
-  getClockedIn: () => Promise<boolean>;
+  getClockedIn: () => Promise<unknown>;
   publish: (state: DesktopUpdateState) => void;
 }
 
 const UPDATE_ERROR_MESSAGE = 'Could not check for desktop updates. You can download the latest version manually.';
+const UPDATE_UNSUPPORTED_MESSAGE = 'Automatic updates are unavailable for this installation. You can download the latest version manually.';
 
 export class DesktopUpdaterController {
   private downloadedVersion: string | null = null;
   private checkInFlight = false;
   private installing = false;
+  private installErrorDuringCall = false;
   private state: DesktopUpdateState | null = null;
 
   constructor(private readonly deps: DesktopUpdaterDependencies) {
@@ -38,7 +40,15 @@ export class DesktopUpdaterController {
       this.setState({ type: 'downloaded', version: this.downloadedVersion });
     });
     updater.on('update-not-available', () => this.setState({ type: 'not-available' }));
-    updater.on('error', () => this.setState({ type: 'error', message: UPDATE_ERROR_MESSAGE }));
+    updater.on('error', () => {
+      if (this.installing) {
+        this.installing = false;
+        this.installErrorDuringCall = true;
+        if (this.downloadedVersion) this.setState({ type: 'downloaded', version: this.downloadedVersion });
+        return;
+      }
+      this.setState({ type: 'error', message: UPDATE_ERROR_MESSAGE });
+    });
   }
 
   get currentState(): DesktopUpdateState | null { return this.state; }
@@ -50,7 +60,17 @@ export class DesktopUpdaterController {
     this.checkInFlight = true;
     this.setState({ type: 'checking' });
     try {
-      await this.deps.updater.checkForUpdates();
+      const result = await this.deps.updater.checkForUpdates() as { downloadPromise?: unknown } | null;
+      if (result === null) {
+        this.setState({ type: 'error', message: UPDATE_UNSUPPORTED_MESSAGE });
+        return;
+      }
+      const downloadPromise = result?.downloadPromise;
+      if (downloadPromise && typeof (downloadPromise as PromiseLike<unknown>).then === 'function') {
+        void Promise.resolve(downloadPromise).catch(() => {
+          this.setState({ type: 'error', message: UPDATE_ERROR_MESSAGE });
+        });
+      }
     } catch {
       this.setState({ type: 'error', message: UPDATE_ERROR_MESSAGE });
     } finally {
@@ -63,7 +83,9 @@ export class DesktopUpdaterController {
     if (!version || this.installing) return false;
     let clockedIn: boolean;
     try {
-      clockedIn = await this.deps.getClockedIn();
+      const clockStatus = await this.deps.getClockedIn();
+      if (typeof clockStatus !== 'boolean') throw new Error('Clock status unavailable');
+      clockedIn = clockStatus;
     } catch {
       this.setState({ type: 'deferred', version, reason: 'status-unavailable' });
       return false;
@@ -74,8 +96,15 @@ export class DesktopUpdaterController {
     }
 
     this.installing = true;
-    this.deps.updater.quitAndInstall();
-    return true;
+    this.installErrorDuringCall = false;
+    try {
+      this.deps.updater.quitAndInstall();
+      return !this.installErrorDuringCall;
+    } catch {
+      this.installing = false;
+      this.setState({ type: 'downloaded', version });
+      return false;
+    }
   }
 
   private readVersion(value: unknown): string {

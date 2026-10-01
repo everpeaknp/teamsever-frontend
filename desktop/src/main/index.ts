@@ -48,7 +48,7 @@ const desktopUpdater = new DesktopUpdaterController({
   updater: autoUpdater,
   getClockedIn: async () => {
     const result = await authorizedFetch('/attendance/desktop/status', { signal: AbortSignal.timeout(5_000) });
-    return !!result.data?.clockedIn;
+    return result.data?.clockedIn;
   },
   publish: (state: DesktopUpdateState) => {
     const origin = getWebUrl()?.origin;

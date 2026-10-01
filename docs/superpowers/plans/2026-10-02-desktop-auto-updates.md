@@ -42,17 +42,17 @@
 **Interfaces:**
 - Produces the release artifacts consumed by Task 2: `latest.yml` for Windows, `latest-linux.yml` for AppImage, installer/AppImage files, and any generated blockmaps.
 
-- [ ] **Step 1: Write failing artifact validation tests in `desktop/src/main/updateArtifacts.test.ts`.**
+- [x] **Step 1: Write failing artifact validation tests in `desktop/src/main/updateArtifacts.test.ts`.**
   - Assert Windows metadata names the `TeamsEver-Setup.exe` installer and Linux metadata names `TeamsEver.AppImage`.
   - Assert missing manifests or platform installers fail validation.
-- [ ] **Step 2: Run the validator tests and confirm they fail because the validator does not exist.**
-- [ ] **Step 3: Add GitHub publisher metadata and create an importable artifact validator.**
+- [x] **Step 2: Run the validator tests and confirm they fail because the validator does not exist.**
+- [x] **Step 3: Add GitHub publisher metadata and create an importable artifact validator.**
   - Configure `everpeaknp/teamsever-frontend` as the GitHub publisher.
   - Validate both per-platform release directories before uploading.
-- [ ] **Step 4: Update release workflow uploads to include the manifests and blockmaps with the installers.**
+- [x] **Step 4: Update release workflow uploads to include the manifests and blockmaps with the installers.**
   - Keep existing tag ancestry verification and `gh release create` behavior.
-- [ ] **Step 5: Run artifact validator tests and `npm run validate:release-version` in `desktop`.**
-- [ ] **Step 6: Commit this task locally; do not push or tag.**
+- [x] **Step 5: Run artifact validator tests and `npm run validate:release-version` in `desktop`.**
+- [x] **Step 6: Commit this task locally; do not push or tag.**
 
 ### Task 2: Add safe main-process update lifecycle
 
@@ -69,16 +69,16 @@
 - `DesktopUpdateState` is a discriminated union for `checking`, `available`, `downloading` (percent), `downloaded` (version), `not-available`, `deferred` (version), and `error` (safe message).
 - `DesktopUpdaterController.checkForUpdates(): Promise<void>` and `.installDownloadedUpdate(): Promise<boolean>` are called by main-process startup/timers and trusted IPC respectively.
 
-- [ ] **Step 1: Write failing tests for event-to-state mapping, update check failure, download progress, and downloaded update state.**
-- [ ] **Step 2: Write failing tests proving install is refused while clocked in and becomes allowed after the status check reports clock-out.**
-- [ ] **Step 3: Write a failing test proving update-service errors do not clear or alter attendance state.**
-- [ ] **Step 4: Run the updater tests and verify they fail for missing controller behavior.**
-- [ ] **Step 5: Implement the injected controller and connect `electron-updater` in `desktop/src/main/index.ts`.**
+- [x] **Step 1: Write failing tests for event-to-state mapping, update check failure, download progress, and downloaded update state.**
+- [x] **Step 2: Write failing tests proving install is refused while clocked in and becomes allowed after the status check reports clock-out.**
+- [x] **Step 3: Write a failing test proving update-service errors do not clear or alter attendance state.**
+- [x] **Step 4: Run the updater tests and verify they fail for missing controller behavior.**
+- [x] **Step 5: Implement the injected controller and connect `electron-updater` in `desktop/src/main/index.ts`.**
   - Check on startup and every six hours; download in the background.
   - Defer `quitAndInstall` until explicit restart or app exit, and gate either path on a fresh no-active-shift check.
   - Publish state over an allowlisted main-to-renderer event and expose check/install operations over trusted IPC.
-- [ ] **Step 6: Run updater unit tests, desktop typecheck, and desktop test suite.**
-- [ ] **Step 7: Commit this task locally; do not push or tag.**
+- [x] **Step 6: Run updater unit tests, desktop typecheck, and desktop test suite.**
+- [x] **Step 7: Commit this task locally; do not push or tag.**
 
 ### Task 3: Show global desktop update status and actions
 
@@ -94,14 +94,14 @@
 - Preload exposes `onUpdateState(callback): unsubscribe`, `installUpdate(): Promise<boolean>`, `checkForUpdates(): Promise<void>`, and `openLatestDownload(): Promise<void>`.
 - `DesktopUpdateNotifier` subscribes only when `window.teamseverDesktop` exists, displays state using Sonner, and invokes the typed bridge methods.
 
-- [ ] **Step 1: Write failing component tests for browser no-op, download progress, ready-to-restart action, clocked-in deferral message, and manual fallback.**
-- [ ] **Step 2: Run component tests and confirm missing desktop update notification behavior.**
-- [ ] **Step 3: Implement typed preload subscriptions and the global desktop-only notifier.**
+- [x] **Step 1: Write failing component tests for browser no-op, download progress, ready-to-restart action, clocked-in deferral message, and manual fallback.**
+- [x] **Step 2: Run component tests and confirm missing desktop update notification behavior.**
+- [x] **Step 3: Implement typed preload subscriptions and the global desktop-only notifier.**
   - Toast offers **Restart to update** and **Later**.
   - If clocked in, explain clock-out is required before restart.
   - On update failure, offer a direct official platform asset download without exposing GitHub navigation or accepting renderer-provided URLs.
-- [ ] **Step 4: Run component tests and relevant frontend typecheck.**
-- [ ] **Step 5: Commit this task locally; do not push or tag.**
+- [x] **Step 4: Run component tests and relevant frontend typecheck.**
+- [x] **Step 5: Commit this task locally; do not push or tag.**
 
 ### Task 4: Verify packaged outputs and end-to-end release configuration
 
@@ -110,9 +110,9 @@
 - Modify: `desktop/README.md` with update behavior and supported installer formats
 - Verify: `.github/workflows/desktop-release.yml`
 
-- [ ] **Step 1: Run Windows and Linux packaging commands where the host/toolchain supports them.**
-- [ ] **Step 2: Validate emitted manifests reference the correct artifacts and blockmaps.**
-- [ ] **Step 3: Run `npm run typecheck && npm test` in `desktop`.**
-- [ ] **Step 4: Run the frontend production build and relevant component tests.**
-- [ ] **Step 5: Review the complete diff and confirm no release, tag, or push occurred.**
+- [x] **Step 1: Run available packaging commands.** Linux AppImage built and verified; this WSL host cannot run the Windows installer toolchain, which remains covered by the Windows Actions job.
+- [x] **Step 2: Validate emitted Linux metadata against the generated AppImage; Windows manifest/artifact requirements are covered by unit tests and the Windows Actions validator.**
+- [x] **Step 3: Run `npm run typecheck && npm test` in `desktop`.**
+- [x] **Step 4: Run the frontend production build and relevant component tests.**
+- [x] **Step 5: Review the complete diff and confirm no release, tag, or push occurred.**
 - [ ] **Step 6: Commit any documentation or verification fixes locally; do not push or tag.**
