@@ -10,7 +10,6 @@ import { api } from '@/lib/axios';
 import { AttendanceLocationSettings } from '@/components/attendance/AttendanceLocationSettings';
 import { LocationReviewPanel } from '@/components/attendance/LocationReviewPanel';
 import { LocationSessionMonitor } from '@/components/attendance/LocationSessionMonitor';
-import { DesktopAttendanceControls } from '@/components/analytics/DesktopAttendanceControls';
 import { DesktopPresenceSettings } from '@/components/attendance/DesktopPresenceSettings';
 import { DesktopPresenceTimeline } from '@/components/attendance/DesktopPresenceTimeline';
 
@@ -63,7 +62,6 @@ export default function AttendancePage() {
           <LeaveManagementTab workspaceId={workspaceId} />
         </TabsContent>
         <TabsContent value="presence" className="mt-0 space-y-6">
-          <DesktopAttendanceControls />
           <DesktopPresenceSettings workspaceId={workspaceId} />
           <DesktopPresenceTimeline workspaceId={workspaceId} canViewTeam={canManageLocations} />
         </TabsContent>

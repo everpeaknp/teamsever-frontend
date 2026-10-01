@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ClockInOut } from './ClockInOut';
 
-const { get, post, toastError, toastSuccess, desktopToggle, provision } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), desktopToggle: vi.fn(), provision: vi.fn() }));
+const { get, post, toastError, toastSuccess, desktopToggle, provision, consent } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), desktopToggle: vi.fn(), provision: vi.fn(), consent: vi.fn() }));
 vi.mock('@/lib/axios', () => ({ api: { get, post } }));
 vi.mock('sonner', () => ({ toast: { error: toastError, success: toastSuccess } }));
-vi.mock('@/lib/desktopAttendance', () => ({ ensureTrustedDesktopDevice: provision, setDesktopActivityConsent: vi.fn(), disconnectDesktopDevice: vi.fn() }));
+vi.mock('@/lib/desktopAttendance', () => ({ ensureTrustedDesktopDevice: provision, setDesktopActivityConsent: consent, disconnectDesktopDevice: vi.fn() }));
 
 describe('ClockInOut location enforcement', () => {
   beforeEach(() => { vi.clearAllMocks(); delete (window as any).teamseverDesktop; get.mockResolvedValue({ data: { data: { policy: { enabled: true } } } }); });
@@ -80,6 +80,9 @@ describe('ClockInOut location enforcement', () => {
     render(<ClockInOut workspaceId="0123456789abcdef01234567" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
     await waitFor(() => expect(desktopToggle).toHaveBeenCalledWith({ workspaceId: '0123456789abcdef01234567', status: 'active' }));
+    expect(consent).toHaveBeenCalledWith('device-1', true);
+    expect(screen.queryByLabelText(/Share app and active\/AFK presence/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Disconnect' })).not.toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
     delete (window as any).teamseverDesktop;
   });

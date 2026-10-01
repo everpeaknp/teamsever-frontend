@@ -31,7 +31,7 @@ export function DesktopActivityReport({ workspaceId, userId, startDate, endDate 
   }, [workspaceId, userId, startDate, endDate]);
 
   return <Card>
-    <CardHeader><CardTitle className="text-lg">Desktop app presence</CardTitle><p className="text-sm text-muted-foreground">Foreground app identifiers recorded once per minute while a trusted desktop shift is clocked in and the member has opted in. Window titles and document content are not shown.</p></CardHeader>
+    <CardHeader><CardTitle className="text-lg">Desktop app presence</CardTitle><p className="text-sm text-muted-foreground">Foreground app identifiers are recorded while a shift is clocked in from its trusted desktop. Window titles and document content are not shown.</p></CardHeader>
     <CardContent>
       {message ? <p className="text-sm text-muted-foreground">{message}</p> : events.length === 0 && gaps.length === 0 ? <p className="text-sm text-muted-foreground">No desktop app presence was recorded for this period.</p> : <div className="max-h-96 overflow-auto rounded-md border">
         <table className="w-full text-sm">

@@ -38,7 +38,7 @@ export function DesktopPresenceSettings({ workspaceId }: { workspaceId: string }
   };
 
   return <section className="space-y-3 rounded-xl border bg-card p-5" aria-label="Desktop presence policy">
-    <div><h2 className="text-lg font-semibold">Desktop presence</h2><p className="text-sm text-muted-foreground">When a trusted desktop has monitoring consent during its own clocked-in shift, it reports active or AFK state and the foreground app name. It never records keys, text, mouse details, window titles, or screenshots.</p></div>
+    <div><h2 className="text-lg font-semibold">Desktop presence</h2><p className="text-sm text-muted-foreground">During a trusted desktop shift, the app reports active or AFK state and the foreground app name. It never records keys, text, mouse details, window titles, or screenshots.</p></div>
     <div className="flex flex-wrap items-end gap-3">
       <div className="w-56 space-y-1"><label htmlFor="desktop-afk-threshold" className="text-sm font-medium">Mark AFK after (minutes)</label><Input id="desktop-afk-threshold" aria-label="Mark AFK after minutes" type="number" min={1} max={60} step={1} value={threshold} disabled={loading || !canManage} onChange={(event) => setThreshold(Number(event.target.value))} /></div>
       {canManage && <Button type="button" disabled={loading || saving || !Number.isInteger(threshold) || threshold < 1 || threshold > 60} onClick={() => void save()}>{saving ? 'Saving…' : 'Save AFK threshold'}</Button>}

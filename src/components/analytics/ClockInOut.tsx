@@ -8,8 +8,7 @@ import { api } from '@/lib/axios';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/useAuthStore';
 import { readAccurateLocation } from './readAccurateLocation';
-import { DesktopAttendanceControls } from './DesktopAttendanceControls';
-import { ensureTrustedDesktopDevice } from '@/lib/desktopAttendance';
+import { ensureTrustedDesktopDevice, setDesktopActivityConsent } from '@/lib/desktopAttendance';
 
 interface ClockInOutProps {
   workspaceId: string;
@@ -140,7 +139,11 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
 
       const response = window.teamseverDesktop
         ? await (async () => {
-            await ensureTrustedDesktopDevice();
+            if (newStatus === 'active') {
+              const device = await ensureTrustedDesktopDevice();
+              if (!device) throw new Error('Could not connect this trusted desktop. Please retry.');
+              await setDesktopActivityConsent(device.deviceId, true);
+            }
             return window.teamseverDesktop!.toggleClock({ workspaceId, status: newStatus, ...(locationFix ? { locationFix } : {}) });
           })()
         : await api.post(`/workspaces/${workspaceId}/clock/toggle`, {
@@ -207,7 +210,6 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
         <h4 className="font-bold">Time Tracking</h4>
       </div>
       <CardContent className="p-6 h-[calc(100%-57px)] flex flex-col gap-3">
-        <DesktopAttendanceControls />
         <div
           className={`rounded-[20px] border px-4 py-4 ${
             clockedIn
