@@ -115,4 +115,4 @@
 - [x] **Step 3: Run `npm run typecheck && npm test` in `desktop`.**
 - [x] **Step 4: Run the frontend production build and relevant component tests.**
 - [x] **Step 5: Review the complete diff and confirm no release, tag, or push occurred.**
-- [ ] **Step 6: Commit any documentation or verification fixes locally; do not push or tag.**
+- [x] **Step 6: Commit documentation, verification fixes, and the next updater-enabled version (`0.1.5`) locally; do not push or tag.**
