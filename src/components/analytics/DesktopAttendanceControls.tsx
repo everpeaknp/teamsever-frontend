@@ -37,10 +37,7 @@ export function DesktopAttendanceControls() {
   }, []);
 
   if (typeof window === 'undefined') return null;
-  if (!window.teamseverDesktop) return <section className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs" aria-label="Desktop presence settings">
-    <p className="font-medium">Desktop presence tracker</p>
-    <p className="text-muted-foreground">Active/AFK and foreground app tracking runs in the TeamsEver desktop app only, after you enable consent and clock in from that paired desktop. Browser clock-ins do not report laptop activity.</p>
-  </section>;
+  if (!window.teamseverDesktop) return null;
 
   const handleConsent = async (enabled: boolean) => {
     if (!deviceId) return;
