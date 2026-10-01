@@ -65,12 +65,17 @@ jobs:
         run: npm run typecheck && npm test
       - name: Build installer
         run: npm run ${{ matrix.script }}
+      - name: Validate updater metadata
+        run: npm run validate:update-artifacts:${{ matrix.platform == 'windows' && 'win' || 'linux' }}
       - name: Upload Windows installer
         if: matrix.platform == 'windows'
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: desktop/release/TeamsEver-Setup.exe
+          path: |
+            desktop/release/TeamsEver-Setup.exe
+            desktop/release/latest.yml
+            desktop/release/*.blockmap
           if-no-files-found: error
       - name: Upload Linux AppImage
         if: matrix.platform == 'linux'
@@ -79,6 +84,8 @@ jobs:
           name: linux-installers
           path: |
             desktop/release/TeamsEver.AppImage
+            desktop/release/latest-linux.yml
+            desktop/release/*.blockmap
           if-no-files-found: error
 
   publish-release:
@@ -94,8 +101,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          shopt -s nullglob
+          windows_assets=(release-assets/windows-installer/TeamsEver-Setup.exe release-assets/windows-installer/latest.yml)
+          windows_blockmaps=(release-assets/windows-installer/*.blockmap)
+          linux_assets=(release-assets/linux-installers/TeamsEver.AppImage release-assets/linux-installers/latest-linux.yml)
+          linux_blockmaps=(release-assets/linux-installers/*.blockmap)
+          for asset in "${windows_assets[@]}" "${linux_assets[@]}"; do
+            test -f "$asset"
+          done
           gh release create "$GITHUB_REF_NAME" \
             --repo everpeaknp/teamsever-frontend \
-            release-assets/windows-installer/TeamsEver-Setup.exe \
-            release-assets/linux-installers/TeamsEver.AppImage \
+            "${windows_assets[@]}" "${windows_blockmaps[@]}" \
+            "${linux_assets[@]}" "${linux_blockmaps[@]}" \
             --generate-notes --verify-tag --title "$GITHUB_REF_NAME"

@@ -19,6 +19,8 @@
     "validate:web-url": "node scripts/validate-web-url.mjs",
     "validate:api-url": "node scripts/validate-api-url.mjs",
     "validate:release-version": "node scripts/validate-release-version.mjs",
+    "validate:update-artifacts:win": "node scripts/validate-update-artifacts.mjs win release",
+    "validate:update-artifacts:linux": "node scripts/validate-update-artifacts.mjs linux release",
     "dist:win": "npm run validate:web-url && npm run validate:api-url && npm run build && electron-builder --win nsis --publish never",
     "dist:linux": "npm run validate:web-url && npm run validate:api-url && npm run build && electron-builder --linux AppImage --publish never",
     "typecheck": "tsc --noEmit",
@@ -31,5 +33,8 @@
     "electron-vite": "^5.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

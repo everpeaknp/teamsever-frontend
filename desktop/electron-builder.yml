@@ -8,6 +8,10 @@ files:
   - package.json
   - '!**/*.map'
 asar: true
+publish:
+  provider: github
+  owner: everpeaknp
+  repo: teamsever-frontend
 win:
   target:
     - target: nsis
