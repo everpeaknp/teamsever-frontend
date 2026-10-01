@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, powerMonitor, safeStorage, shell } from 'electron';
+import electronUpdater from 'electron-updater';
 import fs from 'node:fs/promises';
 import { foregroundAppSupport, getForegroundProcessName } from './foregroundProcess';
 import path from 'node:path';
@@ -6,11 +7,16 @@ import { fileURLToPath } from 'node:url';
 import { isAllowedWebUrl, isFirebaseAuthPopupUrl, isSafeExternalUrl, isSameOriginNavigation } from './security';
 import { detectPresenceCapabilities, isWaylandSession } from './tracker';
 import { DesktopPresenceSession, type DesktopPresenceAuthorization } from './desktopPresenceSession';
+import { DesktopUpdaterController, type DesktopUpdateState } from './desktopUpdater';
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 const developmentUrl = 'http://localhost:3000';
 const apiUrl = process.env.TEAMSEVER_API_URL || 'http://localhost:5000';
 const credentialPath = () => path.join(app.getPath('userData'), 'attendance-device.bin');
+const { autoUpdater } = electronUpdater;
+autoUpdater.autoDownload = true;
+autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.allowPrerelease = false;
 let activeShift: { workspaceId: string; timeEntryId: string; startTime: string; activityMonitoringEnabled: boolean } | null = null;
 let trackerTimer: NodeJS.Timeout | null = null;
 let statusSyncTimer: NodeJS.Timeout | null = null;
@@ -19,6 +25,8 @@ let trackerBusy = false;
 let trackerStarting = false;
 let trackerGeneration = 0;
 let deviceMonitoringConsent = false;
+let allowNormalQuitAfterUpdateCheck = false;
+let updateCheckTimer: NodeJS.Timeout | null = null;
 const presenceSession = new DesktopPresenceSession({
   getAuthorization: async () => {
     const result = await authorizedFetch('/attendance/desktop/status');
@@ -35,6 +43,30 @@ const presenceSession = new DesktopPresenceSession({
   foregroundAppSupported: () => foregroundSupport.supported,
   sendHeartbeat: async (event) => authorizedFetch('/attendance/desktop/activity', { method: 'POST', body: JSON.stringify(event) }),
 });
+const desktopUpdater = new DesktopUpdaterController({
+  updater: autoUpdater,
+  getClockedIn: async () => {
+    const result = await authorizedFetch('/attendance/desktop/status', { signal: AbortSignal.timeout(5_000) });
+    return !!result.data?.clockedIn;
+  },
+  publish: (state: DesktopUpdateState) => {
+    const origin = getWebUrl()?.origin;
+    if (!origin) return;
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (window.isDestroyed()) continue;
+      try {
+        if (new URL(window.webContents.getURL()).origin === origin) window.webContents.send('desktop:update-state', state);
+      } catch { /* Ignore windows without a loaded trusted URL. */ }
+    }
+  },
+});
+
+function scheduleDesktopUpdateChecks(): void {
+  if (!app.isPackaged || updateCheckTimer) return;
+  void desktopUpdater.checkForUpdates();
+  updateCheckTimer = setInterval(() => void desktopUpdater.checkForUpdates(), 6 * 60 * 60 * 1000);
+  updateCheckTimer.unref();
+}
 
 async function loadCredential(): Promise<string | null> {
   try {
@@ -140,6 +172,18 @@ function registerSecureIpc(): void {
     return { enabled };
   });
   register('desktop:get-status', async () => syncStatus());
+  register('desktop:get-update-state', async () => desktopUpdater.currentState);
+  register('desktop:check-updates', async () => {
+    if (app.isPackaged) await desktopUpdater.checkForUpdates();
+    return desktopUpdater.currentState;
+  });
+  register('desktop:install-update', async () => desktopUpdater.installDownloadedUpdate());
+  register('desktop:open-latest-download', async () => {
+    const asset = process.platform === 'win32' ? 'TeamsEver-Setup.exe' : process.platform === 'linux' ? 'TeamsEver.AppImage' : null;
+    if (!asset) throw new Error('Desktop downloads are available for Windows and Linux only.');
+    await shell.openExternal(`https://github.com/everpeaknp/teamsever-frontend/releases/latest/download/${asset}`);
+    return { opened: true };
+  });
   register('desktop:toggle-clock', async (_event, input: any) => {
     if (!input || typeof input.workspaceId !== 'string' || !/^[a-f\d]{24}$/i.test(input.workspaceId) || !['active', 'inactive'].includes(input.status)) throw new Error('Invalid clock request');
     const result = await authorizedFetch(`/workspaces/${input.workspaceId}/clock/desktop-toggle`, { method: 'POST', body: JSON.stringify({ status: input.status, ...(input.locationFix ? { locationFix: input.locationFix } : {}) }) });
@@ -276,6 +320,7 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   registerSecureIpc();
   createWindow();
+  scheduleDesktopUpdateChecks();
   void (async () => {
     try {
       const credential = await loadCredential();
@@ -294,6 +339,20 @@ app.whenReady().then(() => {
   })();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+});
+
+app.on('before-quit', (event) => {
+  if (!app.isPackaged || allowNormalQuitAfterUpdateCheck || desktopUpdater.isInstalling || !desktopUpdater.hasDownloadedUpdate) return;
+  event.preventDefault();
+  void desktopUpdater.installDownloadedUpdate().then((installed) => {
+    if (!installed) {
+      allowNormalQuitAfterUpdateCheck = true;
+      app.quit();
+    }
+  }).catch(() => {
+    allowNormalQuitAfterUpdateCheck = true;
+    app.quit();
   });
 });
 
