@@ -55,6 +55,25 @@ describe('AttendanceLocationSettings', () => {
     ));
   });
 
+  it('saves the optional shared office IP with the office geofence', async () => {
+    const office = { _id: 'office-1', name: 'Simalchaur office', kind: 'office', latitude: 28.2, longitude: 83.9, radiusMeters: 60, isActive: true };
+    get.mockImplementation((url: string) => url.endsWith('/location-policy')
+      ? Promise.resolve({ data: { data: { canManage: true, policy: { enabled: true, areas: [office] } } } })
+      : Promise.resolve({ data: { data: { members: [] } } }));
+    put.mockResolvedValue({
+      data: { data: { policy: { enabled: true, areas: [{ ...office, networkIp: '203.0.113.10' }] } } },
+    });
+
+    render(<AttendanceLocationSettings workspaceId="workspace-1" />);
+    fireEvent.change(await screen.findByLabelText('Optional office public IP'), { target: { value: '203.0.113.10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save enforcement on' }));
+
+    await waitFor(() => expect(put).toHaveBeenCalledWith(
+      '/attendance/workspace/workspace-1/location-policy',
+      expect.objectContaining({ areas: [{ ...office, networkIp: '203.0.113.10' }] }),
+    ));
+  });
+
   it('shows member-private remote places instead of a shared remote-area catalog', async () => {
     get.mockImplementation((url: string) => url.endsWith('/location-policy')
       ? Promise.resolve({ data: { data: { canManage: true, policy: { enabled: true, areas: [{ _id: 'office-1', name: 'Simalchaur office', kind: 'office', latitude: 28.2, longitude: 83.9, radiusMeters: 60 }] } } } })

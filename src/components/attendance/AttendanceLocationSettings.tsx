@@ -17,6 +17,7 @@ export function AttendanceLocationSettings({ workspaceId }: { workspaceId: strin
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [officeNetworkIp, setOfficeNetworkIp] = useState('');
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [editingRemoteAreaId, setEditingRemoteAreaId] = useState<string | null>(null);
   const [hasMapSelection, setHasMapSelection] = useState(false);
@@ -27,6 +28,7 @@ export function AttendanceLocationSettings({ workspaceId }: { workspaceId: strin
     try {
       const { data } = await api.get(`/attendance/workspace/${workspaceId}/location-policy`);
       setPolicy(data.data);
+      setOfficeNetworkIp(data.data.policy.areas?.find((area: Area) => area.kind === 'office')?.networkIp || '');
       if (data.data.canManage) {
         const memberResponse = await api.get(`/attendance/workspace/${workspaceId}/location-policy/members`);
         const list = memberResponse.data.data.members || [];
@@ -48,14 +50,16 @@ export function AttendanceLocationSettings({ workspaceId }: { workspaceId: strin
   const savePolicy = async (next: any) => {
     setSaving(true);
     try {
-      const response = await api.put(`/attendance/workspace/${workspaceId}/location-policy`, next);
+      const areas = (next.areas || []).map((area: Area) => area.kind === 'office' ? { ...area, networkIp: officeNetworkIp.trim() || undefined } : area);
+      const response = await api.put(`/attendance/workspace/${workspaceId}/location-policy`, { ...next, areas });
       setPolicy((current: any) => ({ ...current, policy: response.data.data.policy }));
+      setOfficeNetworkIp(response.data.data.policy.areas?.find((area: Area) => area.kind === 'office')?.networkIp || '');
       toast.success('Attendance settings saved');
     } catch (error: any) { toast.error(error.response?.data?.message || 'Could not save settings'); }
     finally { setSaving(false); }
   };
   const saveOffice = async (point: { latitude: number; longitude: number }) => {
-    const area = { _id: office?._id, name: draft.name.trim() || office?.name || 'Simalchaur office', kind: 'office', latitude: point.latitude, longitude: point.longitude, radiusMeters: 60, isActive: true };
+    const area = { _id: office?._id, name: draft.name.trim() || office?.name || 'Simalchaur office', kind: 'office', latitude: point.latitude, longitude: point.longitude, radiusMeters: 60, isActive: true, networkIp: officeNetworkIp.trim() || undefined };
     await savePolicy({ ...policy.policy, areas: [area] });
   };
   const getCurrentLocation = (done: (latitude: number, longitude: number) => void) => {
@@ -106,6 +110,7 @@ export function AttendanceLocationSettings({ workspaceId }: { workspaceId: strin
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-semibold">Fixed On-site office</h2><p className="text-sm text-muted-foreground">One shared office geofence. On-site clock-in is allowed within 60 m.</p></div><label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={!!policy.policy.enabled} onChange={(event) => setPolicy((current: any) => ({ ...current, policy: { ...current.policy, enabled: event.target.checked } }))} /> Enforce location at clock-in</label></div>
       <AttendanceLocationMapPicker latitude={office?.latitude ?? draft.latitude} longitude={office?.longitude ?? draft.longitude} hasSelection={hasMapSelection || !!office} radiusMeters={60} onSelect={(latitude, longitude) => { setDraft((current) => ({ ...current, latitude, longitude })); setHasMapSelection(true); }} />
       <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]"><Input aria-label="Office name" value={draft.name} onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))} placeholder={office?.name || 'Simalchaur office'} /><Button type="button" variant="outline" disabled={saving} onClick={() => getCurrentLocation((latitude, longitude) => { setDraft((current) => ({ ...current, latitude, longitude })); setHasMapSelection(true); })}>Center on my location</Button><Button type="button" disabled={saving || !hasMapSelection} onClick={() => saveOffice(draft)}>{office ? 'Update office pin' : 'Set office pin'}</Button></div>
+      <div className="max-w-xl space-y-1"><label htmlFor="office-network-ip" className="text-sm font-medium">Optional office public IP</label><Input id="office-network-ip" aria-label="Optional office public IP" inputMode="decimal" autoComplete="off" value={officeNetworkIp} onChange={(event) => setOfficeNetworkIp(event.target.value)} placeholder="e.g. 203.0.113.10" /><p className="text-xs text-muted-foreground">Confirms on-site clock-in only when the server sees this IP and the GPS uncertainty circle overlaps the 60 m office area (up to 250 m accuracy). An IP alone cannot authorize clock-in. Leave blank for GPS-only checks.</p></div>
       {office && <p className="text-xs text-muted-foreground">Office pin: {office.latitude.toFixed(5)}, {office.longitude.toFixed(5)} · 60 m</p>}
       <div className="max-w-md space-y-1"><label htmlFor="max-location-uncertainty" className="text-sm font-medium">Maximum location uncertainty (meters)</label><Input id="max-location-uncertainty" aria-label="Maximum location uncertainty (meters)" type="number" min={1} max={1000} value={policy.policy.maxAccuracyMeters ?? 100} onChange={(event) => setPolicy((current: any) => ({ ...current, policy: { ...current.policy, maxAccuracyMeters: Number(event.target.value) } }))} /><p className="text-xs text-muted-foreground">A higher limit accepts less precise device readings; it does not expand the 60 m office or private remote areas. Save the location policy after changing this value.</p></div>
       <div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={saving} onClick={() => getCurrentLocation((latitude, longitude) => void saveOffice({ latitude, longitude }))}>Quick set office to my location</Button><Button type="button" disabled={saving} onClick={() => savePolicy({ ...policy.policy })}>{saving ? 'Saving…' : `Save enforcement ${policy.policy.enabled ? 'on' : 'off'}`}</Button></div>
