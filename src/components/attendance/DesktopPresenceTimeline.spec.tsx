@@ -37,6 +37,13 @@ describe('DesktopPresenceTimeline', () => {
     expect(String(vi.mocked(api.get).mock.calls[0][0])).not.toContain('userId=all');
   });
 
+  it('shows timeline errors without implying that there were no intervals', async () => {
+    vi.mocked(api.get).mockRejectedValue({ response: { data: { message: 'Active workspace membership required' } } });
+    render(<DesktopPresenceTimeline workspaceId="ws1" />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Active workspace membership required');
+    expect(screen.queryByText(/No desktop presence intervals/)).not.toBeInTheDocument();
+  });
+
   it('lets an authorized manager filter the team timeline to one member', async () => {
     vi.mocked(api.get).mockImplementation(async (url: any) => String(url).includes('/members')
       ? { data: { data: [{ _id: 'member-1', name: 'Sam' }] } } as any
