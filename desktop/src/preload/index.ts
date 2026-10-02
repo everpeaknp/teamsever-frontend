@@ -6,6 +6,8 @@ const desktop = Object.freeze({
   forgetCredential: () => ipcRenderer.invoke('desktop:forget-credential'),
   setMonitoringEnabled: (enabled: boolean) => ipcRenderer.invoke('desktop:set-monitoring', enabled),
   getStatus: () => ipcRenderer.invoke('desktop:get-status'),
+  getCurrentPresence: () => ipcRenderer.invoke('desktop:get-current-presence'),
+  attachPresenceToActiveShift: () => ipcRenderer.invoke('desktop:attach-presence-to-active-shift'),
   toggleClock: (input: { workspaceId: string; status: 'active' | 'inactive'; locationFix?: { latitude: number; longitude: number; accuracyMeters: number; capturedAt: string } }) => ipcRenderer.invoke('desktop:toggle-clock', input),
   onUpdateState: (callback: (state: unknown) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state);

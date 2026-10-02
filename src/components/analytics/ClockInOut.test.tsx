@@ -76,7 +76,8 @@ describe('ClockInOut location enforcement', () => {
     get.mockResolvedValue({ data: { data: { policy: { enabled: false } } } });
     provision.mockResolvedValue({ deviceId: 'device-1' });
     desktopToggle.mockResolvedValue({ data: { success: true, data: { timeEntry: { startTime: new Date().toISOString() } } } });
-    Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: { toggleClock: desktopToggle } });
+    Object.defineProperty(window, 'confirm', { configurable: true, value: vi.fn(() => true) });
+    Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: { toggleClock: desktopToggle, getStatus: vi.fn().mockResolvedValue({ activityMonitoringEnabled: false }) } });
     render(<ClockInOut workspaceId="0123456789abcdef01234567" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
     await waitFor(() => expect(desktopToggle).toHaveBeenCalledWith({ workspaceId: '0123456789abcdef01234567', status: 'active' }));
@@ -84,6 +85,19 @@ describe('ClockInOut location enforcement', () => {
     expect(screen.queryByLabelText(/Share app and active\/AFK presence/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Disconnect' })).not.toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
+    delete (window as any).teamseverDesktop;
+  });
+
+  it('allows desktop clock-in without app tracking when the user declines monitoring consent', async () => {
+    get.mockResolvedValue({ data: { data: { policy: { enabled: false } } } });
+    provision.mockResolvedValue({ deviceId: 'device-1' });
+    desktopToggle.mockResolvedValue({ data: { success: true, data: { timeEntry: { startTime: new Date().toISOString() } } } });
+    Object.defineProperty(window, 'confirm', { configurable: true, value: vi.fn(() => false) });
+    Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: { toggleClock: desktopToggle, getStatus: vi.fn().mockResolvedValue({ activityMonitoringEnabled: false }) } });
+    render(<ClockInOut workspaceId="0123456789abcdef01234567" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
+    await waitFor(() => expect(desktopToggle).toHaveBeenCalledWith({ workspaceId: '0123456789abcdef01234567', status: 'active' }));
+    expect(consent).toHaveBeenCalledWith('device-1', false);
     delete (window as any).teamseverDesktop;
   });
 });

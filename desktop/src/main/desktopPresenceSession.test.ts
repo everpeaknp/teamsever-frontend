@@ -72,6 +72,17 @@ describe('DesktopPresenceSession', () => {
     expect(f.sendHeartbeat).toHaveBeenCalledWith(expect.objectContaining({ presenceStatus: 'afk', appId: null, foregroundAppSupported: false, idleDetectionSupported: true }));
   });
 
+  it('exposes the current foreground app session start and restarts it when the app changes', async () => {
+    const f = fixture();
+    await f.session.start(shift);
+    await f.session.sample();
+    expect(f.session.currentSession).toEqual(expect.objectContaining({ appId: 'code.exe', startedAt: '2026-10-01T09:00:00.000Z' }));
+    f.advance(15_000);
+    f.setForegroundApp('chrome.exe');
+    await f.session.sample();
+    expect(f.session.currentSession).toEqual(expect.objectContaining({ appId: 'chrome.exe', startedAt: '2026-10-01T09:00:15.000Z' }));
+  });
+
   it('reports a missing process name without falsely declaring foreground detection unsupported', async () => {
     const f = fixture(); f.setForegroundApp(null, true); await f.session.start(shift); await f.session.sample();
     f.advance(60_000); await f.session.sample();

@@ -42,6 +42,8 @@ export class DesktopPresenceSession {
   private lastSampleAt: number | null = null;
   private segmentState: Omit<DesktopPresenceHeartbeat, 'startedAt' | 'endedAt'> | null = null;
   private pendingSegments: DesktopPresenceHeartbeat[] = [];
+  private foregroundAppId: string | null = null;
+  private foregroundAppStartedAt: number | null = null;
   private now: () => number;
 
   constructor(private readonly deps: Dependencies) { this.now = deps.now || Date.now; }
@@ -63,9 +65,16 @@ export class DesktopPresenceSession {
     this.lastSampleAt = null;
     this.segmentState = null;
     this.pendingSegments = [];
+    this.foregroundAppId = null;
+    this.foregroundAppStartedAt = null;
   }
 
   get isRunning(): boolean { return this.enabledShift !== null; }
+
+  get currentSession(): { appId: string | null; presenceStatus: PresenceStatus; startedAt: string } | null {
+    if (!this.enabledShift || this.foregroundAppStartedAt === null || !this.segmentState) return null;
+    return { appId: this.foregroundAppId, presenceStatus: this.segmentState.presenceStatus, startedAt: new Date(this.foregroundAppStartedAt).toISOString() };
+  }
 
   async sample(): Promise<void> {
     const shift = this.enabledShift;
@@ -91,6 +100,10 @@ export class DesktopPresenceSession {
     let foregroundAppSupported = false;
     try { foregroundAppSupported = this.deps.foregroundAppSupported(); } catch { foregroundAppSupported = false; }
     const presenceStatus = idleDetectionSupported ? classifyPresence(idleSeconds, this.thresholdMinutes) : 'unavailable';
+    if (this.foregroundAppStartedAt === null || this.foregroundAppId !== appId) {
+      this.foregroundAppId = appId;
+      this.foregroundAppStartedAt = sampledAt;
+    }
     const nextState: Omit<DesktopPresenceHeartbeat, 'startedAt' | 'endedAt'> = {
       workspaceId: shift.workspaceId, timeEntryId: shift.timeEntryId, appId, presenceStatus,
       foregroundAppSupported, idleDetectionSupported,
@@ -136,6 +149,8 @@ export class DesktopPresenceSession {
     this.lastSampleAt = null;
     this.segmentState = null;
     this.pendingSegments = [];
+    this.foregroundAppId = null;
+    this.foregroundAppStartedAt = null;
   }
 
   private isEligible(shift: DesktopPresenceAuthorization): boolean {

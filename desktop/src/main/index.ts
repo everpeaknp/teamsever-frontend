@@ -32,7 +32,7 @@ const presenceSession = new DesktopPresenceSession({
   getAuthorization: async () => {
     const result = await authorizedFetch('/attendance/desktop/status');
     const data = result.data;
-    if (!data?.clockedIn || !data.timeEntryId || !data.workspaceId || !data.startTime || !data.activityMonitoringEnabled) return null;
+    if (!data?.presenceTrackingActive || !data.timeEntryId || !data.workspaceId || !data.startTime || !data.activityMonitoringEnabled) return null;
     return { workspaceId: String(data.workspaceId), timeEntryId: String(data.timeEntryId), startTime: String(data.startTime), activityMonitoringEnabled: true, clockedIn: true };
   },
   getAfkThresholdMinutes: async (workspaceId) => {
@@ -94,7 +94,7 @@ async function authorizedFetch(pathname: string, init: RequestInit = {}) {
 
 async function syncDesktopStatus(): Promise<any> {
   const result = await authorizedFetch('/attendance/desktop/status');
-  activeShift = result.data?.clockedIn ? {
+  activeShift = result.data?.presenceTrackingActive ? {
     workspaceId: String(result.data.workspaceId),
     timeEntryId: String(result.data.timeEntryId),
     startTime: String(result.data.startTime),
@@ -102,7 +102,7 @@ async function syncDesktopStatus(): Promise<any> {
   } : null;
   deviceMonitoringConsent = !!result.data?.activityMonitoringEnabled;
   updateTracker();
-  return result.data;
+  return { ...result.data, currentSession: presenceSession.currentSession };
 }
 
 function ensureStatusSyncTimer(): void {
@@ -173,6 +173,12 @@ function registerSecureIpc(): void {
     return { enabled };
   });
   register('desktop:get-status', async () => syncStatus());
+  register('desktop:get-current-presence', async () => presenceSession.currentSession);
+  register('desktop:attach-presence-to-active-shift', async () => {
+    const result = await authorizedFetch('/attendance/desktop/presence-session', { method: 'POST', body: JSON.stringify({ consent: true }) });
+    await syncDesktopStatus();
+    return { attached: !!result.data?.presenceTrackingActive };
+  });
   register('desktop:get-update-state', async () => desktopUpdater.currentState);
   register('desktop:check-updates', async () => {
     if (app.isPackaged) await desktopUpdater.checkForUpdates();
@@ -333,7 +339,7 @@ app.whenReady().then(() => {
       foregroundSupport = capabilities.foregroundApp;
       const result = await authorizedFetch('/attendance/desktop/status');
       deviceMonitoringConsent = !!result.data?.activityMonitoringEnabled;
-      activeShift = result.data?.clockedIn ? { workspaceId: String(result.data.workspaceId), timeEntryId: String(result.data.timeEntryId), startTime: String(result.data.startTime), activityMonitoringEnabled: deviceMonitoringConsent } : null;
+      activeShift = result.data?.presenceTrackingActive ? { workspaceId: String(result.data.workspaceId), timeEntryId: String(result.data.timeEntryId), startTime: String(result.data.startTime), activityMonitoringEnabled: deviceMonitoringConsent } : null;
       ensureStatusSyncTimer();
       updateTracker();
     } catch { /* unpaired installation */ }
