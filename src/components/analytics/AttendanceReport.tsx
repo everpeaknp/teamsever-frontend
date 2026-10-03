@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/store/useAuthStore';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import { DesktopActivityReport } from './DesktopActivityReport';
+import { DesktopPresenceTimeline } from '@/components/attendance/DesktopPresenceTimeline';
 
 interface AttendanceEntry {
   id: string;
@@ -344,7 +344,23 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-xs"><div>{entry.clockInLocation?.areaName || (entry.attendanceMode === 'remote' ? 'Remote area' : 'Office')}</div><div className="text-muted-foreground">{entry.clockInLocation?.latitude != null && entry.clockInLocation?.longitude != null ? `${entry.clockInLocation.latitude.toFixed(5)}, ${entry.clockInLocation.longitude.toFixed(5)}` : entry.clockInLocation ? 'Location hidden' : 'Location not recorded'}</div><div className="text-muted-foreground">Source: {entry.clockInSource === 'desktop' ? 'Trusted desktop' : 'Web'}</div>{entry.clockInVerificationMethod === 'network_confirmed' && <div className="text-amber-500">Network confirmed · low GPS accuracy</div>}</div>
+                        <div className="text-xs">
+                          <div>{entry.clockInLocation?.areaName || (entry.attendanceMode === 'remote' ? 'Remote area' : 'Office')}</div>
+                          <div className="text-muted-foreground">{entry.clockInLocation?.latitude != null && entry.clockInLocation?.longitude != null ? `${entry.clockInLocation.latitude.toFixed(5)}, ${entry.clockInLocation.longitude.toFixed(5)}` : entry.clockInLocation ? 'Location hidden' : 'Location not recorded'}</div>
+                          <div className="text-muted-foreground">Source: {entry.clockInSource === 'desktop' ? 'Trusted desktop' : 'Web'}</div>
+                          {(entry.clockInVerificationMethod === 'gps' || entry.clockInVerificationMethod === 'network_confirmed') && (
+                            <details className="mt-1">
+                              <summary className="inline-flex cursor-pointer list-none items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-400">
+                                Location verified
+                              </summary>
+                              <p className="mt-1 max-w-56 text-muted-foreground">
+                                {entry.clockInVerificationMethod === 'network_confirmed'
+                                  ? 'GPS was imprecise; the registered network also matched and the location uncertainty overlapped this area.'
+                                  : 'The GPS location matched an allowed attendance area.'}
+                              </p>
+                            </details>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {entry.clockOutLocation ? <div className="text-xs"><div>{entry.clockOutLocation.latitude != null && entry.clockOutLocation.longitude != null ? `${entry.clockOutLocation.latitude.toFixed(5)}, ${entry.clockOutLocation.longitude.toFixed(5)}` : 'Location hidden'}</div><div className={entry.clockOutLocation.withinRange ? 'text-emerald-600' : 'text-amber-600'}>{entry.clockOutLocation.distanceFromClockInMeters != null ? `${entry.clockOutLocation.distanceFromClockInMeters} m from clock-in` : 'Distance unavailable'}</div><div className="text-muted-foreground">Source: {entry.clockOutSource === 'desktop' ? 'Trusted desktop' : entry.clockOutSource === 'web' ? 'Web' : 'Not recorded'}</div></div> : <span className="text-xs text-muted-foreground">{entry.clockOut === 'Running' ? '—' : 'Location not recorded'}</span>}
@@ -358,7 +374,7 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
           </div>
         </CardContent>
       </Card>
-      <DesktopActivityReport workspaceId={workspaceId} userId={isAdmin ? filters.userId : String(user?._id || '')} startDate={filters.startDate} endDate={filters.endDate} />
+      <DesktopPresenceTimeline workspaceId={workspaceId} canViewTeam={isAdmin} />
     </div>
   );
 }

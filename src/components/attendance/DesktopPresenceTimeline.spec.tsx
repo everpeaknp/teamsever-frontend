@@ -21,7 +21,7 @@ describe('DesktopPresenceTimeline', () => {
       gaps: [{ gapStartedAt: '2026-10-01T05:00:00Z', gapEndedAt: '2026-10-01T05:20:00Z', reason: 'presence_heartbeat_missing' }],
     } } } as any);
     render(<DesktopPresenceTimeline workspaceId="ws1" />);
-    expect(await screen.findByText('Active · code.exe')).toBeInTheDocument();
+    expect(await screen.findByText('Active · Visual Studio Code')).toBeInTheDocument();
     expect(screen.getByText('AFK')).toBeInTheDocument();
     expect(screen.getByText('Unavailable')).toBeInTheDocument();
     expect(screen.getByText(/Legacy sample/)).toBeInTheDocument();

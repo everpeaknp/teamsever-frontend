@@ -6,6 +6,7 @@ import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
 import { ensureTrustedDesktopDevice, setDesktopActivityConsent } from '@/lib/desktopAttendance';
 import { formatAppDuration, formatAppLabel, formatAppTimer, summarizeDesktopAppUsage } from './desktopAppUsage';
+import { DesktopAppIcon } from './DesktopAppIcon';
 
 type PresenceEvent = {
   _id?: string; appId?: string | null; presenceStatus?: 'active' | 'afk' | 'unavailable';
@@ -18,22 +19,6 @@ type CurrentAppSession = { appId: string | null; presenceStatus: 'active' | 'afk
 
 const day = (date: Date) => date.toISOString().slice(0, 10);
 const statusLabel = (status?: PresenceEvent['presenceStatus']) => status === 'active' ? 'Active' : status === 'afk' ? 'AFK' : 'Unavailable';
-const appTile: Record<string, { text: string; className: string }> = {
-  code: { text: 'VS', className: 'bg-blue-600 text-white' }, 'code-insiders': { text: 'VS', className: 'bg-emerald-600 text-white' },
-  chrome: { text: 'C', className: 'bg-red-500 text-white' }, brave: { text: 'B', className: 'bg-orange-600 text-white' },
-  firefox: { text: 'F', className: 'bg-orange-500 text-white' }, msedge: { text: 'E', className: 'bg-cyan-600 text-white' },
-  kiro: { text: 'K', className: 'bg-violet-600 text-white' }, antigravity: { text: 'A', className: 'bg-fuchsia-700 text-white' },
-  idea: { text: 'IJ', className: 'bg-rose-700 text-white' }, teams: { text: 'T', className: 'bg-indigo-600 text-white' }, slack: { text: 'S', className: 'bg-purple-700 text-white' },
-};
-
-function AppIcon({ appId, label }: { appId: string; label: string }) {
-  const key = appId.toLowerCase().replace(/\.exe$/i, '').replace(/\s+/g, '-');
-  const tile = appTile[key];
-  return <span role="img" aria-label={`${label} app icon`} className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 text-xs font-bold shadow-sm ${tile?.className || 'bg-muted text-muted-foreground'}`}>
-    {tile ? tile.text : <AppWindow aria-hidden="true" className="h-4 w-4" />}
-  </span>;
-}
-
 export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { workspaceId: string; canViewTeam?: boolean }) {
   const today = day(new Date());
   const [startDate, setStartDate] = useState(() => day(new Date(Date.now() - 6 * 24 * 60 * 60_000)));
@@ -54,9 +39,11 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
   const [nowMs, setNowMs] = useState(Date.now());
   const isDesktop = typeof window !== 'undefined' && !!window.teamseverDesktop;
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    setError('');
+  const refresh = useCallback(async (quiet = false) => {
+    if (!quiet) {
+      setLoading(true);
+      setError('');
+    }
     const query = new URLSearchParams({ startDate, endDate });
     if (teamView && canViewTeam) query.set('userId', teamMemberId);
     try {
@@ -66,10 +53,15 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
     } catch (cause: any) {
       setEvents([]); setGaps([]);
       setError(cause?.response?.data?.message || 'Could not load the desktop presence report.');
-    } finally { setLoading(false); }
+    } finally { if (!quiet) setLoading(false); }
   }, [workspaceId, startDate, endDate, teamView, teamMemberId, canViewTeam]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+    if (endDate < day(new Date())) return;
+    const poll = setInterval(() => void refresh(true), 60_000);
+    return () => clearInterval(poll);
+  }, [refresh, endDate]);
   useEffect(() => {
     const desktop = window.teamseverDesktop;
     if (!desktop) return;
@@ -163,15 +155,15 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
       {desktopCapabilities?.foregroundMonitoringSupported === false && <span className="text-sm text-amber-600">App detection unavailable{desktopCapabilities.foregroundUnavailableReason ? `: ${desktopCapabilities.foregroundUnavailableReason}` : ''}</span>}
     </div>}
     {isDesktop && desktopStatus?.presenceTrackingActive && currentAppSession && <div className="flex items-center gap-3 rounded-lg border p-4" aria-live="polite">
-      {currentAppSession.appId ? <AppIcon appId={currentAppSession.appId} label={formatAppLabel(currentAppSession.appId)} /> : <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted"><AppWindow aria-hidden="true" className="h-4 w-4" /></span>}
+      {currentAppSession.appId ? <DesktopAppIcon appId={currentAppSession.appId} label={formatAppLabel(currentAppSession.appId)} /> : <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted"><AppWindow aria-hidden="true" className="h-4 w-4" /></span>}
       <div className="min-w-0 flex-1"><p className="text-xs uppercase tracking-wider text-muted-foreground">Current foreground app · {statusLabel(currentAppSession.presenceStatus)}</p><p className="truncate font-medium">{currentAppSession.appId ? formatAppLabel(currentAppSession.appId) : 'App name unavailable'}</p></div>
       <span className="font-mono text-lg font-semibold">{formatAppTimer(Math.max(0, nowMs - Date.parse(currentAppSession.startedAt)))}</span>
     </div>}
     {!isDesktop && <p className="rounded-lg border p-3 text-sm text-muted-foreground">App detection is available only from the paired TeamsEver desktop app. A phone or browser clock-in does not report laptop activity automatically; open this workspace in TeamsEver Desktop and explicitly consent to attach the laptop to the active shift.</p>}
     <div className="flex flex-wrap items-end gap-3"><div className="space-y-1"><label htmlFor="presence-start-date" className="text-sm">From</label><input id="presence-start-date" type="date" className="h-10 rounded-md border bg-background px-3" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div><div className="space-y-1"><label htmlFor="presence-end-date" className="text-sm">To</label><input id="presence-end-date" type="date" className="h-10 rounded-md border bg-background px-3" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></div>{teamView && canViewTeam && <div className="space-y-1"><label htmlFor="presence-member-filter" className="text-sm">Member</label><select id="presence-member-filter" className="h-10 rounded-md border bg-background px-3" value={teamMemberId} onChange={(event) => setTeamMemberId(event.target.value)}><option value="all">Entire team</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select></div>}<Button type="button" variant="outline" disabled={loading} onClick={() => void refresh()}>Refresh</Button></div>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    {appUsage.length > 0 && <div className="space-y-3 rounded-lg border p-4"><div><h3 className="font-semibold">App usage</h3><p className="text-xs text-muted-foreground">Time is summed from received desktop intervals; gaps are excluded. Sessions count each return to an app after switching apps or a tracking gap.</p></div><ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{appUsage.map((app) => <li key={app.appId} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3"><AppIcon appId={app.appId} label={app.label} /><div className="min-w-0 flex-1"><p className="truncate font-medium">{app.label}</p><p className="text-xs text-muted-foreground">{app.sessions} {app.sessions === 1 ? 'session' : 'sessions'}</p></div><span className="shrink-0 text-sm font-semibold">{formatAppDuration(app.durationMs)}</span></li>)}</ul></div>}
-    {loading ? <p className="text-sm text-muted-foreground">Loading timeline…</p> : error ? null : rows.length === 0 ? <p className="text-sm text-muted-foreground">No desktop presence intervals or tracking gaps for this period.</p> : <ol className="space-y-2">{rows.map((row) => row.kind === 'gap' ? <li key={row.key} className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3"><p className="font-medium text-amber-700 dark:text-amber-300">Tracking gap{row.gap.active ? ' · ongoing' : ''}</p><p className="text-sm text-muted-foreground">{new Date(row.gap.gapStartedAt).toLocaleString()} – {new Date(row.gap.gapEndedAt).toLocaleString()}. Desktop heartbeat missing; activity during this interval is unknown.</p></li> : <li key={row.key} className="flex flex-wrap items-start justify-between gap-3 rounded-lg border p-3"><div className="flex items-start gap-3">{row.event.appId && <AppIcon appId={row.event.appId} label={formatAppLabel(row.event.appId)} />}<div><p className="font-medium">{statusLabel(row.event.presenceStatus)}{row.event.appId ? ` · ${row.event.appId}` : ''}</p><p className="text-sm text-muted-foreground">{new Date(row.event.startedAt).toLocaleString()} – {new Date(row.event.endedAt).toLocaleString()}</p>{(row.event.foregroundAppSupported === false || row.event.idleDetectionSupported === false || !row.event.presenceStatus) && <p className="text-xs text-muted-foreground">{!row.event.presenceStatus ? 'Legacy sample; no activity status was recorded.' : `App detection ${row.event.foregroundAppSupported ? 'available' : 'unavailable'} · idle detection ${row.event.idleDetectionSupported ? 'available' : 'unavailable'}`}</p>}</div></div>{typeof row.event.user === 'object' && row.event.user?.name && <span className="text-sm text-muted-foreground">{row.event.user.name}</span>}</li>)}</ol>}
+    {appUsage.length > 0 && <div className="space-y-3 rounded-lg border p-4"><div><h3 className="font-semibold">App usage</h3><p className="text-xs text-muted-foreground">Time is summed from received desktop intervals; gaps are excluded. Sessions count each return to an app after switching apps or a tracking gap.</p></div><ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{appUsage.map((app) => <li key={app.appId} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3"><DesktopAppIcon appId={app.appId} label={app.label} /><div className="min-w-0 flex-1"><p className="truncate font-medium">{app.label}</p><p className="text-xs text-muted-foreground">{app.sessions} {app.sessions === 1 ? 'session' : 'sessions'}</p></div><span className="shrink-0 text-sm font-semibold">{formatAppDuration(app.durationMs)}</span></li>)}</ul></div>}
+    {loading ? <p className="text-sm text-muted-foreground">Loading timeline…</p> : error ? null : rows.length === 0 ? <p className="text-sm text-muted-foreground">No desktop presence intervals or tracking gaps for this period.</p> : <ol className="space-y-2">{rows.map((row) => row.kind === 'gap' ? <li key={row.key} className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3"><p className="font-medium text-amber-700 dark:text-amber-300">Tracking gap{row.gap.active ? ' · ongoing' : ''}</p><p className="text-sm text-muted-foreground">{new Date(row.gap.gapStartedAt).toLocaleString()} – {new Date(row.gap.gapEndedAt).toLocaleString()}. Desktop heartbeat missing; activity during this interval is unknown.</p></li> : <li key={row.key} className="flex flex-wrap items-start justify-between gap-3 rounded-lg border p-3"><div className="flex items-start gap-3">{row.event.appId && <DesktopAppIcon appId={row.event.appId} label={formatAppLabel(row.event.appId)} />}<div><p className="font-medium">{statusLabel(row.event.presenceStatus)}{row.event.appId ? ` · ${formatAppLabel(row.event.appId)}` : ''}</p><p className="text-sm text-muted-foreground">{new Date(row.event.startedAt).toLocaleString()} – {new Date(row.event.endedAt).toLocaleString()}</p>{(row.event.foregroundAppSupported === false || row.event.idleDetectionSupported === false || !row.event.presenceStatus) && <p className="text-xs text-muted-foreground">{!row.event.presenceStatus ? 'Legacy sample; no activity status was recorded.' : `App detection ${row.event.foregroundAppSupported ? 'available' : 'unavailable'} · idle detection ${row.event.idleDetectionSupported ? 'available' : 'unavailable'}`}</p>}</div></div>{typeof row.event.user === 'object' && row.event.user?.name && <span className="text-sm text-muted-foreground">{row.event.user.name}</span>}</li>)}</ol>}
     <p className="flex items-center gap-1 text-xs text-muted-foreground"><CircleHelp aria-hidden="true" className="h-3.5 w-3.5" /> App names and durations come from local process-name sampling; no window titles, URLs, screenshots, keys, or input details are sent.</p>
   </section>;
 }
