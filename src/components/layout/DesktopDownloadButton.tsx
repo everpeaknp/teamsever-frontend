@@ -2,26 +2,24 @@
 
 import { useEffect, useId, useState } from 'react';
 import { Download } from 'lucide-react';
-import { getDesktopDownloadUrl, getLatestReleaseApiUrl, type DesktopReleaseAsset } from './desktop-download';
+import { getDesktopDownloadUrl, getDesktopDownloadsApiUrl } from './desktop-download';
 
 export function DesktopDownloadButton() {
-  const [releaseAssets, setReleaseAssets] = useState<DesktopReleaseAsset[]>([]);
+  const [availablePlatforms, setAvailablePlatforms] = useState<{ windows: boolean; linux: boolean }>({ windows: false, linux: false });
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
 
   useEffect(() => {
-    const apiUrl = getLatestReleaseApiUrl();
-    if (!apiUrl) return;
-
     const controller = new AbortController();
-    fetch(apiUrl, {
-      headers: { Accept: 'application/vnd.github+json' },
+    fetch(getDesktopDownloadsApiUrl(), {
+      headers: { Accept: 'application/json' },
       signal: controller.signal,
     })
       .then(async (response) => (response.ok ? response.json() : null))
-      .then((release) => {
-        if (!release || !Array.isArray(release.assets)) return;
-        setReleaseAssets(release.assets);
+      .then((payload) => {
+        const assets = payload?.data?.assets;
+        if (!assets) return;
+        setAvailablePlatforms({ windows: assets.windows === true, linux: assets.linux === true });
       })
       .catch(() => {
         // Keep platform choices visible but unavailable until a published installer can be confirmed.
@@ -30,8 +28,8 @@ export function DesktopDownloadButton() {
     return () => controller.abort();
   }, []);
 
-  const windowsUrl = getDesktopDownloadUrl('windows', releaseAssets);
-  const linuxUrl = getDesktopDownloadUrl('linux', releaseAssets);
+  const windowsUrl = availablePlatforms.windows ? getDesktopDownloadUrl('windows') : null;
+  const linuxUrl = availablePlatforms.linux ? getDesktopDownloadUrl('linux') : null;
 
   return (
     <div className="relative">

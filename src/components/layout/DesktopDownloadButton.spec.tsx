@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DesktopDownloadButton } from './DesktopDownloadButton';
-import { getDesktopDownloadUrl, getLatestReleaseApiUrl } from './desktop-download';
+import { getDesktopDownloadUrl, getDesktopDownloadsApiUrl } from './desktop-download';
 
 describe('DesktopDownloadButton', () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -12,35 +12,15 @@ describe('DesktopDownloadButton', () => {
     fireEvent.click(trigger);
   }
 
-  const windowsAsset = {
-    name: 'TeamsEver-Setup.exe',
-    browser_download_url: 'https://github.com/everpeaknp/teamsever-frontend/releases/download/v0.1.0/TeamsEver-Setup.exe',
-  };
-  const linuxAsset = {
-    name: 'TeamsEver.AppImage',
-    browser_download_url: 'https://github.com/everpeaknp/teamsever-frontend/releases/download/v0.1.0/TeamsEver.AppImage',
-  };
-
-  it('uses the latest release API for the configured public GitHub repo', () => {
-    expect(getLatestReleaseApiUrl()).toBe(
-      'https://api.github.com/repos/everpeaknp/teamsever-frontend/releases/latest',
-    );
+  it('uses the configured TeamsEver API for discovery and installer downloads', () => {
+    expect(getDesktopDownloadsApiUrl()).toMatch(/\/api\/desktop-downloads$/);
+    expect(getDesktopDownloadUrl('windows')).toBe(`${getDesktopDownloadsApiUrl()}/windows`);
+    expect(getDesktopDownloadUrl('linux')).toBe(`${getDesktopDownloadsApiUrl()}/linux`);
+    expect(getDesktopDownloadUrl('windows')).not.toContain('github.com');
   });
 
-  it('returns the Windows installer URL when Windows is explicitly selected', () => {
-    expect(getDesktopDownloadUrl('windows', [windowsAsset, linuxAsset])).toBe(windowsAsset.browser_download_url);
-  });
-
-  it('returns the Linux AppImage URL when Linux is explicitly selected', () => {
-    expect(getDesktopDownloadUrl('linux', [windowsAsset, linuxAsset])).toBe(linuxAsset.browser_download_url);
-  });
-
-  it('returns no download URL when the selected installer is missing', () => {
-    expect(getDesktopDownloadUrl('windows', [linuxAsset])).toBeNull();
-  });
-
-  it('keeps the platform chooser available before the first release is published', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
+  it('keeps platform choices visible but unavailable if release discovery fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 502 }));
     render(<DesktopDownloadButton />);
 
     openPlatformMenu();
@@ -48,37 +28,37 @@ describe('DesktopDownloadButton', () => {
     expect(screen.getByRole('menuitem', { name: /Linux/ })).toBeDisabled();
   });
 
-  it('offers Windows and Linux choices and downloads the selected asset directly', async () => {
+  it('offers available platforms and points downloads to the app API, never GitHub', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ assets: [windowsAsset, linuxAsset] }),
+      json: async () => ({ success: true, data: { version: '0.2.3', assets: { windows: true, linux: true } } }),
     }));
     render(<DesktopDownloadButton />);
 
     openPlatformMenu();
 
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Windows (.exe)' })).toHaveAttribute('href', windowsAsset.browser_download_url));
-    const windowsOption = screen.getByRole('menuitem', { name: 'Windows (.exe)' });
+    const windowsOption = await screen.findByRole('menuitem', { name: 'Windows (.exe)' });
     const linuxOption = screen.getByRole('menuitem', { name: 'Linux (AppImage)' });
-    expect(windowsOption).toHaveAttribute('href', windowsAsset.browser_download_url);
-    expect(linuxOption).toHaveAttribute('href', linuxAsset.browser_download_url);
+    expect(windowsOption).toHaveAttribute('href', getDesktopDownloadUrl('windows'));
+    expect(linuxOption).toHaveAttribute('href', getDesktopDownloadUrl('linux'));
+    expect(windowsOption.getAttribute('href')).not.toContain('github.com');
+    expect(linuxOption.getAttribute('href')).not.toContain('github.com');
     expect(windowsOption).toHaveAttribute('download');
     expect(linuxOption).toHaveAttribute('download');
     expect(windowsOption).not.toHaveAttribute('target');
     expect(linuxOption).not.toHaveAttribute('target');
   });
 
-  it('keeps both platform choices visible but disables downloads that are not published', async () => {
+  it('disables only platforms that are not published', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ assets: [linuxAsset] }),
+      json: async () => ({ success: true, data: { version: '0.2.3', assets: { windows: false, linux: true } } }),
     }));
     render(<DesktopDownloadButton />);
 
     openPlatformMenu();
 
-    const windowsOption = await screen.findByRole('menuitem', { name: /Windows/ });
-    expect(windowsOption).toBeDisabled();
-    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Linux (AppImage)' })).toHaveAttribute('href', linuxAsset.browser_download_url));
+    expect(await screen.findByRole('menuitem', { name: /Windows/ })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Linux (AppImage)' })).toHaveAttribute('href', getDesktopDownloadUrl('linux')));
   });
 });
