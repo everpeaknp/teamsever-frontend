@@ -14,6 +14,7 @@
 
 - Mobile-started time entries keep `clockInSource: mobile` after companion pairing.
 - A companion link never creates a second time entry or allows Electron to clock out a mobile-started shift.
+- The first pairing offers **Sync this time**, **Always sync future mobile shifts**, and **Not now**; always-sync is per trusted desktop and only auto-links future same-IP candidates.
 - Public IP match is discovery only; accept requires an authenticated explicit user action.
 - Never treat client-supplied forwarding headers as authoritative; derive IP through the configured trusted proxy chain.
 - Store no raw public IP in attendance or presence records; candidate fingerprints and pairing challenges expire.
@@ -58,6 +59,7 @@
 - Create: backend `src/models/DesktopPairingChallenge.ts`
 - Create: backend `src/services/desktopCompanionService.ts`
 - Modify: backend `src/controllers/desktopAttendanceController.ts`
+- Modify: backend `src/models/TrustedAttendanceDevice.ts`
 - Modify: backend `src/routes/attendanceLocationRoutes.ts`
 - Modify: backend `src/controllers/attendanceController.ts`
 - Test: backend `src/__tests__/desktopCompanionDiscovery.test.ts`
@@ -66,14 +68,15 @@
 **Interfaces:**
 - `getCompanionCandidate(userId, deviceId, requestIp): Promise<CompanionCandidate | null>` returns only that user's running mobile-origin entry when the registered trusted device and keyed request-IP fingerprint match.
 - `createPairingChallenge(userId, workspaceId): Promise<{ code: string; expiresAt: string }>` creates a short-lived challenge for the user's active mobile shift; persist only a hash.
-- `acceptCompanionLink({ userId, deviceId, entryId?, challengeCode?, requestIpFingerprint? }): Promise<CompanionLink>` atomically attaches one trusted device after rechecking ownership, active status, workspace membership, source, IP eligibility or valid challenge, and conflict state. Exactly one of `entryId` with a matching IP fingerprint or `challengeCode` is required.
+- `acceptCompanionLink({ userId, deviceId, entryId?, challengeCode?, requestIpFingerprint?, alwaysSync? }): Promise<CompanionLink>` atomically attaches one trusted device after rechecking ownership, active status, workspace membership, source, IP eligibility or valid challenge, and conflict state. Exactly one of `entryId` with a matching IP fingerprint or `challengeCode` is required. `alwaysSync` may be enabled only by the user's explicit first-pairing choice.
+- `setDesktopAutoSync(userId, deviceId, enabled): Promise<void>` changes the per-device always-sync preference.
 - Desktop device routes: `GET /api/attendance/desktop/companion-candidate`, `POST /api/attendance/desktop/companion-link`.
 - User routes: `POST /api/attendance/workspace/:workspaceId/desktop-companion-challenge`; desktop claims that code through the companion-link endpoint.
 
-- [ ] **Step 1: Write failing tests** for same-user/same-IP discovery, different-IP nondiscovery, untrusted proxy headers, wrong-user and unpaired-device rejection, single-use/expiry of a pairing code, and concurrent acceptance by two devices.
+- [ ] **Step 1: Write failing tests** for same-user/same-IP discovery, different-IP nondiscovery, untrusted proxy headers, wrong-user and unpaired-device rejection, single-use/expiry of a pairing code, concurrent acceptance by two devices, and always-sync preference enable/disable plus automatic later linking.
 - [ ] **Step 2: Run the targeted tests** with `npm test -- --runInBand src/__tests__/desktopCompanionDiscovery.test.ts src/__tests__/desktopCompanionPairing.test.ts`; confirm the candidate model/service/routes do not exist.
 - [ ] **Step 3: Implement the candidate and challenge models** with TTL indexes, keyed IP fingerprints, hashed one-use challenge values, and only the minimal IDs needed for discovery. Remove candidate/challenge records on clock-out or expiry.
-- [ ] **Step 4: Implement service and route handlers** using `req.ip` after the existing trusted-proxy configuration; never trust raw client IP headers. Use a conditional atomic update so only one active trusted device can link to a time entry.
+- [ ] **Step 4: Implement service and route handlers** using `req.ip` after the existing trusted-proxy configuration; never trust raw client IP headers. Use a conditional atomic update so only one active trusted device can link to a time entry. Persist always-sync only after explicit selection, auto-link only future same-IP candidates, and make the preference reversible.
 - [ ] **Step 5: Run companion tests plus desktop-device route tests** with `npm test -- --runInBand src/__tests__/desktopCompanionDiscovery.test.ts src/__tests__/desktopCompanionPairing.test.ts src/__tests__/desktopDeviceRoutes.test.ts`; all must pass.
 
 ### Task 3: Permit linked companion devices to report presence
@@ -123,6 +126,7 @@
 - Modify: frontend `src/types/desktop.d.ts`
 - Modify: frontend `src/lib/desktopAttendance.ts`
 - Create: frontend `src/components/analytics/DesktopCompanionPrompt.tsx`
+- Modify: frontend `src/components/analytics/DesktopAttendanceControls.tsx`
 - Modify: frontend `src/components/layout/ClientLayout.tsx`
 - Test: frontend `desktop/src/main/companion.test.ts`
 - Test: frontend `src/components/analytics/DesktopCompanionPrompt.test.tsx`
@@ -130,9 +134,9 @@
 **Interfaces:**
 - Add a narrow preload bridge for `getCompanionCandidate`, `acceptCompanionLink`, and `claimPairingCode`; raw device credentials remain inside Electron main-process `authorizedFetch`.
 - Main process polls `GET /attendance/desktop/companion-candidate` every 20 seconds only while a credential is installed and a user session is active. It sends only a minimal candidate DTO to the trusted renderer.
-- The prompt exposes **Sync desktop presence** and **Not now**, and a manual code-entry fallback. Decline is remembered for the current candidate so it does not repeatedly nag; a new time entry can produce a new prompt.
+- The first prompt exposes **Sync this time**, **Always sync future mobile shifts**, and **Not now**, plus a manual code-entry fallback. Always-sync is stored server-side per trusted desktop, auto-links only later same-IP candidates, and can be disabled in desktop settings. Decline is remembered for the current candidate so it does not repeatedly nag; a new time entry can produce a new prompt.
 
-- [ ] **Step 1: Write failing Electron/React tests** for candidate delivery, decline suppression, accepted link activation, code-claim flow, and stopping samples on clock-out, unlink, revocation, or disabled monitoring.
+- [ ] **Step 1: Write failing Electron/React tests** for candidate delivery, decline suppression, one-time accept, always-sync selection with future prompt-free same-IP linking, disabling always-sync, code-claim flow, and stopping samples on clock-out, unlink, revocation, or disabled monitoring.
 - [ ] **Step 2: Run `npm --prefix desktop test` and `npm test -- --run src/components/analytics/DesktopCompanionPrompt.test.tsx`**; confirm bridge and prompt behavior are absent.
 - [ ] **Step 3: Implement main-process polling and the validated preload API** in `desktop/src/main/index.ts` and `desktop/src/preload/index.ts`. Keep polling, credential use, and server authorization outside page JavaScript.
 - [ ] **Step 4: Implement and mount the prompt** in `DesktopCompanionPrompt.tsx` and `ClientLayout.tsx`; after accepted link, update the active tracking target but leave clock controls and source labels as mobile-origin.
