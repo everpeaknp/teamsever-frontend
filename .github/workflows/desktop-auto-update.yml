@@ -1,0 +1,107 @@
+name: Desktop Auto Update
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-auto-update-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Package ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            runner: windows-latest
+            script: dist:win
+          - platform: linux
+            runner: ubuntu-latest
+            script: dist:linux
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        working-directory: desktop
+    env:
+      TEAMSEVER_WEB_URL: ${{ vars.TEAMSEVER_WEB_URL }}
+      TEAMSEVER_API_URL: ${{ vars.TEAMSEVER_API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+      - name: Set increasing updater version
+        run: npm version "0.2.${{ github.run_number }}" --no-git-tag-version
+      - name: Require configured production URLs
+        run: npm run validate:web-url && npm run validate:api-url
+      - name: Verify desktop code
+        run: npm run typecheck && npm test
+      - name: Build installer
+        run: npm run ${{ matrix.script }}
+      - name: Validate updater metadata
+        run: npm run validate:update-artifacts:${{ matrix.platform == 'windows' && 'win' || 'linux' }}
+      - name: Upload Windows installer
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: |
+            desktop/release/TeamsEver-Setup.exe
+            desktop/release/latest.yml
+            desktop/release/*.blockmap
+          if-no-files-found: error
+      - name: Upload Linux AppImage
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-installers
+          path: |
+            desktop/release/TeamsEver.AppImage
+            desktop/release/latest-linux.yml
+            desktop/release/*.blockmap
+          if-no-files-found: error
+
+  publish-update:
+    name: Publish Windows/Linux auto-update
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+      - name: Publish stable update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: 0.2.${{ github.run_number }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          tag="desktop-v${VERSION}"
+          windows_assets=(release-assets/windows-installer/TeamsEver-Setup.exe release-assets/windows-installer/latest.yml)
+          windows_blockmaps=(release-assets/windows-installer/*.blockmap)
+          linux_assets=(release-assets/linux-installers/TeamsEver.AppImage release-assets/linux-installers/latest-linux.yml)
+          linux_blockmaps=(release-assets/linux-installers/*.blockmap)
+          for asset in "${windows_assets[@]}" "${linux_assets[@]}"; do test -f "$asset"; done
+          assets=("${windows_assets[@]}" "${windows_blockmaps[@]}" "${linux_assets[@]}" "${linux_blockmaps[@]}")
+          if gh release view "$tag" --repo everpeaknp/teamsever-frontend >/dev/null 2>&1; then
+            gh release upload "$tag" "${assets[@]}" --repo everpeaknp/teamsever-frontend --clobber
+            gh release edit "$tag" --repo everpeaknp/teamsever-frontend --title "TeamsEver Desktop ${VERSION}" --latest
+          else
+            gh release create "$tag" "${assets[@]}" \
+              --repo everpeaknp/teamsever-frontend \
+              --target "$SOURCE_SHA" \
+              --title "TeamsEver Desktop ${VERSION}" \
+              --notes "Automatic desktop update for main commit ${SOURCE_SHA}." \
+              --latest
+          fi
