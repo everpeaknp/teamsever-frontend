@@ -217,6 +217,11 @@ function registerSecureIpc(): void {
     return result.data;
   });
   register('desktop:get-current-presence', async () => presenceSession.currentSession);
+  register('desktop:get-presence-diagnostics', async () => ({
+    running: presenceSession.isRunning,
+    lastError: presenceSession.lastError,
+    lastSuccessfulHeartbeatAt: presenceSession.lastSuccessfulHeartbeatAt,
+  }));
   register('desktop:attach-presence-to-active-shift', async () => {
     const result = await authorizedFetch('/attendance/desktop/presence-session', { method: 'POST', body: JSON.stringify({ consent: true }) });
     await syncDesktopStatus();

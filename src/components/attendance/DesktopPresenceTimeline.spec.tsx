@@ -81,13 +81,15 @@ describe('DesktopPresenceTimeline', () => {
     const attachPresenceToActiveShift = vi.fn().mockResolvedValue({ attached: true });
     Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: {
       getStatus, getCapabilities: vi.fn().mockResolvedValue({ platform: 'win32', foregroundMonitoringSupported: true, idleDetectionSupported: true }),
-      getCurrentPresence: vi.fn().mockResolvedValue(null), attachPresenceToActiveShift,
+      getCurrentPresence: vi.fn().mockResolvedValue(null),
+      getPresenceDiagnostics: vi.fn().mockResolvedValue({ running: true, lastError: null, lastSuccessfulHeartbeatAt: new Date().toISOString() }),
+      attachPresenceToActiveShift,
     } });
     render(<DesktopPresenceTimeline workspaceId="ws1" />);
     fireEvent.click(await screen.findByRole('button', { name: 'Consent and track from this laptop' }));
     await waitFor(() => expect(attachPresenceToActiveShift).toHaveBeenCalled());
     expect(saveConsent).toHaveBeenCalledWith('device-1', true);
-    expect(await screen.findByText('This laptop is reporting app and active/AFK presence')).toBeInTheDocument();
+    expect(await screen.findByText(/This laptop is reporting app and active\/AFK presence/)).toBeInTheDocument();
     delete (window as any).teamseverDesktop;
   });
 
@@ -97,11 +99,26 @@ describe('DesktopPresenceTimeline', () => {
       getStatus: vi.fn().mockResolvedValue({ clockedIn: true, clockedInOnThisDevice: true, presenceTrackingActive: true, workspaceId: 'ws1', activityMonitoringEnabled: true }),
       getCapabilities: vi.fn().mockResolvedValue({ platform: 'win32', foregroundMonitoringSupported: true, idleDetectionSupported: true }),
       getCurrentPresence: vi.fn().mockResolvedValue({ appId: 'code.exe', presenceStatus: 'active', startedAt: new Date().toISOString() }),
+      getPresenceDiagnostics: vi.fn().mockResolvedValue({ running: true, lastError: null, lastSuccessfulHeartbeatAt: new Date().toISOString() }),
     } });
     render(<DesktopPresenceTimeline workspaceId="ws1" />);
     expect(await screen.findByText('Current foreground app · Active')).toBeInTheDocument();
     expect(screen.getByText('Visual Studio Code')).toBeInTheDocument();
     expect(screen.getByText(/^00:00:\d\d$/)).toBeInTheDocument();
+    delete (window as any).teamseverDesktop;
+  });
+
+  it('does not claim desktop reports are being sent when the local reporter has failed', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { data: { events: [], gaps: [] } } } as any);
+    Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: {
+      getStatus: vi.fn().mockResolvedValue({ clockedIn: true, clockedInOnThisDevice: true, presenceTrackingActive: true, workspaceId: 'ws1', activityMonitoringEnabled: true }),
+      getCapabilities: vi.fn().mockResolvedValue({ platform: 'win32', foregroundMonitoringSupported: true, idleDetectionSupported: true }),
+      getCurrentPresence: vi.fn().mockResolvedValue(null),
+      getPresenceDiagnostics: vi.fn().mockResolvedValue({ running: true, lastError: 'API returned 503', lastSuccessfulHeartbeatAt: null }),
+    } });
+    render(<DesktopPresenceTimeline workspaceId="ws1" />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Desktop presence report failed: API returned 503');
+    expect(screen.queryByText(/This laptop is reporting app and active\/AFK presence/)).not.toBeInTheDocument();
     delete (window as any).teamseverDesktop;
   });
 });

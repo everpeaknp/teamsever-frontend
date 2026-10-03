@@ -89,6 +89,31 @@ describe('DesktopPresenceSession', () => {
     expect(f.sendHeartbeat).toHaveBeenCalledWith(expect.objectContaining({ appId: null, foregroundAppSupported: true }));
   });
 
+  it('exposes an initialization error when the AFK policy cannot be loaded', async () => {
+    const failingSession = new DesktopPresenceSession({
+      getAuthorization: async () => shift,
+      getAfkThresholdMinutes: async () => { throw new Error('Policy request failed'); },
+      readIdleSeconds: () => 0,
+      readForegroundApp: async () => 'code.exe',
+      foregroundAppSupported: () => true,
+      sendHeartbeat: async () => undefined,
+    });
+    await failingSession.start(shift);
+    expect(failingSession.isRunning).toBe(false);
+    expect(failingSession.lastError).toContain('Policy request failed');
+  });
+
+  it('exposes heartbeat upload failures instead of silently appearing healthy', async () => {
+    const f = fixture(); f.sendHeartbeat.mockRejectedValueOnce(new Error('API returned 503'));
+    await f.session.start(shift); await f.session.sample(); f.advance(60_000); await f.session.sample();
+    expect(f.session.isRunning).toBe(true);
+    expect(f.session.lastError).toContain('API returned 503');
+    f.advance(60_000); await f.session.sample();
+    f.advance(60_000); await f.session.sample();
+    expect(f.session.lastError).toBeNull();
+    expect(f.session.lastSuccessfulHeartbeatAt).not.toBeNull();
+  });
+
   it('does not backfill a network outage into a long active or AFK interval', async () => {
     const f = fixture(); f.sendHeartbeat.mockRejectedValueOnce(new Error('offline'));
     await f.session.start(shift); await f.session.sample(); f.advance(60_000); await f.session.sample();

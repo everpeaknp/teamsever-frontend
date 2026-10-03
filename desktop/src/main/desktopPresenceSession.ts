@@ -44,18 +44,26 @@ export class DesktopPresenceSession {
   private pendingSegments: DesktopPresenceHeartbeat[] = [];
   private foregroundAppId: string | null = null;
   private foregroundAppStartedAt: number | null = null;
+  private _lastError: string | null = null;
+  private _lastSuccessfulHeartbeatAt: string | null = null;
   private now: () => number;
 
   constructor(private readonly deps: Dependencies) { this.now = deps.now || Date.now; }
 
   async start(shift: DesktopPresenceAuthorization): Promise<boolean> {
     this.stop();
-    if (!this.isEligible(shift)) return false;
+    if (!this.isEligible(shift)) {
+      this._lastError = 'No consented active desktop shift is available.';
+      return false;
+    }
     try {
       this.thresholdMinutes = await this.deps.getAfkThresholdMinutes(shift.workspaceId);
       this.enabledShift = { ...shift };
       return true;
-    } catch { return false; }
+    } catch (error) {
+      this._lastError = error instanceof Error ? error.message : 'Could not load desktop presence settings.';
+      return false;
+    }
   }
 
   stop(): void {
@@ -67,9 +75,13 @@ export class DesktopPresenceSession {
     this.pendingSegments = [];
     this.foregroundAppId = null;
     this.foregroundAppStartedAt = null;
+    this._lastError = null;
+    this._lastSuccessfulHeartbeatAt = null;
   }
 
   get isRunning(): boolean { return this.enabledShift !== null; }
+  get lastError(): string | null { return this._lastError; }
+  get lastSuccessfulHeartbeatAt(): string | null { return this._lastSuccessfulHeartbeatAt; }
 
   get currentSession(): { appId: string | null; presenceStatus: PresenceStatus; startedAt: string } | null {
     if (!this.enabledShift || this.foregroundAppStartedAt === null || !this.segmentState) return null;
@@ -83,13 +95,16 @@ export class DesktopPresenceSession {
     try { authorization = await this.deps.getAuthorization(); }
     catch (error) {
       const status = typeof error === 'object' && error !== null && 'status' in error ? Number((error as { status?: unknown }).status) : 0;
-      if (status === 401 || status === 403) { this.stop(); return; }
+      const message = error instanceof Error ? error.message : 'Could not verify the active desktop shift.';
+      if (status === 401 || status === 403) { this.stop(); this._lastError = message; return; }
       // Permission cannot be verified while offline; drop this interval and never backfill it.
+      this._lastError = message;
       this.resetInterval();
       return;
     }
     if (!authorization || !this.isEligible(authorization) || authorization.workspaceId !== shift.workspaceId || authorization.timeEntryId !== shift.timeEntryId) {
       this.stop();
+      this._lastError = 'The server no longer authorizes presence reporting for this shift.';
       return;
     }
 
@@ -127,8 +142,14 @@ export class DesktopPresenceSession {
     const batch = this.pendingSegments;
     this.pendingSegments = [];
     // Drop the batch on any write failure; never retry or backfill a stale interval.
-    try { for (const event of batch) await this.deps.sendHeartbeat(event); }
-    catch { this.resetInterval(); }
+    try {
+      for (const event of batch) await this.deps.sendHeartbeat(event);
+      this._lastSuccessfulHeartbeatAt = new Date(sampledAt).toISOString();
+      this._lastError = null;
+    } catch (error) {
+      this._lastError = error instanceof Error ? error.message : 'Could not send the desktop presence report.';
+      this.resetInterval();
+    }
   }
 
   private sameState(left: Omit<DesktopPresenceHeartbeat, 'startedAt' | 'endedAt'> | null, right: Omit<DesktopPresenceHeartbeat, 'startedAt' | 'endedAt'>): boolean {

@@ -16,6 +16,7 @@ type PresenceEvent = {
 type PresenceGap = { _id?: string; gapStartedAt: string; gapEndedAt: string; reason?: string; active?: boolean; user?: { name?: string } | string };
 type DesktopStatus = { clockedIn: boolean; clockedInOnThisDevice: boolean; presenceTrackingActive: boolean; clockInSource?: 'web' | 'desktop' | 'mobile' | null; workspaceId: string | null; activityMonitoringEnabled: boolean };
 type CurrentAppSession = { appId: string | null; presenceStatus: 'active' | 'afk' | 'unavailable'; startedAt: string };
+type ReporterDiagnostics = { running: boolean; lastError: string | null; lastSuccessfulHeartbeatAt: string | null };
 
 const day = (date: Date) => date.toISOString().slice(0, 10);
 const statusLabel = (status?: PresenceEvent['presenceStatus']) => status === 'active' ? 'Active' : status === 'afk' ? 'AFK' : 'Unavailable';
@@ -32,6 +33,7 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
   const [error, setError] = useState('');
   const [desktopStatus, setDesktopStatus] = useState<DesktopStatus | null>(null);
   const [currentAppSession, setCurrentAppSession] = useState<CurrentAppSession | null>(null);
+  const [reporterDiagnostics, setReporterDiagnostics] = useState<ReporterDiagnostics | null>(null);
   const [desktopCapabilities, setDesktopCapabilities] = useState<Awaited<ReturnType<NonNullable<Window['teamseverDesktop']>['getCapabilities']>> | null>(null);
   const [attaching, setAttaching] = useState(false);
   const [attachError, setAttachError] = useState('');
@@ -76,7 +78,13 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
     if (!desktop) return;
     let cancelled = false;
     const refreshCurrentPresence = async () => {
-      try { const current = await desktop.getCurrentPresence(); if (!cancelled) setCurrentAppSession(current); }
+      try {
+        const [current, diagnostics] = await Promise.all([
+          desktop.getCurrentPresence(),
+          desktop.getPresenceDiagnostics?.() ?? Promise.resolve(null),
+        ]);
+        if (!cancelled) { setCurrentAppSession(current); setReporterDiagnostics(diagnostics); }
+      }
       catch { if (!cancelled) setCurrentAppSession(null); }
     };
     void refreshCurrentPresence();
@@ -149,9 +157,19 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
       <Button type="button" disabled={attaching || desktopStatus.workspaceId !== workspaceId} onClick={() => void attachLaptopPresence()}>{attaching ? 'Starting laptop tracking…' : 'Consent and track from this laptop'}</Button>
       {desktopStatus.workspaceId !== workspaceId && <p className="text-xs text-muted-foreground">Open the attendance page for the workspace where this shift is active.</p>}
     </div>}
-    {isDesktop && desktopStatus?.presenceTrackingActive && <div className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" aria-hidden="true" />
-      <span className="font-medium">This laptop is reporting app and active/AFK presence</span>
+    {isDesktop && desktopStatus?.presenceTrackingActive && <div role={reporterDiagnostics?.running && !reporterDiagnostics.lastError && reporterDiagnostics.lastSuccessfulHeartbeatAt ? 'status' : 'alert'} className={`flex flex-wrap items-center gap-3 rounded-lg border p-3 ${reporterDiagnostics?.running && !reporterDiagnostics.lastError && reporterDiagnostics.lastSuccessfulHeartbeatAt ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
+      <span className={`h-2.5 w-2.5 rounded-full ${reporterDiagnostics?.running && !reporterDiagnostics.lastError && reporterDiagnostics.lastSuccessfulHeartbeatAt ? 'bg-emerald-500' : 'bg-amber-500'}`} aria-hidden="true" />
+      <span className="font-medium">
+        {!reporterDiagnostics
+          ? 'Presence is authorized on this laptop; checking its reporter status…'
+          : reporterDiagnostics.lastError
+            ? `Desktop presence report failed: ${reporterDiagnostics.lastError}`
+            : !reporterDiagnostics.running
+              ? 'Presence is authorized, but the desktop tracker is not running.'
+              : reporterDiagnostics.lastSuccessfulHeartbeatAt
+                ? `This laptop is reporting app and active/AFK presence · last report ${new Date(reporterDiagnostics.lastSuccessfulHeartbeatAt).toLocaleTimeString()}`
+                : 'Desktop tracker is running; waiting for its first report.'}
+      </span>
       {desktopCapabilities?.foregroundMonitoringSupported === false && <span className="text-sm text-amber-600">App detection unavailable{desktopCapabilities.foregroundUnavailableReason ? `: ${desktopCapabilities.foregroundUnavailableReason}` : ''}</span>}
     </div>}
     {isDesktop && desktopStatus?.presenceTrackingActive && currentAppSession && <div className="flex items-center gap-3 rounded-lg border p-4" aria-live="polite">

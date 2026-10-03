@@ -7,6 +7,7 @@ const desktop = Object.freeze({
   setMonitoringEnabled: (enabled: boolean) => ipcRenderer.invoke('desktop:set-monitoring', enabled),
   getStatus: () => ipcRenderer.invoke('desktop:get-status'),
   getCurrentPresence: () => ipcRenderer.invoke('desktop:get-current-presence'),
+  getPresenceDiagnostics: () => ipcRenderer.invoke('desktop:get-presence-diagnostics'),
   attachPresenceToActiveShift: () => ipcRenderer.invoke('desktop:attach-presence-to-active-shift'),
   pairMobileCode: (code: string) => ipcRenderer.invoke('desktop:pair-mobile-code', code),
   toggleClock: (input: { workspaceId: string; status: 'active' | 'inactive'; locationFix?: { latitude: number; longitude: number; accuracyMeters: number; capturedAt: string } }) => ipcRenderer.invoke('desktop:toggle-clock', input),
