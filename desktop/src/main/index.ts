@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, powerMonitor, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, powerMonitor, safeStorage, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import fs from 'node:fs/promises';
 import { foregroundAppSupport, getForegroundProcessName } from './foregroundProcess';
@@ -28,6 +28,8 @@ let trackerGeneration = 0;
 let deviceMonitoringConsent = false;
 let allowNormalQuitAfterUpdateCheck = false;
 let updateCheckTimer: NodeJS.Timeout | null = null;
+let companionPromptOpen = false;
+const dismissedMobileEntries = new Set<string>();
 const presenceSession = new DesktopPresenceSession({
   getAuthorization: async () => {
     const result = await authorizedFetch('/attendance/desktop/status');
@@ -92,6 +94,37 @@ async function authorizedFetch(pathname: string, init: RequestInit = {}) {
   return body;
 }
 
+async function promptForMobileShift(pending: { timeEntryId: string; workspaceId: string; startTime: string } | null | undefined): Promise<void> {
+  if (!pending || dismissedMobileEntries.has(pending.timeEntryId) || companionPromptOpen || BrowserWindow.getAllWindows().length === 0) return;
+  companionPromptOpen = true;
+  dismissedMobileEntries.add(pending.timeEntryId);
+  try {
+    const options: Electron.MessageBoxOptions = {
+      type: 'question',
+      title: 'Mobile shift found',
+      message: 'You are clocked in from the TeamsEver mobile app on this network. Sync desktop presence for this shift?',
+      detail: 'When synced, TeamsEver records foreground app names and active/AFK state on this trusted desktop. It does not record keys, text, window titles, or screenshots.',
+      buttons: ['Sync this time', 'Always sync future mobile shifts', 'Not now'],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+    };
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    const answer = focusedWindow ? await dialog.showMessageBox(focusedWindow, options) : await dialog.showMessageBox(options);
+    const action = answer.response === 0 ? 'sync_once' : answer.response === 1 ? 'always' : 'not_now';
+    await authorizedFetch(`/attendance/desktop/companion/${encodeURIComponent(pending.timeEntryId)}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    });
+    if (action === 'sync_once' || action === 'always') await syncDesktopStatus();
+  } catch (error) {
+    dismissedMobileEntries.delete(pending.timeEntryId);
+    console.warn('[Desktop companion] Could not sync mobile shift:', error instanceof Error ? error.message : 'unknown error');
+  } finally {
+    companionPromptOpen = false;
+  }
+}
+
 async function syncDesktopStatus(): Promise<any> {
   const result = await authorizedFetch('/attendance/desktop/status');
   activeShift = result.data?.presenceTrackingActive ? {
@@ -102,6 +135,7 @@ async function syncDesktopStatus(): Promise<any> {
   } : null;
   deviceMonitoringConsent = !!result.data?.activityMonitoringEnabled;
   updateTracker();
+  void promptForMobileShift(result.data?.pendingMobileShift);
   return { ...result.data, currentSession: presenceSession.currentSession };
 }
 
@@ -173,6 +207,15 @@ function registerSecureIpc(): void {
     return { enabled };
   });
   register('desktop:get-status', async () => syncStatus());
+  register('desktop:pair-mobile-code', async (_event, code: unknown) => {
+    if (typeof code !== 'string' || !/^\d{6}$/.test(code)) throw new Error('Enter the 6-digit code shown in the mobile app.');
+    const result = await authorizedFetch('/attendance/desktop/companion/pair', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+    await syncDesktopStatus();
+    return result.data;
+  });
   register('desktop:get-current-presence', async () => presenceSession.currentSession);
   register('desktop:attach-presence-to-active-shift', async () => {
     const result = await authorizedFetch('/attendance/desktop/presence-session', { method: 'POST', body: JSON.stringify({ consent: true }) });
