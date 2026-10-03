@@ -13,7 +13,7 @@ type PresenceEvent = {
   timeEntry?: string; user?: { name?: string } | string;
 };
 type PresenceGap = { _id?: string; gapStartedAt: string; gapEndedAt: string; reason?: string; active?: boolean; user?: { name?: string } | string };
-type DesktopStatus = { clockedIn: boolean; clockedInOnThisDevice: boolean; presenceTrackingActive: boolean; workspaceId: string | null; activityMonitoringEnabled: boolean };
+type DesktopStatus = { clockedIn: boolean; clockedInOnThisDevice: boolean; presenceTrackingActive: boolean; clockInSource?: 'web' | 'desktop' | 'mobile' | null; workspaceId: string | null; activityMonitoringEnabled: boolean };
 type CurrentAppSession = { appId: string | null; presenceStatus: 'active' | 'afk' | 'unavailable'; startedAt: string };
 
 const day = (date: Date) => date.toISOString().slice(0, 10);
@@ -50,6 +50,7 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
   const [desktopCapabilities, setDesktopCapabilities] = useState<Awaited<ReturnType<NonNullable<Window['teamseverDesktop']>['getCapabilities']>> | null>(null);
   const [attaching, setAttaching] = useState(false);
   const [attachError, setAttachError] = useState('');
+  const [pairingCode, setPairingCode] = useState('');
   const [nowMs, setNowMs] = useState(Date.now());
   const isDesktop = typeof window !== 'undefined' && !!window.teamseverDesktop;
 
@@ -125,9 +126,30 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
     } finally { setAttaching(false); }
   };
 
+  const pairMobileShift = async () => {
+    const desktop = window.teamseverDesktop;
+    if (!desktop) return;
+    setAttaching(true); setAttachError('');
+    try {
+      await desktop.pairMobileCode(pairingCode.trim());
+      setPairingCode('');
+      setDesktopStatus(await desktop.getStatus());
+      await refresh();
+    } catch (cause: any) {
+      setAttachError(cause?.response?.data?.message || cause?.message || 'Could not link this mobile shift.');
+    } finally { setAttaching(false); }
+  };
+
   return <section className="space-y-4 rounded-xl border bg-card p-5" aria-label="Desktop presence timeline">
     <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">Presence & activity</h2><p className="text-sm text-muted-foreground">Desktop reports are shown only during an explicitly consented shift. Missing heartbeats are tracking gaps, never AFK.</p></div>{canViewTeam && <Button type="button" variant={teamView ? 'default' : 'outline'} onClick={() => setTeamView((value) => !value)}>{teamView ? 'Show my timeline' : 'Show team timeline'}</Button>}</div>
-    {isDesktop && desktopStatus?.clockedIn && !desktopStatus.presenceTrackingActive && <div className="space-y-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-4">
+    {isDesktop && desktopStatus?.clockedIn && !desktopStatus.presenceTrackingActive && desktopStatus.clockInSource === 'mobile' && <div className="space-y-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-4">
+      <p className="font-medium">Link this mobile shift to this laptop</p>
+      <p className="text-sm text-muted-foreground">If automatic same-network sync did not appear, enter the short-lived code generated in the mobile app. This links presence reporting only; the mobile app remains the source of attendance and location.</p>
+      {attachError && <p role="alert" className="text-sm text-destructive">{attachError}</p>}
+      <div className="flex flex-wrap gap-2"><input aria-label="Mobile pairing code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" className="h-10 w-40 rounded-md border bg-background px-3 font-mono tracking-widest" value={pairingCode} onChange={(event) => setPairingCode(event.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="6-digit code" /><Button type="button" disabled={attaching || pairingCode.length !== 6 || desktopStatus.workspaceId !== workspaceId} onClick={() => void pairMobileShift()}>{attaching ? 'Linking…' : 'Link mobile shift'}</Button></div>
+      {desktopStatus.workspaceId !== workspaceId && <p className="text-xs text-muted-foreground">Open the attendance page for the workspace where this shift is active.</p>}
+    </div>}
+    {isDesktop && desktopStatus?.clockedIn && !desktopStatus.presenceTrackingActive && desktopStatus.clockInSource !== 'mobile' && <div className="space-y-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-4">
       <p className="font-medium">This shift started on another device</p>
       <p className="text-sm text-muted-foreground">You can separately share this laptop’s foreground app name and active/AFK state for the current shift. Attendance clock-in/out and location remain attributed to the device that recorded them. No keys, text, window titles, or screenshots are collected.</p>
       {desktopCapabilities?.foregroundMonitoringSupported === false && <p className="text-sm text-amber-600">App detection unavailable on this system{desktopCapabilities.foregroundUnavailableReason ? `: ${desktopCapabilities.foregroundUnavailableReason}` : ''}. Idle detection may still be reported.</p>}

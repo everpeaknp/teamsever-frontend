@@ -13,11 +13,11 @@ async function provision() {
   const bridge = window.teamseverDesktop;
   if (!bridge) return null;
   const capabilities = await bridge.getCapabilities();
-  if (!['win32', 'linux', 'darwin'].includes(capabilities.platform)) throw new Error('TeamsEver desktop attendance is unavailable on this platform.');
+  if (!['win32', 'linux'].includes(capabilities.platform)) throw new Error('TeamsEver desktop attendance currently supports Windows and Linux only.');
   let deviceId = localStorage.getItem(DEVICE_ID_KEY);
   if (!capabilities.credentialInstalled || !deviceId) {
     if (deviceId) await api.delete(`/attendance/desktop-devices/${deviceId}`).catch(() => undefined);
-    const platform = capabilities.platform === 'win32' ? 'windows' : capabilities.platform === 'darwin' ? 'macos' : 'linux';
+    const platform = capabilities.platform === 'win32' ? 'windows' : 'linux';
     const response = await api.post('/attendance/desktop-devices', { name: `TeamsEver Desktop (${platform})`, platform });
     deviceId = String(response.data.data.device.id);
     try {
@@ -40,10 +40,6 @@ export async function disconnectDesktopDevice(deviceId: string) {
   await api.delete(`/attendance/desktop-devices/${deviceId}`);
   await window.teamseverDesktop?.forgetCredential();
   localStorage.removeItem(DEVICE_ID_KEY);
-}
-
-export async function setDesktopAutoSync(deviceId: string, enabled: boolean) {
-  await api.patch(`/attendance/desktop-devices/${deviceId}/auto-sync-mobile-shifts`, { enabled });
 }
 
 export { DEVICE_ID_KEY };
