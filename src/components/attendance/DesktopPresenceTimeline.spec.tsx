@@ -71,6 +71,15 @@ describe('DesktopPresenceTimeline', () => {
     expect(screen.getByText('2m')).toBeInTheDocument();
   });
 
+  it('displays WhatsApp UWP process ids as WhatsApp with its app icon', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { data: {
+      events: [{ appId: 'WhatsApp.Root', presenceStatus: 'active', startedAt: '2026-10-01T09:00:00Z', endedAt: '2026-10-01T09:01:00Z' }], gaps: [],
+    } } } as any);
+    render(<DesktopPresenceTimeline workspaceId="ws1" />);
+    expect(await screen.findByText('Active · WhatsApp')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('WhatsApp app icon').length).toBeGreaterThan(0);
+  });
+
   it('attaches the paired laptop to a different-device shift only after an explicit action', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { data: { events: [], gaps: [] } } } as any);
     provisionDesktop.mockResolvedValue({ deviceId: 'device-1' });

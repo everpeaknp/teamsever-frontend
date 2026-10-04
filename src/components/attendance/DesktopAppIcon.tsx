@@ -13,6 +13,7 @@ import {
   SiPycharm,
   SiWebstorm,
   SiZoom,
+  SiWhatsapp,
 } from 'react-icons/si';
 import { VscCode } from 'react-icons/vsc';
 
@@ -32,10 +33,12 @@ const appIcons: Record<string, { Icon: IconType; color: string }> = {
   zoom: { Icon: SiZoom, color: '#0b5cff' },
   notion: { Icon: SiNotion, color: '#111111' },
   obsidian: { Icon: SiObsidian, color: '#7c3aed' },
+  whatsapp: { Icon: SiWhatsapp, color: '#25d366' },
 };
 
 export function DesktopAppIcon({ appId, label, className = 'h-9 w-9' }: { appId: string; label: string; className?: string }) {
-  const key = appId.toLowerCase().replace(/\.exe$/i, '').replace(/[_\s]+/g, '-');
+  const rawKey = appId.toLowerCase().replace(/\.exe$/i, '').replace(/[_\s]+/g, '-');
+  const key = rawKey === 'whatsapp.root' ? 'whatsapp' : rawKey;
   const app = appIcons[key];
   const Icon = app?.Icon || AppWindow;
 

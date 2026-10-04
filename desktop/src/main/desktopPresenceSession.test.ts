@@ -39,10 +39,21 @@ describe('DesktopPresenceSession', () => {
     expect(f.sendHeartbeat).toHaveBeenLastCalledWith(expect.objectContaining({ presenceStatus: 'afk' }));
   });
 
+  it('uploads the first completed foreground interval after one sampler interval', async () => {
+    const f = fixture(); await f.session.start(shift); await f.session.sample();
+    f.advance(15_000); await f.session.sample();
+    expect(f.sendHeartbeat).toHaveBeenCalledTimes(1);
+    expect(f.sendHeartbeat).toHaveBeenCalledWith(expect.objectContaining({
+      appId: 'code.exe',
+      startedAt: '2026-10-01T09:00:00.000Z',
+      endedAt: '2026-10-01T09:00:15.000Z',
+    }));
+  });
+
   it('splits a minute into truthful segments when AFK state changes between polls', async () => {
     const f = fixture(); await f.session.start(shift); await f.session.sample();
-    f.advance(30_000); f.setIdleSeconds(300); await f.session.sample();
-    f.advance(30_000); await f.session.sample();
+    f.advance(15_000); f.setIdleSeconds(300); await f.session.sample();
+    f.advance(60_000); await f.session.sample();
     expect(f.sendHeartbeat).toHaveBeenCalledTimes(2);
     expect(f.sendHeartbeat.mock.calls[0][0]).toEqual(expect.objectContaining({ presenceStatus: 'active' }));
     expect(f.sendHeartbeat.mock.calls[1][0]).toEqual(expect.objectContaining({ presenceStatus: 'afk' }));

@@ -31,6 +31,7 @@ interface Dependencies {
 }
 
 const HEARTBEAT_INTERVAL_MS = 60_000;
+const FIRST_HEARTBEAT_INTERVAL_MS = 15_000;
 const MAX_SAMPLE_GAP_MS = 90_000;
 const MAX_INTERVAL_MS = 5 * 60_000;
 
@@ -136,7 +137,8 @@ export class DesktopPresenceSession {
       this.segmentStartedAt = sampledAt;
       this.segmentState = nextState;
     }
-    if (sampledAt - this.heartbeatStartedAt < HEARTBEAT_INTERVAL_MS) return;
+    const heartbeatInterval = this._lastSuccessfulHeartbeatAt === null ? FIRST_HEARTBEAT_INTERVAL_MS : HEARTBEAT_INTERVAL_MS;
+    if (sampledAt - this.heartbeatStartedAt < heartbeatInterval) return;
     this.closeSegment(sampledAt, shift);
     this.heartbeatStartedAt = sampledAt;
     const batch = this.pendingSegments;

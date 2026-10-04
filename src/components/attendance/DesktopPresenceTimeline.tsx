@@ -168,7 +168,7 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
               ? 'Presence is authorized, but the desktop tracker is not running.'
               : reporterDiagnostics.lastSuccessfulHeartbeatAt
                 ? `This laptop is reporting app and active/AFK presence · last report ${new Date(reporterDiagnostics.lastSuccessfulHeartbeatAt).toLocaleTimeString()}`
-                : 'Desktop tracker is running; waiting for its first report.'}
+                : 'Sampling on this laptop; the first server report is sent after 15 seconds.'}
       </span>
       {desktopCapabilities?.foregroundMonitoringSupported === false && <span className="text-sm text-amber-600">App detection unavailable{desktopCapabilities.foregroundUnavailableReason ? `: ${desktopCapabilities.foregroundUnavailableReason}` : ''}</span>}
     </div>}

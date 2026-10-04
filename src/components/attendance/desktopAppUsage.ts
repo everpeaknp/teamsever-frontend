@@ -7,7 +7,7 @@ export function summarizeDesktopAppUsage(events: AppUsageEvent[], gaps: AppUsage
     .slice().sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
   const appSessions: Array<{ appId: string; startedAt: number; endedAt: number; timeEntry?: string }> = [];
   for (const event of ordered) {
-    const appId = event.appId!.trim().toLowerCase().replace(/\.exe$/i, '');
+    const appId = normalizeDisplayAppId(event.appId!);
     if (!appId) continue;
     const start = Date.parse(event.startedAt);
     const end = Math.max(start, Date.parse(event.endedAt));
@@ -30,14 +30,20 @@ export function summarizeDesktopAppUsage(events: AppUsageEvent[], gaps: AppUsage
 }
 
 export function formatAppLabel(appId: string): string {
-  const name = appId.toLowerCase().replace(/\.exe$/i, '').replace(/[-_]+/g, ' ').trim();
+  const name = normalizeDisplayAppId(appId).replace(/[-_]+/g, ' ').trim();
   const aliases: Record<string, string> = {
     code: 'Visual Studio Code', 'code insiders': 'Visual Studio Code Insiders', chrome: 'Google Chrome',
     brave: 'Brave', firefox: 'Firefox', msedge: 'Microsoft Edge', kiro: 'Kiro',
     antigravity: 'Antigravity', devenv: 'Visual Studio', idea: 'IntelliJ IDEA', webstorm: 'WebStorm',
     pycharm: 'PyCharm', teams: 'Microsoft Teams', slack: 'Slack',
+    whatsapp: 'WhatsApp',
   };
   return aliases[name] || name.replace(/\b\w/g, (letter) => letter.toUpperCase()) || 'Unknown app';
+}
+
+export function normalizeDisplayAppId(appId: string): string {
+  const normalized = appId.trim().toLowerCase().replace(/\.exe$/i, '');
+  return normalized === 'whatsapp.root' ? 'whatsapp' : normalized;
 }
 
 export function formatAppDuration(durationMs: number): string {
