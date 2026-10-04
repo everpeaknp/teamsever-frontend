@@ -27,6 +27,12 @@ function renderCard({ currentUserId, canManageLeaves, isWorkspaceOwner = false }
 }
 
 describe('LeaveCard decision actions', () => {
+  it('shows expired requests as history with no decision actions', () => {
+    render(<LeaveCard message={{ ...message, metadata: { ...message.metadata, status: 'expired' as any } }} currentUserId="approver-1" canManageLeaves isWorkspaceOwner={false} workspaceId="workspace-1" />);
+    expect(screen.getByText('Expired')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Deny' })).toBeNull();
+  });
   it('does not let a non-owner requester decide their own leave request', () => {
     renderCard({ currentUserId: 'requester-1', canManageLeaves: true });
 

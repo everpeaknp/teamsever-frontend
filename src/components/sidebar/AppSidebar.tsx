@@ -1044,7 +1044,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                       href={`/workspace/${workspaceId}/attendance`}
                       className={cn(
                         'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
-                        pathname === `/workspace/${workspaceId}/attendance`
+                        pathname?.startsWith(`/workspace/${workspaceId}/attendance`)
                           ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
                           : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                       )}

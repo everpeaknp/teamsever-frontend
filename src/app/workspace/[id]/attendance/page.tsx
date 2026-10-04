@@ -1,72 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { AttendanceReport } from '@/components/analytics/AttendanceReport';
-import { LeaveManagementTab } from '@/components/attendance/LeaveManagementTab';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Clock, CalendarDays, MapPin, Activity } from 'lucide-react';
-import { api } from '@/lib/axios';
-import { AttendanceLocationSettings } from '@/components/attendance/AttendanceLocationSettings';
-import { LocationReviewPanel } from '@/components/attendance/LocationReviewPanel';
-import { LocationSessionMonitor } from '@/components/attendance/LocationSessionMonitor';
-import { DesktopPresenceSettings } from '@/components/attendance/DesktopPresenceSettings';
-import { DesktopPresenceTimeline } from '@/components/attendance/DesktopPresenceTimeline';
+import { Activity, CalendarDays, Clock3, MapPin } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+
+const sections = [
+  { href: 'timesheets', title: 'Timesheets', description: 'Review attendance records and working hours.', icon: Clock3 },
+  { href: 'leave-remote', title: 'Leave & remote requests', description: 'Track your requests and review assigned requests.', icon: CalendarDays },
+  { href: 'presence', title: 'Presence & activity', description: 'See desktop app activity and tracking gaps.', icon: Activity },
+  { href: 'locations', title: 'Locations & work modes', description: 'Manage attendance areas and work-mode assignments.', icon: MapPin },
+];
 
 export default function AttendancePage() {
-  const params = useParams();
-  const workspaceId = params.id as string;
-  const [activeTab, setActiveTab] = useState('attendance');
-  const [canManageLocations, setCanManageLocations] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    api.get(`/attendance/workspace/${workspaceId}/location-policy`).then((response) => {
-      if (!cancelled) setCanManageLocations(!!response.data.data.canManage);
-    }).catch(() => { if (!cancelled) setCanManageLocations(false); });
-    return () => { cancelled = true; };
-  }, [workspaceId]);
-
-  return (
-    <div className="container mx-auto py-8 px-4 md:px-8 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Attendance & Leaves</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            View clock-in/out records, timesheets, and team leave management.
-          </p>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-muted/50 p-1 rounded-xl">
-          <TabsTrigger value="attendance" className="rounded-lg gap-2 text-xs font-semibold data-[state=active]:bg-background">
-            <Clock className="h-4 w-4" />
-            Timesheets & Clocks
-          </TabsTrigger>
-          <TabsTrigger value="leaves" className="rounded-lg gap-2 text-xs font-semibold data-[state=active]:bg-background">
-            <CalendarDays className="h-4 w-4" />
-            Leave Management & Records
-          </TabsTrigger>
-          <TabsTrigger value="presence" className="rounded-lg gap-2 text-xs font-semibold data-[state=active]:bg-background"><Activity className="h-4 w-4" />Presence & Activity</TabsTrigger>
-          {canManageLocations && <TabsTrigger value="locations" className="rounded-lg gap-2 text-xs font-semibold data-[state=active]:bg-background"><MapPin className="h-4 w-4" />Locations & Assignments</TabsTrigger>}
-        </TabsList>
-
-        <TabsContent value="attendance" className="mt-0">
-          <LocationSessionMonitor workspaceId={workspaceId} />
-          <AttendanceReport workspaceId={workspaceId} />
-          <div className="mt-6"><LocationReviewPanel workspaceId={workspaceId} /></div>
-        </TabsContent>
-
-        <TabsContent value="leaves" className="mt-0">
-          <LeaveManagementTab workspaceId={workspaceId} />
-        </TabsContent>
-        <TabsContent value="presence" className="mt-0 space-y-6">
-          <DesktopPresenceSettings workspaceId={workspaceId} />
-          <DesktopPresenceTimeline workspaceId={workspaceId} canViewTeam={canManageLocations} />
-        </TabsContent>
-        {canManageLocations && <TabsContent value="locations" className="mt-0"><AttendanceLocationSettings workspaceId={workspaceId} /></TabsContent>}
-      </Tabs>
-    </div>
-  );
+  const workspaceId = useParams().id as string;
+  return <main className="container mx-auto space-y-6 px-4 py-8 md:px-8">
+    <header><h1 className="text-3xl font-bold tracking-tight">Attendance</h1><p className="mt-1 text-sm text-muted-foreground">Clock, timesheets, requests, presence, and work locations.</p></header>
+    <section aria-label="Attendance sections" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {sections.map(({ href, title, description, icon: Icon }) => <Link key={href} href={`/workspace/${workspaceId}/attendance/${href}`} className="group rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        <Card className="h-full transition-colors group-hover:border-primary/50"><CardContent className="flex gap-4 p-5"><span className="rounded-xl bg-primary/10 p-3 text-primary"><Icon className="h-5 w-5" /></span><span><span className="block font-semibold">{title}</span><span className="mt-1 block text-sm text-muted-foreground">{description}</span></span></CardContent></Card>
+      </Link>)}
+    </section>
+  </main>;
 }

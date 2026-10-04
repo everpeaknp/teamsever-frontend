@@ -28,7 +28,7 @@ interface LeaveCardProps {
       endDate?: string;
       daysCount?: number;
       reason?: string;
-      status?: 'pending' | 'approved' | 'denied';
+      status?: 'pending' | 'approved' | 'denied' | 'expired';
       approvedBy?: { _id: string; name: string };
       approvedAt?: string;
       deniedBy?: { _id: string; name: string };
@@ -113,7 +113,8 @@ export function LeaveCard({
           'flex items-center justify-between px-3.5 py-2 text-xs font-semibold border-b',
           status === 'pending' && 'bg-amber-500/10 text-amber-500 border-amber-500/20',
           status === 'approved' && 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-          status === 'denied' && 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+          status === 'denied' && 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+          status === 'expired' && 'bg-slate-500/10 text-slate-500 border-slate-500/20'
         )}
       >
         <div className="flex items-center gap-1.5">
@@ -140,6 +141,7 @@ export function LeaveCard({
               <span>Denied</span>
             </>
           )}
+          {status === 'expired' && <><Clock className="h-3.5 w-3.5" /><span>Expired</span></>}
         </div>
       </div>
 

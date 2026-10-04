@@ -29,6 +29,7 @@ export default function GeneralSettingsPage() {
 
   const [workspaceName, setWorkspaceName] = useState('');
   const [workspaceLogo, setWorkspaceLogo] = useState<string | null>(null);
+  const [workspaceTimezone, setWorkspaceTimezone] = useState('UTC');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -47,6 +48,7 @@ export default function GeneralSettingsPage() {
       const workspace = response.data.data;
       setWorkspaceName(workspace.name);
       setWorkspaceLogo(workspace.logo || null);
+      setWorkspaceTimezone(workspace.timezone || 'UTC');
     } catch (error: any) {
       console.error('Failed to fetch workspace:', error);
       toast.error('Failed to load workspace settings');
@@ -63,6 +65,7 @@ export default function GeneralSettingsPage() {
       setSaving(true);
       await api.put(`/workspaces/${workspaceId}`, {
         name: workspaceName.trim(),
+        timezone: workspaceTimezone.trim(),
       });
       toast.success('Workspace updated successfully');
       window.dispatchEvent(new CustomEvent('workspace-updated'));
@@ -258,6 +261,11 @@ export default function GeneralSettingsPage() {
                 required
                 className="min-h-[44px]"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="workspace-timezone">Workspace time zone</Label>
+              <Input id="workspace-timezone" value={workspaceTimezone} onChange={(e) => setWorkspaceTimezone(e.target.value)} placeholder="Asia/Kathmandu" required className="min-h-[44px]" />
+              <p className="text-sm text-muted-foreground">Use an IANA name such as Asia/Kathmandu or America/New_York. Leave requests expire according to the workspace calendar. Older workspaces default to UTC until you set this.</p>
             </div>
             
             <Button type="submit" disabled={saving || !workspaceName.trim()} className="min-h-[44px]">

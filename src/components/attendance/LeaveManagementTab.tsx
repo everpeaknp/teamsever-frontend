@@ -38,7 +38,7 @@ interface LeaveItem {
   daysCount: number;
   reason: string;
   denialReason?: string;
-  status: 'pending' | 'approved' | 'denied';
+  status: 'pending' | 'approved' | 'denied' | 'expired';
   isExceedingMonthlyQuota?: boolean;
   createdAt: string;
 }
@@ -46,23 +46,26 @@ interface LeaveItem {
 export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
   const [activeLeavesToday, setActiveLeavesToday] = useState<LeaveItem[]>([]);
   const [leaves, setLeaves] = useState<LeaveItem[]>([]);
-  const [remoteRequests, setRemoteRequests] = useState<any[]>([]);
+  const [reviewRequests, setReviewRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'denied'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'denied' | 'expired'>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchLeaves = async () => {
     try {
       setLoading(true);
-      const [todayRes, allRes, remoteRes] = await Promise.allSettled([
+      const [todayRes, allRes, ownRes, inboxRes] = await Promise.allSettled([
         api.get(`/workspaces/${workspaceId}/leaves/today`),
         api.get(`/workspaces/${workspaceId}/leaves`),
-        api.get(`/workspaces/${workspaceId}/leaves/remote-requests`),
+        api.get(`/workspaces/${workspaceId}/leaves/my-requests`),
+        api.get(`/workspaces/${workspaceId}/leaves/inbox`),
       ]);
       setActiveLeavesToday(todayRes.status === 'fulfilled' ? todayRes.value.data.data || [] : []);
-      setLeaves(allRes.status === 'fulfilled' ? allRes.value.data.data || [] : []);
-      setRemoteRequests(remoteRes.status === 'fulfilled' ? remoteRes.value.data.data || [] : []);
-      if (todayRes.status === 'rejected' && allRes.status === 'rejected' && remoteRes.status === 'rejected') toast.error('You do not have permission to view attendance and leave records');
+      const team = allRes.status === 'fulfilled' ? allRes.value.data.data || [] : [];
+      const own = ownRes.status === 'fulfilled' ? ownRes.value.data.data || [] : [];
+      setLeaves(Array.from(new Map([...team, ...own].map((item: LeaveItem) => [item._id, item])).values()));
+      setReviewRequests(inboxRes.status === 'fulfilled' ? inboxRes.value.data.data || [] : []);
+      if (todayRes.status === 'rejected' && allRes.status === 'rejected' && ownRes.status === 'rejected' && inboxRes.status === 'rejected') toast.error('You do not have permission to view attendance and leave records');
     } catch (err: any) {
       console.error('[LeaveManagementTab] Failed to fetch leaves:', err);
       toast.error('Failed to load leave records');
@@ -71,15 +74,15 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
     }
   };
 
-  const decideRemoteRequest = async (requestId: string, decision: 'approve' | 'deny') => {
-    const denialInput = decision === 'deny' ? window.prompt('Optional reason for denying this remote request:') : undefined;
+  const decideRequest = async (requestId: string, requestType: 'leave' | 'remote', decision: 'approve' | 'deny') => {
+    const denialInput = decision === 'deny' ? window.prompt(`Optional reason for denying this ${requestType} request:`) : undefined;
     if (denialInput === null) return;
     const denialReason = denialInput?.trim();
     try {
       await api.patch(`/workspaces/${workspaceId}/leaves/${requestId}/${decision}`, { denialReason });
-      toast.success(`Remote request ${decision === 'approve' ? 'approved' : 'denied'}`);
+      toast.success(`${requestType === 'remote' ? 'Remote' : 'Leave'} request ${decision === 'approve' ? 'approved' : 'denied'}`);
       await fetchLeaves();
-    } catch (error: any) { toast.error(error.response?.data?.message || `Could not ${decision} remote request`); }
+    } catch (error: any) { toast.error(error.response?.data?.message || `Could not ${decision} ${requestType} request`); }
   };
 
   useEffect(() => {
@@ -109,7 +112,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="space-y-6">
-      {remoteRequests.length > 0 && <section className="space-y-3 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 sm:p-5"><div><h3 className="text-sm font-bold">Pending Remote requests assigned to you</h3><p className="text-xs text-muted-foreground">Only the assigned approver and workspace owner can review. Proposed places stay private to them and the requester.</p></div>{remoteRequests.map((request) => <div key={request._id} className="flex flex-wrap items-start justify-between gap-4 rounded-xl border bg-card p-3"><div className="min-w-0 space-y-1"><p className="text-sm font-semibold">{request.requester?.name} · {formatDate(request.startDate)} → {formatDate(request.endDate)}</p><p className="text-xs">{request.remoteAreaName || request.proposedRemoteArea?.name || 'Private remote place'}</p>{request.proposedRemoteArea && <p className="text-xs text-muted-foreground">Proposed pin: {request.proposedRemoteArea.latitude.toFixed(5)}, {request.proposedRemoteArea.longitude.toFixed(5)} · 60 m allowed radius</p>}<p className="text-xs text-muted-foreground">{request.reason}</p></div><div className="flex gap-2"><Button size="sm" onClick={() => void decideRemoteRequest(request._id, 'approve')}>Approve</Button><Button size="sm" variant="outline" onClick={() => void decideRemoteRequest(request._id, 'deny')}>Deny</Button></div></div>)}</section>}
+      {reviewRequests.length > 0 && <section className="space-y-3 rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 sm:p-5"><div><h3 className="text-sm font-bold">Requests assigned to you</h3><p className="text-xs text-muted-foreground">Only the assigned approver and workspace owner can review requests. Proposed remote places remain private.</p></div>{reviewRequests.map((request) => <div key={request._id} className="flex flex-wrap items-start justify-between gap-4 rounded-xl border bg-card p-3"><div className="min-w-0 space-y-1"><p className="text-sm font-semibold">{request.requester?.name} · {request.requestType === 'remote' ? 'Remote' : 'Leave'} · {formatDate(request.startDate)} → {formatDate(request.endDate)}</p>{request.requestType === 'remote' && <><p className="text-xs">{request.remoteAreaName || request.proposedRemoteArea?.name || 'Private remote place'}</p>{request.proposedRemoteArea && <p className="text-xs text-muted-foreground">Proposed pin: {request.proposedRemoteArea.latitude.toFixed(5)}, {request.proposedRemoteArea.longitude.toFixed(5)}</p>}</>}<p className="text-xs text-muted-foreground">{request.reason}</p></div><div className="flex gap-2"><Button size="sm" onClick={() => void decideRequest(request._id, request.requestType || 'leave', 'approve')}>Approve</Button><Button size="sm" variant="outline" onClick={() => void decideRequest(request._id, request.requestType || 'leave', 'deny')}>Deny</Button></div></div>)}</section>}
       {/* 1. "Who's on Leave Today" Banner */}
       <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-card to-card border border-emerald-500/20 shadow-sm">
         <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
@@ -169,7 +172,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
           </div>
 
           <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto">
-            {(['all', 'pending', 'approved', 'denied'] as const).map((st) => (
+            {(['all', 'pending', 'approved', 'denied', 'expired'] as const).map((st) => (
               <Button
                 key={st}
                 type="button"
@@ -252,6 +255,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
                           <XCircle className="h-3 w-3" /> Denied
                         </Badge>
                       )}
+                      {leave.status === 'expired' && <Badge variant="outline" className="bg-slate-500/10 text-slate-500 border-slate-500/30 gap-1 text-[11px]">Expired</Badge>}
                     </td>
                     <td className="px-4 py-3 text-[11px] text-muted-foreground">
                       {leave.status === 'approved' && (
