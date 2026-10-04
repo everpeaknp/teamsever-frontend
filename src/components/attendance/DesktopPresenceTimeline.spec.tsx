@@ -3,107 +3,86 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { api } from '@/lib/axios';
 import { DesktopPresenceTimeline } from './DesktopPresenceTimeline';
 
-const { provisionDesktop, saveConsent } = vi.hoisted(() => ({ provisionDesktop: vi.fn(), saveConsent: vi.fn() }));
 vi.mock('@/lib/axios', () => ({ api: { get: vi.fn() } }));
-vi.mock('@/lib/desktopAttendance', () => ({ ensureTrustedDesktopDevice: provisionDesktop, setDesktopActivityConsent: saveConsent }));
+
+const roster = (canViewHistory = false) => ({
+  success: true,
+  data: {
+    members: [
+      { userId: 'u1', displayName: 'Ramon', avatar: null, presence: { appId: 'WhatsApp.Root', presenceStatus: 'active', reportedAt: '2026-10-04T10:00:00.000Z' } },
+      { userId: 'u2', displayName: 'Ada', avatar: null, presence: null },
+    ],
+    pagination: { nextCursor: null, hasMore: false, pageSize: 50 },
+    permissions: { canViewHistory },
+  },
+});
+
+const history = {
+  success: true,
+  data: {
+    member: { userId: 'u2', displayName: 'Ada', avatar: null },
+    summary: { apps: [{ appId: 'WhatsApp.Root', durationMs: 120_000, sessions: 2 }], activeMs: 120_000, afkMs: 60_000, gapMs: 30_000 },
+    items: [
+      { kind: 'app', id: 'app-1', appId: 'WhatsApp.Root', presenceStatus: 'active', startedAt: '2026-10-04T10:00:00.000Z', endedAt: '2026-10-04T10:02:00.000Z' },
+      { kind: 'gap', id: 'gap-1', reason: 'presence_heartbeat_missing', active: false, startedAt: '2026-10-04T09:00:00.000Z', endedAt: '2026-10-04T09:00:30.000Z' },
+    ],
+    pagination: { nextCursor: null, hasMore: false, pageSize: 50 },
+  },
+};
 
 describe('DesktopPresenceTimeline', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('keeps active, AFK, unavailable, legacy, and heartbeat gap states distinct', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { data: {
-      events: [
-        { appId: 'code.exe', presenceStatus: 'active', startedAt: '2026-10-01T09:00:00Z', endedAt: '2026-10-01T09:01:00Z' },
-        { appId: null, presenceStatus: 'afk', startedAt: '2026-10-01T08:00:00Z', endedAt: '2026-10-01T08:01:00Z' },
-        { appId: null, presenceStatus: 'unavailable', startedAt: '2026-10-01T07:00:00Z', endedAt: '2026-10-01T07:01:00Z' },
-        { appId: 'legacy', startedAt: '2026-10-01T06:00:00Z', endedAt: '2026-10-01T06:01:00Z' },
-      ],
-      gaps: [{ gapStartedAt: '2026-10-01T05:00:00Z', gapEndedAt: '2026-10-01T05:20:00Z', reason: 'presence_heartbeat_missing' }],
-    } } } as any);
-    render(<DesktopPresenceTimeline workspaceId="ws1" />);
-    expect(await screen.findByText('Active · Visual Studio Code')).toBeInTheDocument();
-    expect(screen.getByText('AFK')).toBeInTheDocument();
-    expect(screen.getByText('Unavailable')).toBeInTheDocument();
-    expect(screen.getByText(/Legacy sample/)).toBeInTheDocument();
-    expect(screen.getByText(/Tracking gap/)).toBeInTheDocument();
-    expect(screen.getByText(/activity during this interval is unknown/i)).toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.get).mockResolvedValue({ data: roster() } as any);
   });
 
-  it('does not offer a team query to a viewer without team permission', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { data: { events: [], gaps: [] } } } as any);
+  it('shows current app and active/AFK/not-reporting state person by person', async () => {
     render(<DesktopPresenceTimeline workspaceId="ws1" />);
-    expect(await screen.findByText(/No desktop presence intervals/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /team timeline/i })).not.toBeInTheDocument();
-    expect(String(vi.mocked(api.get).mock.calls[0][0])).not.toContain('userId=all');
+
+    expect(await screen.findByText('Ramon')).toBeInTheDocument();
+    expect(screen.getByText('WhatsApp')).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.getByText('Ada')).toBeInTheDocument();
+    expect(screen.getByText('Not reporting')).toBeInTheDocument();
+    expect(String(vi.mocked(api.get).mock.calls[0][0])).toContain('/desktop-presence/current');
   });
 
-  it('shows timeline errors without implying that there were no intervals', async () => {
-    vi.mocked(api.get).mockRejectedValue({ response: { data: { message: 'Active workspace membership required' } } });
+  it('does not offer a detailed history action without the server permission', async () => {
     render(<DesktopPresenceTimeline workspaceId="ws1" />);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Active workspace membership required');
-    expect(screen.queryByText(/No desktop presence intervals/)).not.toBeInTheDocument();
+
+    expect(await screen.findByText('Ada')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /view activity for ada/i })).not.toBeInTheDocument();
   });
 
-  it('lets an authorized manager filter the team timeline to one member', async () => {
-    vi.mocked(api.get).mockImplementation(async (url: any) => String(url).includes('/members')
-      ? { data: { data: [{ _id: 'member-1', name: 'Sam' }] } } as any
-      : { data: { data: { events: [], gaps: [] } } } as any);
-    render(<DesktopPresenceTimeline workspaceId="ws1" canViewTeam />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Show team timeline' }));
-    const memberSelect = await screen.findByLabelText('Member');
-    fireEvent.change(memberSelect, { target: { value: 'member-1' } });
-    await waitFor(() => expect(vi.mocked(api.get).mock.calls.some(([url]) => String(url).includes('userId=member-1'))).toBe(true));
-  });
-
-  it('shows app icons, distinct sessions, and combined usage time', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { data: {
-      events: [
-        { appId: 'code.exe', presenceStatus: 'active', startedAt: '2026-10-01T09:00:00Z', endedAt: '2026-10-01T09:01:00Z' },
-        { appId: 'chrome.exe', presenceStatus: 'active', startedAt: '2026-10-01T09:01:00Z', endedAt: '2026-10-01T09:02:00Z' },
-        { appId: 'code.exe', presenceStatus: 'active', startedAt: '2026-10-01T09:02:00Z', endedAt: '2026-10-01T09:03:00Z' },
-      ], gaps: [],
-    } } } as any);
+  it('loads one selected member history only after an authorized admin opens it', async () => {
+    vi.mocked(api.get).mockImplementation(async (url: any) => String(url).includes('/desktop-activity')
+      ? { data: history } as any
+      : { data: roster(true) } as any);
     render(<DesktopPresenceTimeline workspaceId="ws1" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /view activity for ada/i }));
+
     expect(await screen.findByText('App usage')).toBeInTheDocument();
-    expect(screen.getByText('Visual Studio Code')).toBeInTheDocument();
     expect(screen.getByText('2 sessions')).toBeInTheDocument();
-    expect(screen.getAllByLabelText('Visual Studio Code app icon').length).toBeGreaterThan(0);
-    expect(screen.getByText('2m')).toBeInTheDocument();
+    expect(screen.getAllByText(/Tracking gap/).length).toBeGreaterThan(0);
+    await waitFor(() => expect(vi.mocked(api.get).mock.calls.some(([url]) => String(url).includes('userId=u2'))).toBe(true));
+    expect(vi.mocked(api.get).mock.calls.filter(([url]) => String(url).includes('/desktop-activity')).every(([url]) => !String(url).includes('userId=all'))).toBe(true);
   });
 
-  it('displays WhatsApp UWP process ids as WhatsApp with its app icon', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { data: {
-      events: [{ appId: 'WhatsApp.Root', presenceStatus: 'active', startedAt: '2026-10-01T09:00:00Z', endedAt: '2026-10-01T09:01:00Z' }], gaps: [],
-    } } } as any);
+  it('appends roster pages rather than requesting team history', async () => {
+    vi.mocked(api.get).mockImplementation(async (url: any) => String(url).includes('cursor=')
+      ? { data: { data: { members: [{ userId: 'u3', displayName: 'Bea', avatar: null, presence: null }], pagination: { nextCursor: null, hasMore: false, pageSize: 50 }, permissions: { canViewHistory: false } } } } as any
+      : { data: { data: { ...roster().data, pagination: { nextCursor: 'next-page', hasMore: true, pageSize: 50 } } } } as any);
     render(<DesktopPresenceTimeline workspaceId="ws1" />);
-    expect(await screen.findByText('Active · WhatsApp')).toBeInTheDocument();
-    expect(screen.getAllByLabelText('WhatsApp app icon').length).toBeGreaterThan(0);
+
+    expect(await screen.findByRole('button', { name: /load more people/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /load more people/i }));
+
+    expect(await screen.findByText('Bea')).toBeInTheDocument();
+    expect(vi.mocked(api.get).mock.calls.every(([url]) => !String(url).includes('userId=all'))).toBe(true);
   });
 
-  it('attaches the paired laptop to a different-device shift only after an explicit action', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { data: { events: [], gaps: [] } } } as any);
-    provisionDesktop.mockResolvedValue({ deviceId: 'device-1' });
-    saveConsent.mockResolvedValue(undefined);
-    const getStatus = vi.fn()
-      .mockResolvedValueOnce({ clockedIn: true, clockedInOnThisDevice: false, presenceTrackingActive: false, workspaceId: 'ws1', activityMonitoringEnabled: false })
-      .mockResolvedValueOnce({ clockedIn: true, clockedInOnThisDevice: false, presenceTrackingActive: true, workspaceId: 'ws1', activityMonitoringEnabled: true });
-    const attachPresenceToActiveShift = vi.fn().mockResolvedValue({ attached: true });
-    Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: {
-      getStatus, getCapabilities: vi.fn().mockResolvedValue({ platform: 'win32', foregroundMonitoringSupported: true, idleDetectionSupported: true }),
-      getCurrentPresence: vi.fn().mockResolvedValue(null),
-      getPresenceDiagnostics: vi.fn().mockResolvedValue({ running: true, lastError: null, lastSuccessfulHeartbeatAt: new Date().toISOString() }),
-      attachPresenceToActiveShift,
-    } });
-    render(<DesktopPresenceTimeline workspaceId="ws1" />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Consent and track from this laptop' }));
-    await waitFor(() => expect(attachPresenceToActiveShift).toHaveBeenCalled());
-    expect(saveConsent).toHaveBeenCalledWith('device-1', true);
-    expect(await screen.findByText(/This laptop is reporting app and active\/AFK presence/)).toBeInTheDocument();
-    delete (window as any).teamseverDesktop;
-  });
-
-  it('shows the live foreground app session timer in the paired desktop', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { data: { events: [], gaps: [] } } } as any);
+  it('shows live foreground app timer in the paired desktop self context', async () => {
     Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: {
       getStatus: vi.fn().mockResolvedValue({ clockedIn: true, clockedInOnThisDevice: true, presenceTrackingActive: true, workspaceId: 'ws1', activityMonitoringEnabled: true }),
       getCapabilities: vi.fn().mockResolvedValue({ platform: 'win32', foregroundMonitoringSupported: true, idleDetectionSupported: true }),
@@ -111,23 +90,10 @@ describe('DesktopPresenceTimeline', () => {
       getPresenceDiagnostics: vi.fn().mockResolvedValue({ running: true, lastError: null, lastSuccessfulHeartbeatAt: new Date().toISOString() }),
     } });
     render(<DesktopPresenceTimeline workspaceId="ws1" />);
+
     expect(await screen.findByText('Current foreground app · Active')).toBeInTheDocument();
     expect(screen.getByText('Visual Studio Code')).toBeInTheDocument();
     expect(screen.getByText(/^00:00:\d\d$/)).toBeInTheDocument();
-    delete (window as any).teamseverDesktop;
-  });
-
-  it('does not claim desktop reports are being sent when the local reporter has failed', async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { data: { events: [], gaps: [] } } } as any);
-    Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: {
-      getStatus: vi.fn().mockResolvedValue({ clockedIn: true, clockedInOnThisDevice: true, presenceTrackingActive: true, workspaceId: 'ws1', activityMonitoringEnabled: true }),
-      getCapabilities: vi.fn().mockResolvedValue({ platform: 'win32', foregroundMonitoringSupported: true, idleDetectionSupported: true }),
-      getCurrentPresence: vi.fn().mockResolvedValue(null),
-      getPresenceDiagnostics: vi.fn().mockResolvedValue({ running: true, lastError: 'API returned 503', lastSuccessfulHeartbeatAt: null }),
-    } });
-    render(<DesktopPresenceTimeline workspaceId="ws1" />);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Desktop presence report failed: API returned 503');
-    expect(screen.queryByText(/This laptop is reporting app and active\/AFK presence/)).not.toBeInTheDocument();
     delete (window as any).teamseverDesktop;
   });
 });

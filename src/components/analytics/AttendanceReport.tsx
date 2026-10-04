@@ -260,7 +260,7 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
           <AttendanceRecordsView entries={reportData} loading={loading} error={reportError} onRetry={() => void fetchReport()} />
         </CardContent>
       </Card>
-      <DesktopPresenceTimeline workspaceId={workspaceId} canViewTeam={isAdmin} />
+      <DesktopPresenceTimeline workspaceId={workspaceId} />
     </div>
   );
 }
