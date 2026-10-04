@@ -25,6 +25,19 @@ Create one `Attendance` parent in workspace navigation with separate, deep-linka
 
 Each section receives a stable URL and a shared attendance page shell with a title, current-section indicator, and breadcrumb. Permission checks hide or disable management-only sections without hiding the member’s own attendance and request history. Existing workspace links should redirect to or resolve through the canonical sections so saved links continue to work.
 
+## Flutter mobile navigation
+
+Keep the existing compact bottom navigation and its Attendance destination. Make Attendance a mobile hub with distinct, native-feeling sections for Overview & Clock, Timesheets, Leave & Remote Requests, Presence & Activity, and Locations & Work Modes. Do not put every workflow into one long scrolling screen. Preserve existing screen patterns, loading/empty/error states, and deep links where the app already supports them.
+
+- Overview & Clock reuses the existing attendance summary and clock flow rather than creating a second clock state.
+- Timesheets presents the member’s clock records and any team view already authorized by backend permissions.
+- Leave & Remote Requests shows the member’s requests and, for authorized assigned approvers/managers, requests awaiting their decision. Keep private A→B request details restricted to the requester and authorized reviewer; keep existing DM cards working.
+- Presence & Activity reads backend desktop-presence data. It must identify those intervals as reported by a paired/trusted desktop and clearly say when no desktop reporter is connected. The phone must not claim to detect laptop foreground apps or AFK state itself.
+- Locations & Work Modes reuses the existing location screen and exposes manager-only configuration only when permitted.
+- Profile remains under More → Profile & Settings. Workspace timezone and attendance policies belong to workspace settings; expose timezone configuration in Flutter only for members with the existing settings permission.
+
+The same backend statuses and timezone rules are used by web and Flutter so requests cannot look pending in one client after expiring in another.
+
 ## Profile boundary
 
 Keep the account profile under the user/account area. It owns identity and personal preferences. Workspace attendance policy, team locations, and approval settings remain under Attendance. Where a personal profile setting affects attendance, show an explanatory link to the relevant Attendance section instead of duplicating the setting.
@@ -61,6 +74,5 @@ The backend is authoritative for expiry. Listing and decision endpoints must beh
 
 ## Out of scope
 
-- Reworking mobile/Flutter navigation in this change; the mobile client should continue to use the shared backend status contract and can be audited separately if its source is brought into scope.
-- Changing attendance calculations, clock event history, device pairing, presence collection, or location rules.
+- Changing attendance calculations, clock event history, device pairing, desktop presence collection, or location rules. Flutter only displays desktop presence reported by the backend.
 - Moving personal identity fields into the workspace Attendance area.
