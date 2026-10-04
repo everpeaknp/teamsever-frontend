@@ -71,5 +71,5 @@ export function LocationSessionMonitor({ workspaceId }: { workspaceId: string })
 
   if (state === 'loading' || state === 'idle') return null;
   const colors = state === 'inside' ? 'border-emerald-500/30 bg-emerald-500/5' : state === 'checking' ? 'border-blue-500/30 bg-blue-500/5' : 'border-amber-500/40 bg-amber-500/5';
-  return <div role="status" className={`mb-4 rounded-lg border p-3 text-sm ${colors}`}><strong>{state === 'inside' ? 'Location checked' : state === 'checking' ? 'Checking location…' : state === 'outside' ? 'Location outside assigned area' : 'Location unavailable'}</strong><p className="mt-1 text-muted-foreground">{message}</p></div>;
+  return <div role="status" className={`mt-2 rounded-lg border p-3 text-sm ${colors}`}><strong>{state === 'inside' ? 'Location checked' : state === 'checking' ? 'Checking location…' : state === 'outside' ? 'Location outside assigned area' : 'Location unavailable'}</strong><p className="mt-1 text-muted-foreground">{message}</p></div>;
 }

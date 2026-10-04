@@ -9,7 +9,6 @@ import { AttendanceReport } from '@/components/analytics/AttendanceReport';
 import { LeaveManagementTab } from '@/components/attendance/LeaveManagementTab';
 import { AttendanceLocationSettings } from '@/components/attendance/AttendanceLocationSettings';
 import { LocationReviewPanel } from '@/components/attendance/LocationReviewPanel';
-import { LocationSessionMonitor } from '@/components/attendance/LocationSessionMonitor';
 import { DesktopPresenceSettings } from '@/components/attendance/DesktopPresenceSettings';
 import { DesktopPresenceTimeline } from '@/components/attendance/DesktopPresenceTimeline';
 
@@ -36,7 +35,7 @@ export default function AttendanceSectionPage() {
   const Icon = detail.icon;
   return <main className="container mx-auto space-y-6 px-4 py-8 md:px-8">
     <div><Link className="text-sm text-muted-foreground hover:text-foreground" href={`/workspace/${workspaceId}/attendance`}>Attendance</Link><div className="mt-3 flex items-center gap-3"><Icon className="h-6 w-6 text-primary"/><h1 className="text-3xl font-bold tracking-tight">{detail.title}</h1></div></div>
-    {section === 'timesheets' && <><LocationSessionMonitor workspaceId={workspaceId}/><AttendanceReport workspaceId={workspaceId}/><LocationReviewPanel workspaceId={workspaceId}/></>}
+    {section === 'timesheets' && <><AttendanceReport workspaceId={workspaceId}/><LocationReviewPanel workspaceId={workspaceId}/></>}
     {section === 'leave-remote' && <LeaveManagementTab workspaceId={workspaceId}/>}
     {section === 'presence' && <><DesktopPresenceSettings workspaceId={workspaceId}/><DesktopPresenceTimeline workspaceId={workspaceId} canViewTeam={canManageLocations}/></>}
     {section === 'locations' && <AttendanceLocationSettings workspaceId={workspaceId}/>}

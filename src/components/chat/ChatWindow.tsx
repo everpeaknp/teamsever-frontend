@@ -174,7 +174,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     typingUsers,
     sendMessage,
     sendTypingIndicator,
-    loadMore
+    loadMore,
+    refetch: refetchMessages
   } = useChat({ 
     workspaceId, 
     channelId,
@@ -1113,8 +1114,9 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                     canManageLeaves={canManageLeaves}
                     isWorkspaceOwner={isWorkspaceOwner}
                     workspaceId={workspaceId || ''}
-                    onStatusUpdated={() => {
-                      // Status will sync via socket dm:updated
+                    onStatusUpdated={async () => {
+                      const refreshed = await refetchMessages(1, false);
+                      return refreshed?.find((item) => item._id === message._id)?.metadata?.status ?? null;
                     }}
                   />
                 </div>

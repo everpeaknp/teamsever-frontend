@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/axios';
 import { useAuthStore } from '@/store/useAuthStore';
+import { LocationSessionMonitor } from './LocationSessionMonitor';
 
 export function LocationReviewPanel({ workspaceId }: { workspaceId: string }) {
   const userId = useAuthStore((state) => state.user?._id || state.userId);
@@ -34,6 +35,7 @@ export function LocationReviewPanel({ workspaceId }: { workspaceId: string }) {
   const label = (event: any) => event.status === 'inside' ? 'Inside allowed area' : event.status === 'outside' ? 'Outside assigned area' : 'Location unavailable';
   return <section className="rounded-xl border bg-card p-5 space-y-4">
     <div><h2 className="text-lg font-semibold">Location status & review</h2><p className="text-sm text-muted-foreground">Unavailable or outside checks are review flags only. They do not clock anyone out or change recorded time.</p></div>
+    <div className="space-y-1 rounded-lg border bg-muted/20 p-3"><h3 className="text-sm font-medium">Live check for the current shift</h3><p className="text-xs text-muted-foreground">This status applies only to the running shift. Past clock-in verification stays with its attendance record.</p><LocationSessionMonitor workspaceId={workspaceId} /></div>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     <div className="space-y-2">{ownEvents.length ? ownEvents.map((event) => <div key={event._id} className="flex flex-wrap justify-between gap-2 rounded-lg border p-3 text-sm"><span>{label(event)}{event.activeReviewFlag && <strong className="ml-2 text-amber-600">Needs review</strong>}</span><time className="text-muted-foreground">{new Date(event.receivedAt).toLocaleString()}</time></div>) : <p className="text-sm text-muted-foreground">No location checks have been recorded for your current shifts.</p>}</div>
     {canManage && <div className="space-y-2 border-t pt-4"><h3 className="font-semibold">Active team flags</h3>{teamEvents.length ? teamEvents.map((event) => <div key={event._id} className="flex flex-wrap justify-between gap-2 rounded-lg border border-amber-500/30 p-3 text-sm"><span><strong>{event.user?.name || event.user?.email || 'Member'}</strong> · {label(event)}{event.reason && <span className="text-muted-foreground"> — {event.reason}</span>}</span><time className="text-muted-foreground">{new Date(event.receivedAt).toLocaleString()}</time></div>) : <p className="text-sm text-muted-foreground">No active team flags.</p>}</div>}

@@ -5,34 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Filter, User, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Download, Filter } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/store/useAuthStore';
-import { UserAvatar } from '@/components/ui/user-avatar';
 import { DesktopPresenceTimeline } from '@/components/attendance/DesktopPresenceTimeline';
-
-interface AttendanceEntry {
-  id: string;
-  user: any; // Full user object from backend
-  userName: string;
-  userEmail: string;
-  date: string;
-  clockIn: string;
-  clockOut: string;
-  totalHours: string;
-  durationFormatted: string;
-  description: string;
-  attendanceMode?: 'onsite' | 'remote';
-  clockInSource?: 'web' | 'desktop';
-  clockOutSource?: 'web' | 'desktop' | null;
-  clockInLocation?: { areaName?: string; latitude?: number; longitude?: number; accuracyMeters?: number } | null;
-  clockInVerificationMethod?: 'gps' | 'network_confirmed' | null;
-  clockOutLocation?: { latitude?: number; longitude?: number; distanceFromClockInMeters?: number; withinRange?: boolean } | null;
-  locationReviewReason?: string | null;
-}
+import { AttendanceRecordsView } from './AttendanceRecordsView';
+import type { AttendanceReportEntry } from './attendanceReportTypes';
 
 interface Member {
   _id: string;
@@ -43,9 +23,10 @@ interface Member {
 
 export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
   const { user, can } = useAuthStore();
-  const [reportData, setReportData] = useState<AttendanceEntry[]>([]);
+  const [reportData, setReportData] = useState<AttendanceReportEntry[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reportError, setReportError] = useState('');
   const [period, setPeriod] = useState<string>('30d');
   const [filters, setFilters] = useState({
     startDate: format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd'),
@@ -123,6 +104,7 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
     if (!workspaceId || workspaceId === 'undefined') return;
 
     try {
+      setReportError('');
       setLoading(true);
       const queryParams = new URLSearchParams();
       if (filters.startDate) queryParams.append('startDate', filters.startDate);
@@ -133,6 +115,7 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
       setReportData(response.data.data);
     } catch (error) {
       console.error('Failed to fetch report:', error);
+      setReportError((error as any)?.response?.data?.message || (error instanceof Error ? error.message : 'Failed to load the attendance report.'));
       toast.error('Failed to update report');
     } finally {
       setLoading(false);
@@ -188,27 +171,27 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-4 sm:space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-xl font-bold">Attendance Report</CardTitle>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+        <CardHeader className="flex flex-col items-stretch justify-between gap-3 space-y-0 px-3.5 pb-2 pt-4 sm:flex-row sm:items-center sm:px-6 sm:pt-6">
+          <CardTitle className="text-lg font-bold sm:text-xl">Attendance Report</CardTitle>
+          <div className="grid grid-cols-2 gap-2 sm:flex">
+            <Button variant="outline" onClick={handleExport} className="min-h-11 gap-2 px-3 sm:h-9 sm:min-h-9">
               <Download className="w-4 h-4" />
               CSV
             </Button>
-            <Button variant="outline" size="sm" onClick={handleExportExcel} className="gap-2">
+            <Button variant="outline" onClick={handleExportExcel} className="min-h-11 gap-2 px-3 sm:h-9 sm:min-h-9">
               <Download className="w-4 h-4" />
               Excel
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <CardContent className="min-w-0 px-3.5 pb-4 sm:px-6 sm:pb-6">
+          <div className="mb-4 grid min-w-0 grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:gap-4 lg:mb-6 lg:grid-cols-5">
             <div className="space-y-2">
               <label className="text-sm font-medium">Time Period</label>
               <Select value={period} onValueChange={handlePeriodChange}>
-                <SelectTrigger>
+                <SelectTrigger className="h-11 min-h-11">
                   <SelectValue placeholder="Select Period" />
                 </SelectTrigger>
                 <SelectContent>
@@ -223,18 +206,20 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
             
             {period === 'custom' && (
               <>
-                <div className="space-y-2">
+                <div className="min-w-0 space-y-2">
                   <label className="text-sm font-medium">Start Date</label>
                   <Input 
                     type="date" 
+                    className="h-11 min-w-0 px-2 text-sm sm:px-3"
                     value={filters.startDate} 
                     onChange={(e) => setFilters({...filters, startDate: e.target.value})}
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="min-w-0 space-y-2">
                   <label className="text-sm font-medium">End Date</label>
                   <Input 
                     type="date" 
+                    className="h-11 min-w-0 px-2 text-sm sm:px-3"
                     value={filters.endDate} 
                     onChange={(e) => setFilters({...filters, endDate: e.target.value})}
                   />
@@ -249,7 +234,7 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
                   value={filters.userId} 
                   onValueChange={(val) => setFilters({...filters, userId: val})}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11 min-h-11">
                     <SelectValue placeholder="All Members" />
                   </SelectTrigger>
                   <SelectContent>
@@ -264,114 +249,15 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
               </div>
             )}
             
-            <div className="flex items-end">
-              <Button onClick={fetchReport} variant="outline" className="w-full gap-2" disabled={loading}>
+            <div className="flex min-w-0 items-end min-[360px]:col-span-2 lg:col-span-1">
+              <Button onClick={fetchReport} variant="outline" className="h-11 w-full gap-2" disabled={loading}>
                 <Filter className="w-4 h-4" />
                 Refresh
               </Button>
             </div>
           </div>
 
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Clock In</TableHead>
-                  <TableHead>Clock Out</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Clock-in location</TableHead>
-                  <TableHead>Clock-out location</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-10">
-                      <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                        <Clock className="w-5 h-5 animate-spin" />
-                        Loading report data...
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : reportData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                      No attendance records found for the selected period.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  reportData.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <UserAvatar 
-                            user={entry.user} 
-                            className="w-9 h-9 border border-white/10" 
-                          />
-                          <div className="flex flex-col">
-                            <span className="font-medium">{entry.userName}</span>
-                            <span className="text-xs text-muted-foreground">{entry.userEmail}</span>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <CalendarIcon className="w-4 h-4 text-muted-foreground" />
-                          {entry.date}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                          {format(new Date(entry.clockIn), 'p')}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={entry.clockOut.includes('Running') ? 'text-blue-500 font-bold animate-pulse' : 'text-rose-600 dark:text-rose-400 font-medium'}>
-                          {entry.clockOut.includes('Running') ? (
-                            <div className="flex items-center gap-1">
-                              <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-                              Running
-                            </div>
-                          ) : format(new Date(entry.clockOut), 'p')}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2 font-mono">
-                          <Clock className="w-3 h-3" />
-                          {entry.durationFormatted}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-xs">
-                          <div>{entry.clockInLocation?.areaName || (entry.attendanceMode === 'remote' ? 'Remote area' : 'Office')}</div>
-                          <div className="text-muted-foreground">{entry.clockInLocation?.latitude != null && entry.clockInLocation?.longitude != null ? `${entry.clockInLocation.latitude.toFixed(5)}, ${entry.clockInLocation.longitude.toFixed(5)}` : entry.clockInLocation ? 'Location hidden' : 'Location not recorded'}</div>
-                          <div className="text-muted-foreground">Source: {entry.clockInSource === 'desktop' ? 'Trusted desktop' : 'Web'}</div>
-                          {(entry.clockInVerificationMethod === 'gps' || entry.clockInVerificationMethod === 'network_confirmed') && (
-                            <details className="mt-1">
-                              <summary className="inline-flex cursor-pointer list-none items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-400">
-                                Location verified
-                              </summary>
-                              <p className="mt-1 max-w-56 text-muted-foreground">
-                                {entry.clockInVerificationMethod === 'network_confirmed'
-                                  ? 'GPS was imprecise; the registered network also matched and the location uncertainty overlapped this area.'
-                                  : 'The GPS location matched an allowed attendance area.'}
-                              </p>
-                            </details>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {entry.clockOutLocation ? <div className="text-xs"><div>{entry.clockOutLocation.latitude != null && entry.clockOutLocation.longitude != null ? `${entry.clockOutLocation.latitude.toFixed(5)}, ${entry.clockOutLocation.longitude.toFixed(5)}` : 'Location hidden'}</div><div className={entry.clockOutLocation.withinRange ? 'text-emerald-600' : 'text-amber-600'}>{entry.clockOutLocation.distanceFromClockInMeters != null ? `${entry.clockOutLocation.distanceFromClockInMeters} m from clock-in` : 'Distance unavailable'}</div><div className="text-muted-foreground">Source: {entry.clockOutSource === 'desktop' ? 'Trusted desktop' : entry.clockOutSource === 'web' ? 'Web' : 'Not recorded'}</div></div> : <span className="text-xs text-muted-foreground">{entry.clockOut === 'Running' ? '—' : 'Location not recorded'}</span>}
-                        {entry.locationReviewReason && <div className="mt-1 text-xs text-amber-600" title={entry.locationReviewReason}>Review: {entry.locationReviewReason}</div>}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <AttendanceRecordsView entries={reportData} loading={loading} error={reportError} onRetry={() => void fetchReport()} />
         </CardContent>
       </Card>
       <DesktopPresenceTimeline workspaceId={workspaceId} canViewTeam={isAdmin} />

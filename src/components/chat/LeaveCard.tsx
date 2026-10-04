@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Calendar, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Calendar, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Loader2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -43,7 +43,15 @@ interface LeaveCardProps {
   canManageLeaves: boolean;
   isWorkspaceOwner: boolean;
   workspaceId: string;
-  onStatusUpdated?: () => void;
+  onStatusUpdated?: () => Promise<string | null | undefined> | string | null | undefined | void;
+}
+
+type RequestStatus = 'pending' | 'approved' | 'denied' | 'expired';
+
+function terminalStatusFromError(error: any): RequestStatus | null {
+  const message = error?.response?.data?.message || '';
+  const match = String(message).match(/already been (approved|denied|expired)/i);
+  return match ? match[1].toLowerCase() as RequestStatus : null;
 }
 
 export function LeaveCard({
@@ -55,7 +63,11 @@ export function LeaveCard({
   onStatusUpdated,
 }: LeaveCardProps) {
   const meta = message.metadata || {};
-  const status = meta.status || 'pending';
+  const [statusOverride, setStatusOverride] = useState<RequestStatus | null>(null);
+  const [statusRefreshRequired, setStatusRefreshRequired] = useState(false);
+  const [statusRefreshing, setStatusRefreshing] = useState(false);
+  const [statusRefreshError, setStatusRefreshError] = useState('');
+  const status = statusOverride || meta.status || 'pending';
   const leaveRequestId = meta.leaveRequestId;
   const isRemoteRequest = meta.requestType === 'remote';
 
@@ -64,6 +76,53 @@ export function LeaveCard({
   const [denialReason, setDenialReason] = useState('');
 
   const isRequester = message.sender._id === currentUserId;
+
+  useEffect(() => {
+    if (meta.status && meta.status !== 'pending') {
+      setStatusOverride(null);
+      setStatusRefreshRequired(false);
+      setStatusRefreshError('');
+    }
+  }, [message._id, meta.status]);
+
+  const refreshRequestStatus = async () => {
+    if (!onStatusUpdated) {
+      setStatusRefreshError('Could not refresh the conversation. The action stays disabled until you retry.');
+      return false;
+    }
+    setStatusRefreshing(true);
+    setStatusRefreshError('');
+    try {
+      const refreshedStatus = await onStatusUpdated();
+      if (typeof refreshedStatus === 'string' && ['pending', 'approved', 'denied', 'expired'].includes(refreshedStatus)) {
+        setStatusOverride(refreshedStatus as RequestStatus);
+        setStatusRefreshRequired(false);
+      } else if (refreshedStatus === null) {
+        throw new Error('Request status was not returned.');
+      }
+      return true;
+    } catch {
+      setStatusRefreshError('Could not refresh the conversation. The action stays disabled until you retry.');
+      return false;
+    } finally {
+      setStatusRefreshing(false);
+    }
+  };
+
+  const handleDecisionError = async (err: any, fallback: string) => {
+    const resolvedStatus = terminalStatusFromError(err);
+    if (err?.response?.status === 409 || resolvedStatus) {
+      setShowDenyPopover(false);
+      setStatusRefreshRequired(!resolvedStatus);
+      setStatusOverride(resolvedStatus);
+      toast.info(resolvedStatus
+        ? `This request was already ${resolvedStatus}. Showing its current status.`
+        : 'This request may have changed. Refreshing its status…');
+      await refreshRequestStatus();
+      return;
+    }
+    toast.error(err.response?.data?.message || fallback);
+  };
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -76,11 +135,12 @@ export function LeaveCard({
     setIsProcessing(true);
     try {
       await api.patch(`/workspaces/${workspaceId}/leaves/${leaveRequestId}/approve`);
+      setStatusOverride('approved');
       toast.success(`${isRemoteRequest ? 'Remote work' : 'Leave'} request approved!`);
-      if (onStatusUpdated) onStatusUpdated();
+      await refreshRequestStatus();
     } catch (err: any) {
       console.error('[LeaveCard] Approve error:', err);
-      toast.error(err.response?.data?.message || 'Failed to approve leave');
+      await handleDecisionError(err, 'Failed to approve leave');
     } finally {
       setIsProcessing(false);
     }
@@ -93,13 +153,14 @@ export function LeaveCard({
       await api.patch(`/workspaces/${workspaceId}/leaves/${leaveRequestId}/deny`, {
         denialReason: denialReason.trim() || undefined,
       });
+      setStatusOverride('denied');
       toast.success('Leave request denied');
       setShowDenyPopover(false);
       setDenialReason('');
-      if (onStatusUpdated) onStatusUpdated();
+      await refreshRequestStatus();
     } catch (err: any) {
       console.error('[LeaveCard] Deny error:', err);
-      toast.error(err.response?.data?.message || 'Failed to deny leave');
+      await handleDecisionError(err, 'Failed to deny leave');
     } finally {
       setIsProcessing(false);
     }
@@ -205,8 +266,12 @@ export function LeaveCard({
           </div>
         )}
 
+        {status !== 'pending' && <p className="rounded-md bg-muted/30 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">{status === 'expired' ? 'This request expired because its end date passed before a decision was made.' : status === 'approved' ? 'This request has been approved and is now closed.' : 'This request has been denied and is now closed.'}</p>}
+        {statusRefreshRequired && <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-muted-foreground" role={statusRefreshError ? 'alert' : 'status'}><p>{statusRefreshing ? 'Refreshing request status…' : statusRefreshError || 'This request changed elsewhere. Refresh its status before taking action.'}</p>{!statusRefreshing && <Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => void refreshRequestStatus()}><RefreshCw className="mr-2 h-3.5 w-3.5"/>Retry status refresh</Button>}</div>}
+        {!statusRefreshRequired && statusRefreshError && <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-muted-foreground" role="alert"><p>{statusRefreshError}</p><Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => void refreshRequestStatus()}><RefreshCw className="mr-2 h-3.5 w-3.5"/>Refresh conversation</Button></div>}
+
         {/* Action Buttons for Managers with MANAGE_LEAVES permission */}
-        {status === 'pending' && canManageLeaves && (!isRequester || isWorkspaceOwner) && (
+        {status === 'pending' && !statusRefreshRequired && canManageLeaves && (!isRequester || isWorkspaceOwner) && (
           <div className="flex items-center gap-2 pt-2 border-t border-border/50">
             <Button
               type="button"

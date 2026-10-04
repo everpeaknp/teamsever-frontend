@@ -81,7 +81,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
   const { addMessage: addMessageToStore } = useChatStore();
 
   // Fetch initial messages
-  const fetchMessages = useCallback(async (pageNum: number = 1, append: boolean = false) => {
+  const fetchMessages = useCallback(async (pageNum: number = 1, append: boolean = false): Promise<ChatMessage[] | null> => {
     try {
       if (append) {
         setLoadingMore(true);
@@ -95,7 +95,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
         setError('Authentication required');
         setLoading(false);
         setLoadingMore(false);
-        return;
+        return null;
       }
 
       let response;
@@ -116,7 +116,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       } else {
         setLoading(false);
         setLoadingMore(false);
-        return;
+        return null;
       }
 
       if (response?.data?.success) {
@@ -134,9 +134,12 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
         
         setHasMore(pagination?.hasMore || false);
         setPage(pageNum);
+        return newMessages;
       }
+      return null;
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Failed to load messages');
+      return null;
     } finally {
       setLoading(false);
       setLoadingMore(false);
