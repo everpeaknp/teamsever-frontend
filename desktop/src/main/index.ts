@@ -38,7 +38,7 @@ const presenceSession = new DesktopPresenceSession({
     return { workspaceId: String(data.workspaceId), timeEntryId: String(data.timeEntryId), startTime: String(data.startTime), activityMonitoringEnabled: true, clockedIn: true };
   },
   getAfkThresholdMinutes: async (workspaceId) => {
-    const result = await authorizedFetch('/attendance/workspace/' + workspaceId + '/desktop-presence-policy');
+    const result = await authorizedFetch('/attendance/desktop/workspace/' + workspaceId + '/presence-policy');
     return Number(result.data?.policy?.afkThresholdMinutes);
   },
   readIdleSeconds: () => powerMonitor.getSystemIdleTime(),
