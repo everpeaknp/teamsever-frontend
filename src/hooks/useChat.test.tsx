@@ -55,4 +55,51 @@ describe('useChat live DM updates', () => {
     } }));
     expect(result.current.messages[0].metadata?.status).toBe('approved');
   });
+
+  it('keeps an incoming DM that arrives while the first history request is loading', async () => {
+    let resolveHistory!: (value: any) => void;
+    vi.mocked(api.get).mockReturnValueOnce(new Promise(resolve => { resolveHistory = resolve; }) as any);
+    const socket = fakeSocket();
+    socketContext.socket = socket;
+    const { result } = renderHook(() => useChat({
+      type: 'direct', workspaceId: 'workspace', conversationId: 'conversation', userId: 'manager',
+    }));
+
+    await waitFor(() => expect(socket.on).toHaveBeenCalledWith('dm:new', expect.any(Function)));
+    act(() => socket.handlers.get('dm:new')?.({ message: {
+      _id: 'arrived-live', conversation: 'conversation', content: 'Leave request',
+      sender: { _id: 'requester', name: 'Requester' }, createdAt: new Date().toISOString(),
+      type: 'leave_request', metadata: { status: 'pending' },
+    } }));
+    await act(async () => {
+      resolveHistory({ data: { success: true, data: [] } });
+    });
+
+    expect(result.current.messages.map(message => message._id)).toContain('arrived-live');
+  });
+
+  it('keeps a live approval when the initial history response contains the older pending card', async () => {
+    let resolveHistory!: (value: any) => void;
+    vi.mocked(api.get).mockReturnValueOnce(new Promise(resolve => { resolveHistory = resolve; }) as any);
+    const socket = fakeSocket();
+    socketContext.socket = socket;
+    const { result } = renderHook(() => useChat({
+      type: 'direct', workspaceId: 'workspace', conversationId: 'conversation', userId: 'manager',
+    }));
+
+    await waitFor(() => expect(socket.on).toHaveBeenCalledWith('dm:updated', expect.any(Function)));
+    act(() => socket.handlers.get('dm:updated')?.({ message: {
+      _id: 'request-message', conversation: 'conversation', type: 'leave_request',
+      metadata: { status: 'approved' },
+    } }));
+    await act(async () => {
+      resolveHistory({ data: { success: true, data: [{
+        _id: 'request-message', conversation: 'conversation', content: 'Leave request',
+        sender: { _id: 'requester', name: 'Requester' }, createdAt: new Date().toISOString(),
+        type: 'leave_request', metadata: { status: 'pending' },
+      }] } });
+    });
+
+    expect(result.current.messages[0].metadata?.status).toBe('approved');
+  });
 });

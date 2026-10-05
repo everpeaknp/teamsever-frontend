@@ -67,6 +67,9 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(1);
+  // Socket messages can arrive before the initial history request completes.
+  // Keep their latest versions so an older HTTP snapshot cannot erase them.
+  const socketMessagesRef = useRef<Map<string, ChatMessage>>(new Map());
   
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const onInitialLoadRef = useRef(onInitialLoad);
@@ -123,13 +126,20 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       }
 
       if (response?.data?.success) {
-        const newMessages = response.data.data || [];
+        const newMessages: ChatMessage[] = response.data.data || [];
         const pagination = response.data.pagination;
         
         if (append) {
           setMessages(prev => [...newMessages, ...prev]);
         } else {
-          setMessages(newMessages);
+          const merged = new Map<string, ChatMessage>(
+            newMessages.map(message => [String(message._id), message])
+          );
+          socketMessagesRef.current.forEach((message, id) => {
+            const historyMessage = merged.get(id);
+            merged.set(id, historyMessage ? { ...historyMessage, ...message } : message);
+          });
+          setMessages(Array.from(merged.values()));
           if (onInitialLoadRef.current) {
             setTimeout(() => onInitialLoadRef.current?.(), 100);
           }
@@ -207,8 +217,9 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       const isTargetDM = type === 'direct' && conversationId && msg.conversation === conversationId;
 
       if (isTargetChannel || isTargetDM) {
+        if (msg._id) socketMessagesRef.current.set(String(msg._id), msg);
         setMessages(prev => {
-          if (prev.some(m => m._id === msg._id)) return prev;
+          if (prev.some(m => String(m._id) === String(msg._id))) return prev;
           return [...prev, msg];
         });
         
@@ -256,8 +267,14 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
 
     const handleDMUpdated = (data: { message: ChatMessage }) => {
       if (data.message) {
+        const id = String(data.message._id);
+        const previousSocketMessage = socketMessagesRef.current.get(id);
+        const updatedMessage = previousSocketMessage
+          ? { ...previousSocketMessage, ...data.message }
+          : data.message;
+        socketMessagesRef.current.set(id, updatedMessage);
         setMessages(prev =>
-          prev.map(m => (m._id === data.message._id ? { ...m, ...data.message } : m))
+          prev.map(m => (String(m._id) === id ? { ...m, ...updatedMessage } : m))
         );
       }
     };
@@ -290,6 +307,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
   useEffect(() => {
     if ((type === 'workspace' && (channelId || workspaceId)) || (type === 'direct' && conversationId)) {
       setMessages([]); // Clear messages when switching channels
+      socketMessagesRef.current.clear();
       fetchMessages(1, false);
     }
   }, [fetchMessages, type, workspaceId, channelId, conversationId, filterUserId, filterFolderId]);
