@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getSocket, joinDM, leaveDM } from '@/lib/socket';
+import { joinDM, leaveDM } from '@/lib/socket';
+import { useSocket } from '@/contexts/SocketContext';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { api } from '@/lib/axios';
 
@@ -69,7 +70,9 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
   
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const onInitialLoadRef = useRef(onInitialLoad);
-  const socket = getSocket();
+  // Read the socket from React context so a chat mounted before socket
+  // initialization re-subscribes as soon as the provider publishes it.
+  const { socket } = useSocket();
   const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
   
   // Update ref when callback changes

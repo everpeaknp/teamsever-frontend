@@ -46,6 +46,7 @@ coverage
 !src/components/chat/LeaveCard.test.tsx
 !src/components/layout/DesktopDownloadButton.spec.tsx
 !src/components/layout/AppUpdateNotifier.spec.tsx
+!src/components/layout/MobileWorkspaceTabBar.spec.tsx
 !src/components/attendance/DesktopPresenceSettings.spec.tsx
 !src/components/attendance/DesktopPresenceTimeline.spec.tsx
 !desktop/**/*.test.ts

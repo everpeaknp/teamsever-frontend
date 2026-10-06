@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Activity, MapPin } from 'lucide-react';
 import { api } from '@/lib/axios';
 
 function readLocation(): Promise<any> {
@@ -70,6 +71,33 @@ export function LocationSessionMonitor({ workspaceId }: { workspaceId: string })
   }, [workspaceId]);
 
   if (state === 'loading' || state === 'idle') return null;
-  const colors = state === 'inside' ? 'border-emerald-500/30 bg-emerald-500/5' : state === 'checking' ? 'border-blue-500/30 bg-blue-500/5' : 'border-amber-500/40 bg-amber-500/5';
-  return <div role="status" className={`mb-4 rounded-lg border p-3 text-sm ${colors}`}><strong>{state === 'inside' ? 'Location checked' : state === 'checking' ? 'Checking location…' : state === 'outside' ? 'Location outside assigned area' : 'Location unavailable'}</strong><p className="mt-1 text-muted-foreground">{message}</p></div>;
+  const label = state === 'inside'
+    ? 'Location verified'
+    : state === 'checking'
+      ? 'Checking location…'
+      : state === 'outside'
+        ? 'Location outside assigned area'
+        : 'Location check needs attention';
+  const tone = state === 'inside'
+    ? 'text-emerald-600 dark:text-emerald-400'
+    : state === 'checking'
+      ? 'text-muted-foreground'
+      : 'text-amber-700 dark:text-amber-300';
+  const icon = state === 'checking' ? Activity : MapPin;
+  const Icon = icon;
+
+  return (
+    <div className="border-b px-6 py-2.5">
+      <div role="status" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+        <Icon className={`h-3.5 w-3.5 ${tone}`} aria-hidden="true" />
+        <span className={`font-medium ${tone}`}>{label}</span>
+        {(state === 'outside' || state === 'unavailable') && (
+          <details className="text-muted-foreground">
+            <summary className="cursor-pointer select-none underline underline-offset-2">Details</summary>
+            <p className="mt-1 max-w-xl text-xs">{message} Your recorded time is unchanged.</p>
+          </details>
+        )}
+      </div>
+    </div>
+  );
 }

@@ -81,6 +81,7 @@ export function LeaveCard({
     } catch (err: any) {
       console.error('[LeaveCard] Approve error:', err);
       toast.error(err.response?.data?.message || 'Failed to approve leave');
+      onStatusUpdated?.();
     } finally {
       setIsProcessing(false);
     }
@@ -100,17 +101,18 @@ export function LeaveCard({
     } catch (err: any) {
       console.error('[LeaveCard] Deny error:', err);
       toast.error(err.response?.data?.message || 'Failed to deny leave');
+      onStatusUpdated?.();
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="w-full max-w-sm rounded-xl border border-border bg-card shadow-sm overflow-hidden text-card-foreground my-1.5 transition-all">
+    <div data-testid="leave-request-card" className="w-fit max-w-[min(82vw,30rem)] rounded-xl border border-border bg-card shadow-sm overflow-hidden text-card-foreground my-1 transition-all">
       {/* Top Banner / Status */}
       <div
         className={cn(
-          'flex items-center justify-between px-3.5 py-2 text-xs font-semibold border-b',
+          'flex items-center justify-between gap-4 px-3 py-1.5 text-xs font-semibold border-b',
           status === 'pending' && 'bg-amber-500/10 text-amber-500 border-amber-500/20',
           status === 'approved' && 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
           status === 'denied' && 'bg-rose-500/10 text-rose-500 border-rose-500/20'
@@ -144,21 +146,16 @@ export function LeaveCard({
       </div>
 
       {/* Body Content */}
-      <div className="p-3.5 space-y-2.5 text-xs">
+      <div className="px-3 py-2.5 space-y-2 text-xs">
         {/* Requester & Date Range */}
-        <div className="flex items-center justify-between text-muted-foreground pb-2 border-b border-border/50">
-          <div>
-            <span className="text-foreground font-semibold">{message.sender.name}</span>
-            <span className="block text-[11px] text-muted-foreground">
-              {formatDate(meta.startDate)} → {formatDate(meta.endDate)}
+        <div className="flex items-center justify-between gap-3 text-muted-foreground">
+          <div className="min-w-0">
+            <span className="font-semibold text-foreground">{message.sender.name}</span>
+            <span className="ml-2 whitespace-nowrap text-[11px]">
+              {formatDate(meta.startDate)}{meta.endDate && meta.endDate !== meta.startDate ? ` – ${formatDate(meta.endDate)}` : ''}
             </span>
           </div>
-          <div className="text-right">
-            <span className="text-sm font-bold text-foreground">{meta.daysCount || 1}</span>
-            <span className="block text-[10px] text-muted-foreground">
-              day{(meta.daysCount || 1) > 1 ? 's' : ''}
-            </span>
-          </div>
+          <span className="shrink-0 text-[11px]">{meta.daysCount || 1}d</span>
         </div>
 
         {isRemoteRequest && <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Private remote place</span><p className="mt-0.5 text-xs">{meta.proposedRemoteArea?.name || meta.remoteAreaName || 'Existing approved private place'}</p>{meta.proposedRemoteArea?.latitude != null && meta.proposedRemoteArea.longitude != null && <p className="text-[10px] text-muted-foreground">{meta.proposedRemoteArea.latitude.toFixed(5)}, {meta.proposedRemoteArea.longitude.toFixed(5)} · shared in this DM only</p>}</div>}
@@ -166,7 +163,7 @@ export function LeaveCard({
         {/* Reason (Compulsory) */}
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Reason</span>
-          <p className="text-xs text-foreground/90 mt-0.5 whitespace-pre-wrap bg-muted/30 p-2 rounded-md border border-border/40">
+          <p className="text-xs text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">
             {meta.reason || message.content}
           </p>
         </div>
@@ -191,15 +188,13 @@ export function LeaveCard({
 
         {/* Status resolved footer */}
         {status === 'approved' && meta.approvedBy && (
-          <div className="text-[10px] text-muted-foreground pt-1 flex items-center justify-between">
-            <span>Approved by {meta.approvedBy.name}</span>
-            {meta.approvedAt && <span>{new Date(meta.approvedAt).toLocaleDateString()}</span>}
+          <div className="text-[10px] text-muted-foreground">
+            Approved by {meta.approvedBy.name}{meta.approvedAt ? ` · ${new Date(meta.approvedAt).toLocaleDateString()}` : ''}
           </div>
         )}
         {status === 'denied' && meta.deniedBy && (
-          <div className="text-[10px] text-muted-foreground pt-1 flex items-center justify-between">
-            <span>Denied by {meta.deniedBy.name}</span>
-            {meta.deniedAt && <span>{new Date(meta.deniedAt).toLocaleDateString()}</span>}
+          <div className="text-[10px] text-muted-foreground">
+            Denied by {meta.deniedBy.name}{meta.deniedAt ? ` · ${new Date(meta.deniedAt).toLocaleDateString()}` : ''}
           </div>
         )}
 

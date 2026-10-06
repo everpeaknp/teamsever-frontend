@@ -49,7 +49,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
-import { api } from '@/lib/axios';
+import { api, getValidAuthToken } from '@/lib/axios';
 import UpgradeButton from '@/components/subscription/UpgradeButton';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
@@ -403,6 +403,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   // Fetch hierarchy using the optimized endpoint
   const loadHierarchy = useCallback(async () => {
     if (!workspaceId) return;
+    if (!getValidAuthToken()) return;
 
     if (!/^[0-9a-fA-F]{24}$/.test(workspaceId)) {
       console.error('Invalid workspace ID format:', workspaceId);
@@ -533,7 +534,9 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
         }
       }
     } catch (err: any) {
-      console.error('Failed to load hierarchy:', err);
+      if (err.response?.status !== 401 && err.message !== 'No valid authentication token') {
+        console.error('Failed to load hierarchy:', err);
+      }
       
       if (err.response?.status === 404) {
         setTimeout(() => {

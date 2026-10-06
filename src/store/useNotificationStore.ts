@@ -264,7 +264,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       // Check if VAPID key is configured
       let vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
       if (!vapidKey) {
-        console.error('❌ VAPID key not configured in environment variables');
+        console.warn('Web push is disabled: NEXT_PUBLIC_FIREBASE_VAPID_KEY is not configured.');
         return;
       }
       

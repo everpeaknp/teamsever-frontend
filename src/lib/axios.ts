@@ -2,6 +2,23 @@ import axios from 'axios'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
+export function getValidAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+  if (!token) return null;
+
+  const normalized = token.trim();
+  if (
+    !normalized ||
+    ['undefined', 'null', 'Bearer undefined', 'Bearer null'].includes(normalized)
+  ) {
+    return null;
+  }
+
+  return normalized;
+}
+
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
   headers: {
@@ -40,19 +57,11 @@ api.interceptors.request.use(
       }
       
       // Prioritize 'authToken' as it is the current standard
-      let token = localStorage.getItem('authToken');
-      if (!token || token === 'undefined' || token === 'null') {
-        token = localStorage.getItem('token');
-      }
+      const token = getValidAuthToken();
       
       // STRICT VALIDATION: Block request if token is invalid
       // This prevents "jwt malformed" errors on backend
-      if (!token || 
-          token === 'undefined' || 
-          token === 'null' || 
-          token.trim() === '' ||
-          token === 'Bearer undefined' ||
-          token === 'Bearer null') {
+      if (!token) {
         
         // Clear ALL invalid tokens silently
         localStorage.removeItem('token');

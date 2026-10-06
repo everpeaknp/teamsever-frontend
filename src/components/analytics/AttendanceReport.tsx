@@ -7,12 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Download, Filter, User, Calendar as CalendarIcon, Clock } from 'lucide-react';
-import { api } from '@/lib/axios';
+import { api, getValidAuthToken } from '@/lib/axios';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { useAuthStore } from '@/store/useAuthStore';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { DesktopPresenceTimeline } from '@/components/attendance/DesktopPresenceTimeline';
+import { LiveAttendanceTimers } from '@/components/attendance/LiveAttendanceTimers';
+import { LocationSessionMonitor } from '@/components/attendance/LocationSessionMonitor';
 
 interface AttendanceEntry {
   id: string;
@@ -59,6 +61,10 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
   useEffect(() => {
     const fetchInitialData = async () => {
       if (!workspaceId || workspaceId === 'undefined') return;
+      if (!getValidAuthToken()) {
+        setLoading(false);
+        return;
+      }
       
       try {
         setLoading(true);
@@ -75,7 +81,9 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
            setMembers(membersRes.data.data);
         }
       } catch (error) {
-        console.error('Failed to fetch attendance initial data:', error);
+        if ((error as any).response?.status !== 401) {
+          console.error('Failed to fetch attendance initial data:', error);
+        }
       } finally {
         setLoading(false);
       }
@@ -121,6 +129,10 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
 
   const fetchReport = async () => {
     if (!workspaceId || workspaceId === 'undefined') return;
+    if (!getValidAuthToken()) {
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -132,8 +144,10 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
       const response = await api.get(`/attendance/workspace/${workspaceId}/report?${queryParams.toString()}`);
       setReportData(response.data.data);
     } catch (error) {
-      console.error('Failed to fetch report:', error);
-      toast.error('Failed to update report');
+      if ((error as any).response?.status !== 401) {
+        console.error('Failed to fetch report:', error);
+        toast.error('Failed to update report');
+      }
     } finally {
       setLoading(false);
     }
@@ -188,8 +202,10 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div>
+      <Card className="overflow-hidden">
+        <LiveAttendanceTimers workspaceId={workspaceId} />
+        <LocationSessionMonitor workspaceId={workspaceId} />
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-xl font-bold">Attendance Report</CardTitle>
           <div className="flex gap-2">

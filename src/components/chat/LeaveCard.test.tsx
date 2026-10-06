@@ -27,6 +27,13 @@ function renderCard({ currentUserId, canManageLeaves, isWorkspaceOwner = false }
 }
 
 describe('LeaveCard decision actions', () => {
+  it('renders as a compact message-sized card rather than filling the conversation width', () => {
+    renderCard({ currentUserId: 'approver-1', canManageLeaves: true });
+    const card = screen.getByTestId('leave-request-card');
+    expect(card.className).toContain('w-fit');
+    expect(card.className).not.toContain('w-full');
+  });
+
   it('does not let a non-owner requester decide their own leave request', () => {
     renderCard({ currentUserId: 'requester-1', canManageLeaves: true });
 

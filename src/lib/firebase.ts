@@ -23,22 +23,37 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let app: any;
-const isConfigValid = firebaseConfig.apiKey && firebaseConfig.apiKey !== 'undefined';
+const hasFirebaseValue = (value: string | undefined) =>
+  Boolean(value?.trim() && value !== 'undefined' && !value.startsWith('your_'));
 
-if (isConfigValid) {
+export const isFirebaseConfigured = [
+  firebaseConfig.apiKey,
+  firebaseConfig.authDomain,
+  firebaseConfig.projectId,
+  firebaseConfig.appId,
+].every(hasFirebaseValue);
+
+const requireFirebaseConfiguration = () => {
+  if (!isFirebaseConfigured) {
+    throw new Error(
+      'Social sign-in is not configured. Add the Firebase web app settings to .env.local and restart the dev server.',
+    );
+  }
+};
+
+if (isFirebaseConfigured) {
   if (!getApps().length) {
     app = initializeApp(firebaseConfig);
   } else {
     app = getApps()[0];
   }
 } else {
-  // Graceful fallback during build or if keys are missing
-  console.warn("Firebase API Key is missing. Skipping initialization.");
+  // Keep password sign-in usable while Firebase social auth is not configured.
   app = { name: '[DEFAULT]', options: {}, automaticDataCollectionEnabled: false }; 
 }
 
 // Initialize Firebase Auth
-export const auth: Auth = isConfigValid ? getAuth(app) : {} as Auth;
+export const auth: Auth = isFirebaseConfigured ? getAuth(app) : {} as Auth;
 
 // Google Auth Provider
 export const googleProvider = new GoogleAuthProvider();
@@ -58,6 +73,7 @@ appleProvider.addScope('name');
 
 // Sign in with Google
 export const signInWithGoogle = async () => {
+  requireFirebaseConfiguration();
   try {
     const result = await signInWithPopup(auth, googleProvider);
     return result;
@@ -69,6 +85,7 @@ export const signInWithGoogle = async () => {
 
 // Sign in with GitHub
 export const signInWithGithub = async () => {
+  requireFirebaseConfiguration();
   try {
     const result = await signInWithPopup(auth, githubProvider);
     return result;
@@ -114,6 +131,7 @@ export const signInWithGithub = async () => {
 
 // Sign in with Apple
 export const signInWithApple = async () => {
+  requireFirebaseConfiguration();
   try {
     const result = await signInWithPopup(auth, appleProvider);
     return result;
@@ -127,6 +145,7 @@ export const signInWithApple = async () => {
 let messaging: Messaging | null = null;
 
 export const initializeMessaging = async (): Promise<Messaging | null> => {
+  if (!isFirebaseConfigured) return null;
   try {
     // Check if messaging is supported (not supported in all browsers)
     const messagingSupported = await isSupported();

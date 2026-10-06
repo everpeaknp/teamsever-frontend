@@ -9,7 +9,6 @@ import { Clock, CalendarDays, MapPin, Activity } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { AttendanceLocationSettings } from '@/components/attendance/AttendanceLocationSettings';
 import { LocationReviewPanel } from '@/components/attendance/LocationReviewPanel';
-import { LocationSessionMonitor } from '@/components/attendance/LocationSessionMonitor';
 import { DesktopPresenceSettings } from '@/components/attendance/DesktopPresenceSettings';
 import { DesktopPresenceTimeline } from '@/components/attendance/DesktopPresenceTimeline';
 
@@ -53,7 +52,6 @@ export default function AttendancePage() {
         </TabsList>
 
         <TabsContent value="attendance" className="mt-0">
-          <LocationSessionMonitor workspaceId={workspaceId} />
           <AttendanceReport workspaceId={workspaceId} />
           <div className="mt-6"><LocationReviewPanel workspaceId={workspaceId} /></div>
         </TabsContent>

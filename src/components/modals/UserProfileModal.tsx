@@ -34,6 +34,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { PublicClockPresence } from './PublicClockPresence';
 
 interface UserProfile {
   _id: string;
@@ -157,7 +158,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
             </div>
             
             <div className="px-8 pb-8 -mt-16 relative z-10">
-              <div className="flex flex-col md:flex-row items-end gap-6 mb-8">
+              <div className="flex flex-col md:flex-row items-end gap-5 mb-3">
                 <div className="p-1.5 bg-white dark:bg-[#0a0a0a] rounded-[2.5rem] ring-1 ring-slate-200 dark:ring-white/10 shadow-2xl">
                   <UserAvatar 
                     user={user} 
@@ -222,7 +223,11 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {workspaceId && (
+                <PublicClockPresence workspaceId={workspaceId} userId={user._id} />
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Left Column: Info Card */}
                 <div className="lg:col-span-4 space-y-6">
                   <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-5 border border-slate-200 dark:border-white/[0.05] space-y-5">
