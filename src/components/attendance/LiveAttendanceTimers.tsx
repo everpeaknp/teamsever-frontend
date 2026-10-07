@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { formatDistanceToNowStrict, format } from 'date-fns';
-import { Activity, Clock, RefreshCw, StopCircle } from 'lucide-react';
+import { Activity, Clock, RefreshCw, StopCircle, Building2, House } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ type ActiveTimer = {
   _id: string;
   startTime: string;
   currentDuration: number;
+  attendanceMode?: 'onsite' | 'remote';
   user?: { _id?: string; name?: string; email?: string; avatar?: string; profilePicture?: string };
 };
 
@@ -122,6 +123,10 @@ export function LiveAttendanceTimers({ workspaceId }: { workspaceId: string }) {
                     <p className="truncate font-medium">{name}</p>
                     {timer.user?.email && <p className="truncate text-xs text-muted-foreground">{timer.user.email}</p>}
                     <p className="mt-0.5 text-xs text-muted-foreground">Started {format(startedAt, 'MMM d, h:mm a')} · {formatDistanceToNowStrict(startedAt, { addSuffix: true })}</p>
+                    <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground">
+                      {timer.attendanceMode === 'remote' ? <House className="h-3 w-3" /> : <Building2 className="h-3 w-3" />}
+                      {timer.attendanceMode === 'remote' ? 'Remote' : 'Office'}
+                    </span>
                   </div>
                 </div>
                 <div className="ml-auto flex items-center gap-3">

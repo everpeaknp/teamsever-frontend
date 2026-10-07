@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Filter, User, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Download, Filter, User, Calendar as CalendarIcon, Clock, Building2, House } from 'lucide-react';
 import { api, getValidAuthToken } from '@/lib/axios';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -339,9 +339,15 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                          {format(new Date(entry.clockIn), 'p')}
-                        </span>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                            {format(new Date(entry.clockIn), 'p')}
+                          </span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground">
+                            {entry.attendanceMode === 'remote' ? <House className="h-3 w-3" /> : <Building2 className="h-3 w-3" />}
+                            {entry.attendanceMode === 'remote' ? 'Remote' : 'Office'}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <span className={entry.clockOut.includes('Running') ? 'text-blue-500 font-bold animate-pulse' : 'text-rose-600 dark:text-rose-400 font-medium'}>

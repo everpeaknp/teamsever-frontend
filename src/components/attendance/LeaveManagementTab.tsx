@@ -73,7 +73,15 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
         api.get(`/workspaces/${workspaceId}/leaves/inbox`, { params: { page: 1, pageSize: 1 } }),
         api.get(`/workspaces/${workspaceId}/leaves`, { params: { page: 1, pageSize: 1 } }),
       ]);
-      setActiveLeavesToday(todayRes.status === 'fulfilled' ? todayRes.value.data.data || [] : []);
+      const todayLeaves: LeaveItem[] = todayRes.status === 'fulfilled' ? todayRes.value.data.data || [] : [];
+      const uniqueTodayLeaves = new Map<string, LeaveItem>();
+      for (const leave of todayLeaves) {
+        const requesterId = leave.requester?._id || leave.requester?.email || leave._id;
+        if (!uniqueTodayLeaves.has(requesterId)) uniqueTodayLeaves.set(requesterId, leave);
+      }
+      setActiveLeavesToday(Array.from(uniqueTodayLeaves.values()).sort((a, b) =>
+        (a.requester?.name || '').localeCompare(b.requester?.name || '')
+      ));
       setMembers(membersRes.status === 'fulfilled' ? membersRes.value.data.data || [] : []);
       setCanReviewRequests(reviewRes.status === 'fulfilled');
       setCanViewOverall(overallRes.status === 'fulfilled');
@@ -167,41 +175,30 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
   return (
     <div className="space-y-6">
       {/* 1. "Who's on Leave Today" Banner */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-card to-card border border-emerald-500/20 shadow-sm">
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
+      <div className="rounded-xl border border-border/70 bg-card px-3 py-2.5">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🌴</span>
+            <span className="text-base" aria-hidden="true">🌴</span>
             <div>
-              <h3 className="text-sm font-bold text-foreground">Who&apos;s on Leave Today</h3>
-              <p className="text-xs text-muted-foreground">
-                Approved leaves active for {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-              </p>
+              <h3 className="text-sm font-semibold text-foreground">On leave today</h3>
             </div>
           </div>
-          <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 font-semibold text-xs">
-            {activeLeavesToday.length} Away Today
+          <Badge variant="secondary" className="shrink-0 text-[11px] font-medium">
+            {activeLeavesToday.length} away today
           </Badge>
         </div>
 
         {activeLeavesToday.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic py-1">
-            Everyone is in office today! No approved leaves recorded for today.
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">No approved leave today</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1">
+          <div aria-label="People on leave today" className="mt-2 flex gap-3 overflow-x-auto pb-0.5">
             {activeLeavesToday.map((item) => (
               <div
                 key={item._id}
-                className="flex items-center gap-3 p-3 rounded-xl bg-background/80 border border-border/60 shadow-xs"
+                className="flex min-w-0 shrink-0 items-center gap-2 rounded-lg bg-muted/50 px-2 py-1.5"
               >
-                <UserAvatar user={item.requester} className="h-9 w-9 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-bold text-foreground truncate">{item.requester?.name}</p>
-                  <p className="text-[11px] text-muted-foreground truncate">{item.reason}</p>
-                  <p className="text-[10px] text-emerald-500 font-medium">
-                    Until {formatDate(item.endDate)}
-                  </p>
-                </div>
+                <UserAvatar user={item.requester} className="h-7 w-7 shrink-0" />
+                <span className="max-w-36 truncate text-xs font-medium text-foreground">{item.requester?.name}</span>
               </div>
             ))}
           </div>
