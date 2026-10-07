@@ -23,6 +23,7 @@ interface LeaveCardProps {
       leaveRequestId?: string;
       requestType?: 'leave' | 'remote';
       proposedRemoteArea?: { name?: string; latitude?: number; longitude?: number };
+      remoteLocation?: { name?: string; latitude?: number; longitude?: number };
       remoteAreaName?: string;
       startDate?: string;
       endDate?: string;
@@ -58,6 +59,10 @@ export function LeaveCard({
   const status = meta.status || 'pending';
   const leaveRequestId = meta.leaveRequestId;
   const isRemoteRequest = meta.requestType === 'remote';
+  const remoteLocation = meta.remoteLocation || meta.proposedRemoteArea;
+  const remoteMapUrl = remoteLocation?.latitude != null && remoteLocation.longitude != null
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${remoteLocation.longitude - 0.008},${remoteLocation.latitude - 0.005},${remoteLocation.longitude + 0.008},${remoteLocation.latitude + 0.005}&layer=mapnik&marker=${remoteLocation.latitude},${remoteLocation.longitude}`
+    : undefined;
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDenyPopover, setShowDenyPopover] = useState(false);
@@ -158,7 +163,7 @@ export function LeaveCard({
           <span className="shrink-0 text-[11px]">{meta.daysCount || 1}d</span>
         </div>
 
-        {isRemoteRequest && <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Private remote place</span><p className="mt-0.5 text-xs">{meta.proposedRemoteArea?.name || meta.remoteAreaName || 'Existing approved private place'}</p>{meta.proposedRemoteArea?.latitude != null && meta.proposedRemoteArea.longitude != null && <p className="text-[10px] text-muted-foreground">{meta.proposedRemoteArea.latitude.toFixed(5)}, {meta.proposedRemoteArea.longitude.toFixed(5)} · shared in this DM only</p>}</div>}
+        {isRemoteRequest && <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Private remote place</span><p className="mt-0.5 text-xs">{remoteLocation?.name || meta.remoteAreaName || 'Existing approved private place'}</p>{remoteMapUrl && <iframe title={`Map pin for ${remoteLocation?.name || 'requested remote location'}`} src={remoteMapUrl} className="mt-2 h-36 w-full rounded-md border-0 bg-muted" loading="lazy" referrerPolicy="no-referrer" />}{remoteLocation?.latitude != null && remoteLocation.longitude != null && <p className="mt-1 text-[10px] text-muted-foreground">{remoteLocation.latitude.toFixed(5)}, {remoteLocation.longitude.toFixed(5)} · shared in this DM only</p>}</div>}
 
         {/* Reason (Compulsory) */}
         <div>
