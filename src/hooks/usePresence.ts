@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getSocket } from '@/lib/socket';
-import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+import { api } from '@/lib/axios';
 
 export interface UserPresence {
   userId: string;
@@ -27,12 +25,7 @@ export const usePresence = (workspaceId: string) => {
         return;
       }
 
-      const response = await axios.get(
-        `${API_URL}/api/presence/${workspaceId}/online`,
-        {
-          headers: { Authorization: `Bearer ${finalToken}` }
-        }
-      );
+      const response = await api.get(`/presence/${workspaceId}/online`);
 
       if (response.data.success) {
         const users = response.data.data?.onlineUsers || [];

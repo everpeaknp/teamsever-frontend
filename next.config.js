@@ -16,6 +16,22 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
 
+  // Browser requests to localhost:5000 cannot reach a backend bound inside
+  // WSL on some Windows setups. Proxy local API calls through the Next server,
+  // which shares the backend's WSL network namespace.
+  async rewrites() {
+    if (process.env.NODE_ENV !== 'development') return [];
+
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')
+      .replace(/\/$/, '');
+    return [
+      {
+        source: '/api-proxy/:path*',
+        destination: `${apiUrl}/api/:path*`,
+      },
+    ];
+  },
+
   // Embed a deployment-specific value in the client so an open tab can detect new deploys.
   env: {
     NEXT_PUBLIC_APP_BUILD_ID:

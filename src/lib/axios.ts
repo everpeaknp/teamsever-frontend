@@ -1,6 +1,7 @@
 import axios from 'axios'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+const usesLocalBackendProxy = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(API_URL)
 
 export function getValidAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -20,7 +21,7 @@ export function getValidAuthToken(): string | null {
 }
 
 export const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: usesLocalBackendProxy ? '/api-proxy' : `${API_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },

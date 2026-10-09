@@ -4,8 +4,6 @@ import { useSocket } from '@/contexts/SocketContext';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { api } from '@/lib/axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
 export interface ChatMessage {
   _id: string;
   workspace?: string;

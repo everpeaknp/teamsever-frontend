@@ -11,10 +11,7 @@ import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { Button } from '@/components/ui/button';
 import { CreateChannelModal } from './CreateChannelModal';
 import { UserAvatar } from '@/components/ui/user-avatar';
-import axios from 'axios';
 import { getSocket } from '@/lib/socket';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 interface ChatChannel {
   _id: string;
@@ -71,10 +68,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       if (!token) return;
 
-      const response = await axios.get(
-        `${API_URL}/api/workspaces/${workspaceId}/chat/channels`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await api.get(`/workspaces/${workspaceId}/chat/channels`);
 
       if (response.data.success) {
         setChannels(response.data.data || []);
@@ -108,8 +102,8 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
         if (!token) return;
 
         const [membersRes, convsRes] = await Promise.all([
-          axios.get(`${API_URL}/api/workspaces/${workspaceId}/members`, { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get(`${API_URL}/api/dm?workspaceId=${workspaceId}`, { headers: { Authorization: `Bearer ${token}` } })
+          api.get(`/workspaces/${workspaceId}/members`),
+          api.get(`/dm?workspaceId=${workspaceId}`)
         ]);
 
         if (membersRes.data.success) {
