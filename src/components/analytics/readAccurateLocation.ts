@@ -5,7 +5,17 @@ export interface LocationFix {
   capturedAt: string;
 }
 
-/** Collect fixes until one meets policy or the provider's best reading window expires. */
+const MAX_FIX_AGE_MS = 30_000;
+const MAX_FUTURE_SKEW_MS = 15_000;
+
+function staleLocationError() {
+  return Object.assign(
+    new Error('Could not obtain a fresh location reading. Check your PC date/time and location services, then retry.'),
+    { name: 'StaleLocationError' },
+  );
+}
+
+/** Collect fresh fixes until one meets policy or the provider's reading window expires. */
 export function readAccurateLocation(
   maxAccuracyMeters: number,
   geolocation: Geolocation = navigator.geolocation,
@@ -16,7 +26,7 @@ export function readAccurateLocation(
     let watchId: number | undefined;
     let settled = false;
 
-    const finish = (fix?: LocationFix, error?: GeolocationPositionError) => {
+    const finish = (fix?: LocationFix, error?: Error | GeolocationPositionError) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
@@ -25,10 +35,15 @@ export function readAccurateLocation(
       else reject(error || new Error('Location is unavailable or permission was denied.'));
     };
 
-    const timer = setTimeout(() => finish(bestFix), timeoutMs);
+    const timer = setTimeout(() => finish(bestFix, bestFix ? undefined : staleLocationError()), timeoutMs);
     try {
       watchId = geolocation.watchPosition(
         (position) => {
+          const ageMs = Date.now() - position.timestamp;
+          if (!Number.isFinite(position.timestamp) || ageMs > MAX_FIX_AGE_MS || ageMs < -MAX_FUTURE_SKEW_MS) {
+            return;
+          }
+
           const fix = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
