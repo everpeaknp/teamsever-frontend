@@ -72,6 +72,7 @@ import { useTaskSidebarStore } from '@/store/useTaskSidebarStore';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { toast } from 'sonner';
+import { BugForm, BugDraft } from '@/components/quality/BugForm';
 
 export default function ListView() {
   const router = useRouter();
@@ -95,6 +96,8 @@ export default function ListView() {
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showBugModal, setShowBugModal] = useState(false);
+  const [canCreateBug, setCanCreateBug] = useState(false);
   const [openAssigneePicker, setOpenAssigneePicker] = useState(false);
   const [newTaskData, setNewTaskData] = useState({
     title: '',
@@ -132,6 +135,15 @@ export default function ListView() {
       fetchActivities({ listId });
     }
   }, [view, listId]);
+
+  useEffect(() => {
+    if (!workspaceId || !listId) return;
+    let active = true;
+    api.get(`/workspaces/${workspaceId}/quality/capabilities`, { params: { listId } })
+      .then(response => { if (active) setCanCreateBug(Boolean(response.data?.data?.canCreateBug)); })
+      .catch(() => { if (active) setCanCreateBug(false); });
+    return () => { active = false; };
+  }, [workspaceId, listId]);
 
   const fetchData = async (fetchKey?: string) => {
     // Guard checks BEFORE any async operations
@@ -428,6 +440,13 @@ export default function ListView() {
       // Error toast is already handled in the store
       console.error('[CreateTask] Error:', error);
     }
+  };
+
+  const handleReportBug = async (draft: BugDraft) => {
+    await api.post(`/lists/${listId}/tasks`, draft);
+    await fetchTasks(listId);
+    setShowBugModal(false);
+    toast.success('Bug reported');
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -787,6 +806,16 @@ export default function ListView() {
               )}
 
               {/* New Task Button */}
+              {canCreateBug && <Dialog open={showBugModal} onOpenChange={setShowBugModal}>
+                <DialogTrigger asChild><Button variant="outline" className="h-8 flex-shrink-0 text-xs sm:h-9 sm:text-sm"><AlertCircle className="mr-1.5 h-4 w-4" />Report bug</Button></DialogTrigger>
+                <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+                  <DialogHeader><DialogTitle>Report a bug</DialogTitle><DialogDescription>Record what happened so a developer can reproduce it. The bug starts Open in this list.</DialogDescription></DialogHeader>
+                  <BugForm onSubmit={handleReportBug} onCancel={() => setShowBugModal(false)} members={(workspace?.members || []).map((member: any) => {
+                    const person = typeof member.user === 'object' ? member.user : member;
+                    return { id: person._id || member.user, name: person.name || 'Member' };
+                  })} />
+                </DialogContent>
+              </Dialog>}
               {canCreateTask() && (
                 <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
                   <DialogTrigger asChild>
