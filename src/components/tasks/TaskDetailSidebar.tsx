@@ -55,10 +55,13 @@ import {
   CommandItem,
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { BugHandoff } from '@/components/quality/BugHandoff';
 
 interface Task {
   _id: string;
   title: string;
+  workItemType?: 'task' | 'bug';
+  bugDetails?: { reproductionSteps: string; expectedResult: string; actualResult: string; severity: string; environment: string; build?: string };
   description?: string;
   status: 'todo' | 'inprogress' | 'review' | 'done' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
@@ -518,7 +521,7 @@ export function TaskDetailSidebar() {
 
               {/* Status and Priority */}
               <div className="flex items-center gap-3">
-                <Select value={status} onValueChange={handleStatusChange}>
+                {task.workItemType === 'bug' ? <Badge variant="outline" className="h-8 px-3">{({ todo: 'Open', inprogress: 'In progress', review: 'Ready for QA', done: 'Verified', cancelled: 'Closed' } as Record<string, string>)[status]}</Badge> : <Select value={status} onValueChange={handleStatusChange}>
                   <SelectTrigger className={`w-[140px] h-8 ${getStatusColor(status)}`}>
                     <SelectValue />
                   </SelectTrigger>
@@ -529,7 +532,7 @@ export function TaskDetailSidebar() {
                     <SelectItem value="done">Done</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
-                </Select>
+                </Select>}
 
                 <Select value={priority} onValueChange={handlePriorityChange}>
                   <SelectTrigger className={`w-[120px] h-8 ${getPriorityColor(priority)}`}>
@@ -555,6 +558,14 @@ export function TaskDetailSidebar() {
             {/* Scrollable Content */}
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-6">
+                {task.workItemType === 'bug' && task.bugDetails && <section className="space-y-3 rounded-lg border p-4" aria-label="Bug details">
+                  <div className="flex flex-wrap gap-2"><Badge variant="secondary">Bug</Badge><Badge variant="outline">{task.bugDetails.severity} severity</Badge>{task.bugDetails.build && <Badge variant="outline">Build {task.bugDetails.build}</Badge>}</div>
+                  <div><p className="text-xs font-semibold text-muted-foreground">Steps to reproduce</p><p className="whitespace-pre-wrap text-sm">{task.bugDetails.reproductionSteps}</p></div>
+                  <div><p className="text-xs font-semibold text-muted-foreground">Expected result</p><p className="whitespace-pre-wrap text-sm">{task.bugDetails.expectedResult}</p></div>
+                  <div><p className="text-xs font-semibold text-muted-foreground">Actual result</p><p className="whitespace-pre-wrap text-sm">{task.bugDetails.actualResult}</p></div>
+                  <div><p className="text-xs font-semibold text-muted-foreground">Environment</p><p className="text-sm">{task.bugDetails.environment}</p></div>
+                </section>}
+                {task.workItemType === 'bug' && task.list.space?.workspace?._id && <BugHandoff taskId={task._id} workspaceId={task.list.space.workspace._id} listId={task.list._id} status={task.status} assigneeId={task.assignee?._id} currentUserId={typeof window !== 'undefined' ? localStorage.getItem('userId') || undefined : undefined} onChanged={fetchTask} />}
                 {/* Meta Grid */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">

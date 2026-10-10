@@ -1,0 +1,11 @@
+import type { QualityReport } from '@/hooks/queries/useQuality';
+
+export function ReportView({ report }: { report: QualityReport }) {
+  const { counts, completion, passRate, gate } = report;
+  return <div className="space-y-5">
+    <div className="grid gap-3 sm:grid-cols-2"><div className="rounded-xl border bg-card p-4"><div className="text-xs font-medium text-muted-foreground">Completion</div><div className="mt-2 text-xl font-semibold">{completion.numerator} / {completion.denominator}</div><div className="text-xs text-muted-foreground">{completion.percent === null ? '—' : `${completion.percent}%`} of selected cases have a result</div></div><div className="rounded-xl border bg-card p-4"><div className="text-xs font-medium text-muted-foreground">Pass rate</div><div className="mt-2 text-xl font-semibold">{passRate.numerator} / {passRate.denominator}</div><div className="text-xs text-muted-foreground">{passRate.percent === null ? '—' : `${passRate.percent}%`} of pass or fail results passed</div></div></div>
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">{([['Pass', counts.pass], ['Fail', counts.fail], ['Blocked', counts.blocked], ['Skipped', counts.skipped], ['Not run', counts.notRun]] as const).map(([label, count]) => <div key={label} className="rounded-lg border bg-card p-3"><div className="text-lg font-semibold">{count}</div><div className="text-xs text-muted-foreground">{label}</div></div>)}</div>
+    <div className={`rounded-xl border p-4 ${gate.ready ? 'border-emerald-300 bg-emerald-50/60 dark:bg-emerald-950/20' : 'border-amber-300 bg-amber-50/60 dark:bg-amber-950/20'}`}><h3 className="text-sm font-semibold">{gate.ready ? 'Release gate clear' : 'Release gate has blockers'}</h3><p className="mt-1 text-sm text-muted-foreground">{counts.fail} failed · {counts.blocked} blocked · {counts.notRun} not run · {gate.unresolvedHighBugs} unresolved high-priority {gate.unresolvedHighBugs === 1 ? 'bug' : 'bugs'}{report.latestRun?.status === 'open' ? ' · run still open' : ''}</p></div>
+    {report.latestRun && <p className="text-xs text-muted-foreground">Latest run: build {report.latestRun.build} · {report.latestRun.environment} · {report.latestRun.status}</p>}
+  </div>;
+}
