@@ -61,6 +61,9 @@ __mocks__
 !docs/superpowers/
 !docs/superpowers/specs/
 !docs/superpowers/specs/2026-09-30-electron-desktop-design.md
+!docs/superpowers/specs/2026-10-09-qa-test-management-design.md
+!docs/superpowers/plans/
+!docs/superpowers/plans/2026-10-09-qa-test-management.md
 
 # Misc
 .DS_Store

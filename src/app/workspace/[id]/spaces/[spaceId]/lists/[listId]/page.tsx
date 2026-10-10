@@ -215,11 +215,21 @@ export default function ListView() {
       const isSpaceMember = spaceMemberIds.includes(userId);
       setIsSpaceMember(isSpaceMember);
       
+      // Load tasks and scoped permissions together; neither depends on the other.
+      const taskLoad = fetchTasks(listId);
+      const [listMembersResult, spaceMembersResult, folderMembersResult] = await Promise.allSettled([
+        api.get(`/lists/${listId}/list-members`),
+        api.get(`/spaces/${spaceId}/space-members`),
+        listData?.folderId
+          ? api.get(`/folders/${listData.folderId}/folder-members`)
+          : Promise.resolve(null),
+      ]);
+
       // Check if user is a list member (has list-specific permissions)
       let userListMember: any = null;
       try {
-        const listMembersRes = await api.get(`/lists/${listId}/list-members`);
-        const listMembersData = listMembersRes.data.data;
+        if (listMembersResult.status !== 'fulfilled') throw listMembersResult.reason;
+        const listMembersData = listMembersResult.value.data.data || [];
         
         // Filter to only show members with list access (hasOverride = true)
         const membersWithAccess = listMembersData.filter((m: any) => m.hasOverride);
@@ -244,7 +254,8 @@ export default function ListView() {
       // Determine scoped permission overrides
       let resolvedSpacePermissionLevel: string | null = null;
       try {
-        const spaceMembersRes = await api.get(`/spaces/${spaceId}/space-members`);
+        if (spaceMembersResult.status !== 'fulfilled') throw spaceMembersResult.reason;
+        const spaceMembersRes = spaceMembersResult.value;
         const currentSpaceMember = (spaceMembersRes.data.data || []).find((m: any) => m?._id === userId);
         resolvedSpacePermissionLevel = currentSpaceMember?.spacePermissionLevel || null;
         setSpacePermissionLevel(resolvedSpacePermissionLevel);
@@ -256,7 +267,10 @@ export default function ListView() {
       let resolvedFolderPermissionLevel: string | null = null;
       try {
         if (listData?.folderId) {
-          const folderMembersRes = await api.get(`/folders/${listData.folderId}/folder-members`);
+          if (folderMembersResult.status !== 'fulfilled' || !folderMembersResult.value) {
+            throw folderMembersResult.status === 'rejected' ? folderMembersResult.reason : new Error('No folder');
+          }
+          const folderMembersRes = folderMembersResult.value;
           const currentFolderMember = (folderMembersRes.data.data || []).find((m: any) => m?._id === userId);
           resolvedFolderPermissionLevel = currentFolderMember?.folderPermissionLevel || null;
           setFolderPermissionLevel(resolvedFolderPermissionLevel);
@@ -300,7 +314,7 @@ export default function ListView() {
         setListSettings({ name: listData.name, description: listData.description || '' });
       }
 
-      await fetchTasks(listId);
+      await taskLoad;
     } catch (error: any) {
       console.error('Failed to fetch data:', error);
 

@@ -110,7 +110,7 @@ export default function SpaceHomePage() {
   // Use permission hook with space permission level
   const { can, isAdmin, isOwner } = usePermission(spacePermissionLevel);
   
-  const { currentSpace, lists, folders, loading, fetchSpace, fetchLists, fetchFolders, createList, createFolder, updateSpace, deleteList, addMemberToSpace, removeMemberFromSpace, addListOptimistic } = useSpaceStore();
+  const { currentSpace, lists, folders, loading, fetchSpace, fetchFolders, createList, createFolder, updateSpace, deleteList, addMemberToSpace, removeMemberFromSpace, addListOptimistic } = useSpaceStore();
   
   // Also use global workspace store for sidebar updates
   const { addFolder: addFolderToWorkspace, addList: addListToWorkspace, deleteList: deleteListFromWorkspace } = useWorkspaceStore();
@@ -207,8 +207,11 @@ export default function SpaceHomePage() {
       try {
         console.log('[SpacePage] Initializing with:', { spaceId, workspaceId, userId });
         
-        // Fetch workspace data first (needed for permissions)
-        const workspaceRes = await api.get(`/workspaces/${workspaceId}`);
+        // Workspace access and the space hierarchy load independently.
+        const [workspaceRes] = await Promise.all([
+          api.get(`/workspaces/${workspaceId}`),
+          fetchSpace(spaceId),
+        ]);
         
         if (!isMounted) return; // Component unmounted, abort
         
@@ -233,29 +236,26 @@ export default function SpaceHomePage() {
         
         setWorkspaceContext(workspaceId, role);
 
-        // Fetch space data in parallel (all have guard checks in store)
-        await Promise.all([
-          fetchSpace(spaceId),
-          fetchLists(spaceId),
-          fetchFolders(spaceId),
-        ]);
-
         if (!isMounted) return;
 
-        // Fetch tables for this space
-        try {
-          const tablesRes = await api.get(`/spaces/${spaceId}/tables`);
-          if (!isMounted) return;
+        // Independent secondary data should not block each other.
+        const [tablesResult, spaceMembersResult] = await Promise.allSettled([
+          api.get(`/spaces/${spaceId}/tables`),
+          api.get(`/spaces/${spaceId}/space-members`),
+        ]);
+        if (!isMounted) return;
+
+        if (tablesResult.status === 'fulfilled') {
+          const tablesRes = tablesResult.value;
           setTables(tablesRes.data.data || tablesRes.data.tables || []);
-        } catch (error) {
-          console.error('[SpacePage] Failed to fetch tables:', error);
-          // Non-critical error, continue
+        } else {
+          console.error('[SpacePage] Failed to fetch tables:', tablesResult.reason);
         }
 
         // Fetch space permission level
         try {
-          const spaceMembersRes = await api.get(`/spaces/${spaceId}/space-members`);
-          if (!isMounted) return;
+          if (spaceMembersResult.status !== 'fulfilled') throw spaceMembersResult.reason;
+          const spaceMembersRes = spaceMembersResult.value;
           
           const currentUserMember = spaceMembersRes.data.data.find(
             (m: any) => {
