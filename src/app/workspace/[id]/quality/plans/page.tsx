@@ -36,9 +36,9 @@ export default function QualityPlansPage() {
   const createPlan = useCreateQualityPlan(workspaceId);
   const startRun = useStartQualityRun(workspaceId);
   const members = useQuery({
-    queryKey: ['workspace', workspaceId, 'members', 'quality-assignment'],
+    queryKey: ['quality', workspaceId, 'eligible-testers'],
     enabled: Boolean(runPlanId),
-    queryFn: async () => (await api.get(`/workspaces/${workspaceId}/members`)).data.data as Array<{ _id: string; name: string; email: string }>,
+    queryFn: async () => (await api.get(`/workspaces/${workspaceId}/quality/testers`)).data.data as Array<{ _id: string; name: string; email: string }>,
   });
 
   if (caps.isLoading) return <div className="p-8 text-sm text-muted-foreground">Loading Quality…</div>;
