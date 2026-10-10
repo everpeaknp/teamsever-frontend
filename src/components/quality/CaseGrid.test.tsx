@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { CaseGrid } from './CaseGrid';
 
@@ -14,5 +14,16 @@ describe('CaseGrid', () => {
     expect(onOpen).toHaveBeenCalledWith(data[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
     expect(onPageChange).toHaveBeenCalledWith(3);
+  });
+
+  it('keeps a quick edit visible when the revision conflicts', async () => {
+    const onQuickSave = vi.fn().mockRejectedValue({ response: { status: 409 } });
+    render(<CaseGrid cases={data} page={1} limit={10} total={1} onPageChange={() => {}} onOpen={() => {}} onQuickSave={onQuickSave} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Edit row' }));
+    fireEvent.change(screen.getByLabelText('Case title'), { target: { value: 'Google sign-in on Android' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('changed'));
+    expect((screen.getByLabelText('Case title') as HTMLInputElement).value).toBe('Google sign-in on Android');
+    expect(onQuickSave).toHaveBeenCalledWith(data[0], { title: 'Google sign-in on Android', priority: 'high', state: 'active' });
   });
 });
