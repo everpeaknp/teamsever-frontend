@@ -50,6 +50,7 @@ coverage
 !src/components/attendance/DesktopPresenceSettings.spec.tsx
 !src/components/attendance/DesktopPresenceTimeline.spec.tsx
 !src/components/quality/*.test.tsx
+!src/components/quality/*.test.ts
 !desktop/**/*.test.ts
 !desktop/**/*.test.tsx
 __tests__

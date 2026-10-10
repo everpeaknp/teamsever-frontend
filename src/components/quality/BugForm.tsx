@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { uploadTaskEvidence } from './uploadTaskEvidence';
 
 export type BugDraft = {
   workItemType: 'bug';
@@ -26,12 +27,13 @@ export type BugDraft = {
 };
 
 type Props = {
-  onSubmit: (draft: BugDraft) => Promise<unknown>;
+  onSubmit: (draft: BugDraft) => Promise<string | undefined>;
   onCancel: () => void;
+  onComplete?: () => void;
   members?: Array<{ id: string; name: string }>;
 };
 
-export function BugForm({ onSubmit, onCancel, members = [] }: Props) {
+export function BugForm({ onSubmit, onCancel, onComplete, members = [] }: Props) {
   const [title, setTitle] = useState('');
   const [reproductionSteps, setReproductionSteps] = useState('');
   const [expectedResult, setExpectedResult] = useState('');
@@ -43,6 +45,8 @@ export function BugForm({ onSubmit, onCancel, members = [] }: Props) {
   const [assignee, setAssignee] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [evidence, setEvidence] = useState<File | null>(null);
+  const [createdId, setCreatedId] = useState('');
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -53,14 +57,20 @@ export function BugForm({ onSubmit, onCancel, members = [] }: Props) {
     if (!environment.trim()) return setError('Describe the environment where this happened.');
     setSaving(true);
     setError('');
+    let reportedId = createdId;
     try {
-      await onSubmit({
+      const taskId = createdId || await onSubmit({
         workItemType: 'bug', title: title.trim(), status: 'todo', priority,
         ...(assignee && { assignee }),
         bugDetails: { reproductionSteps: reproductionSteps.trim(), expectedResult: expectedResult.trim(), actualResult: actualResult.trim(), severity, environment: environment.trim(), ...(build.trim() && { build: build.trim() }) },
       });
+      reportedId = taskId || '';
+      if (taskId) setCreatedId(taskId);
+      if (evidence && taskId) await uploadTaskEvidence(taskId, evidence);
+      if (evidence && !taskId) throw new Error('Bug created, but the task ID was not returned. Open the bug to attach evidence.');
+      onComplete?.();
     } catch (caught: any) {
-      setError(caught?.response?.data?.message || caught?.message || 'Could not report this bug. Your input is still here.');
+      setError(reportedId ? `Bug created, but evidence upload failed: ${caught?.response?.data?.message || caught?.message || 'please retry'}. Retry here without creating another bug.` : caught?.response?.data?.message || caught?.message || 'Could not report this bug. Your input is still here.');
     } finally {
       setSaving(false);
     }
@@ -80,7 +90,8 @@ export function BugForm({ onSubmit, onCancel, members = [] }: Props) {
       <div className="space-y-1.5"><Label htmlFor="bug-build">Build (optional)</Label><Input id="bug-build" value={build} onChange={event => setBuild(event.target.value)} maxLength={100} placeholder="Version or commit" /></div>
     </div>
     {members.length > 0 && <div className="space-y-1.5"><Label htmlFor="bug-assignee">Developer (optional)</Label><select id="bug-assignee" className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={assignee} onChange={event => setAssignee(event.target.value)}><option value="">Unassigned</option>{members.map(member => <option key={member.id} value={member.id}>{member.name}</option>)}</select></div>}
+    <div className="space-y-1.5"><Label htmlFor="bug-evidence">Evidence (optional)</Label><Input id="bug-evidence" type="file" accept="image/*,.pdf,.txt,.doc,.docx" onChange={event => setEvidence(event.target.files?.[0] || null)} /><p className="text-xs text-muted-foreground">A screenshot or file helps the developer verify the issue.</p></div>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-    <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onCancel}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? 'Reporting…' : 'Report bug'}</Button></div>
+    <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onCancel}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? 'Saving…' : createdId ? 'Retry evidence upload' : 'Report bug'}</Button></div>
   </form>;
 }

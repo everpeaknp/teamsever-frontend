@@ -443,10 +443,9 @@ export default function ListView() {
   };
 
   const handleReportBug = async (draft: BugDraft) => {
-    await api.post(`/lists/${listId}/tasks`, draft);
+    const response = await api.post(`/lists/${listId}/tasks`, draft);
     await fetchTasks(listId);
-    setShowBugModal(false);
-    toast.success('Bug reported');
+    return response.data.data._id as string;
   };
 
   const handleDeleteTask = async (taskId: string) => {
@@ -810,7 +809,7 @@ export default function ListView() {
                 <DialogTrigger asChild><Button variant="outline" className="h-8 flex-shrink-0 text-xs sm:h-9 sm:text-sm"><AlertCircle className="mr-1.5 h-4 w-4" />Report bug</Button></DialogTrigger>
                 <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
                   <DialogHeader><DialogTitle>Report a bug</DialogTitle><DialogDescription>Record what happened so a developer can reproduce it. The bug starts Open in this list.</DialogDescription></DialogHeader>
-                  <BugForm onSubmit={handleReportBug} onCancel={() => setShowBugModal(false)} members={(workspace?.members || []).map((member: any) => {
+                  <BugForm onSubmit={handleReportBug} onComplete={() => { setShowBugModal(false); toast.success('Bug reported'); }} onCancel={() => setShowBugModal(false)} members={(workspace?.members || []).map((member: any) => {
                     const person = typeof member.user === 'object' ? member.user : member;
                     return { id: person._id || member.user, name: person.name || 'Member' };
                   })} />
