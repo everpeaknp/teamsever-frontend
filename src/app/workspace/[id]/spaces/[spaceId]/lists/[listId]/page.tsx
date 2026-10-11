@@ -60,6 +60,7 @@ import {
   CommandItem,
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { countTaskDescriptionWords, MAX_TASK_DESCRIPTION_WORDS } from '@/lib/taskDescription';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { useTaskStore } from '@/store/useTaskStore';
@@ -104,6 +105,7 @@ export default function ListView() {
     assignee: undefined as string | undefined,
     deadline: undefined as Date | undefined,
   });
+  const taskDescriptionWordCount = countTaskDescriptionWords(newTaskData.description);
   const [isReadOnly, setIsReadOnly] = useState(false);
   const [userRole, setUserRole] = useState<'owner' | 'admin' | 'member'>('member');
   const [isSpaceMember, setIsSpaceMember] = useState(false);
@@ -398,6 +400,10 @@ export default function ListView() {
   const handleCreateTask = async () => {
     if (!newTaskData.title.trim()) {
       toast.error('Task title is required');
+      return;
+    }
+    if (taskDescriptionWordCount > MAX_TASK_DESCRIPTION_WORDS) {
+      toast.error(`Task description cannot exceed ${MAX_TASK_DESCRIPTION_WORDS.toLocaleString()} words`);
       return;
     }
 
@@ -820,7 +826,15 @@ export default function ListView() {
                           onChange={(e) => setNewTaskData({ ...newTaskData, description: e.target.value })}
                           placeholder="Task description"
                           rows={3}
+                          aria-describedby="task-description-word-count"
                         />
+                        <p
+                          id="task-description-word-count"
+                          className={`mt-1 text-xs ${taskDescriptionWordCount > MAX_TASK_DESCRIPTION_WORDS ? 'text-destructive' : 'text-muted-foreground'}`}
+                          aria-live="polite"
+                        >
+                          {taskDescriptionWordCount.toLocaleString()} / {MAX_TASK_DESCRIPTION_WORDS.toLocaleString()} words
+                        </p>
                       </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
@@ -967,7 +981,7 @@ export default function ListView() {
                         >
                           Cancel
                         </Button>
-                        <Button onClick={handleCreateTask} className="flex-1">
+                        <Button onClick={handleCreateTask} className="flex-1" disabled={taskDescriptionWordCount > MAX_TASK_DESCRIPTION_WORDS}>
                           Create Task
                         </Button>
                       </div>

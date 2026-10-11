@@ -55,6 +55,7 @@ import {
   CommandItem,
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { countTaskDescriptionWords, MAX_TASK_DESCRIPTION_WORDS } from '@/lib/taskDescription';
 
 interface Task {
   _id: string;
@@ -152,6 +153,7 @@ export function TaskDetailSidebar() {
   // Editable fields
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const descriptionWordCount = countTaskDescriptionWords(description);
   const [status, setStatus] = useState<Task['status']>('todo');
   const [priority, setPriority] = useState<Task['priority']>('medium');
   const [startDate, setStartDate] = useState('');
@@ -261,6 +263,7 @@ export function TaskDetailSidebar() {
   // Handle description change
   const handleDescriptionChange = (newDescription: string) => {
     setDescription(newDescription);
+    if (countTaskDescriptionWords(newDescription) > MAX_TASK_DESCRIPTION_WORDS) return;
     debouncedSave('description', newDescription);
   };
 
@@ -719,7 +722,16 @@ export function TaskDetailSidebar() {
                     className="w-full min-h-[120px] p-3 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none overflow-hidden leading-relaxed"
                     placeholder="Add a description..."
                     style={{ height: 'auto' }}
+                    aria-describedby="task-detail-description-word-count"
                   />
+                  <p
+                    id="task-detail-description-word-count"
+                    className={`text-xs ${descriptionWordCount > MAX_TASK_DESCRIPTION_WORDS ? 'text-destructive' : 'text-muted-foreground'}`}
+                    aria-live="polite"
+                  >
+                    {descriptionWordCount.toLocaleString()} / {MAX_TASK_DESCRIPTION_WORDS.toLocaleString()} words
+                    {descriptionWordCount > MAX_TASK_DESCRIPTION_WORDS && ' · Reduce the description to save it'}
+                  </p>
                 </div>
 
                 <Separator />
