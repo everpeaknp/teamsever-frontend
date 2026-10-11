@@ -15,9 +15,12 @@ type Props = {
   onPageChange: (page: number) => void;
   onOpen: (testCase: QualityCase) => void;
   onQuickSave?: (testCase: QualityCase, change: QuickChange) => Promise<unknown>;
+  caseStatuses?: Array<{ key: string; label: string }>;
+  caseTransitions?: Record<string, string[]>;
+  caseFields?: Array<{ key: string; label: string; enabled: boolean }>;
 };
 
-export function CaseGrid({ cases, page, limit, total, onPageChange, onOpen, onQuickSave }: Props) {
+export function CaseGrid({ cases, page, limit, total, onPageChange, onOpen, onQuickSave, caseStatuses = [], caseTransitions = {}, caseFields = [] }: Props) {
   const [editing, setEditing] = useState<QualityCase | null>(null);
   const [draft, setDraft] = useState<QuickChange | null>(null);
   const [saving, setSaving] = useState(false);
@@ -52,9 +55,9 @@ export function CaseGrid({ cases, page, limit, total, onPageChange, onOpen, onQu
         const active = editing?._id === testCase._id && draft;
         return <tr key={testCase._id} className="border-b last:border-b-0 hover:bg-muted/30">
           <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{testCase.key}</td>
-          <td className="px-4 py-3">{active ? <Input aria-label="Case title" value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void save(); } if (event.key === 'Escape') cancelEdit(); }} maxLength={240} /> : <button type="button" className="text-left font-medium hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" onClick={() => onOpen(testCase)}>{testCase.title}</button>}</td>
+          <td className="px-4 py-3">{active ? <Input aria-label="Case title" value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void save(); } if (event.key === 'Escape') cancelEdit(); }} maxLength={240} /> : <><button type="button" className="text-left font-medium hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary" onClick={() => onOpen(testCase)}>{testCase.title}</button>{Object.entries(testCase.customFields || {}).filter(([, value]) => value !== undefined && value !== null && value !== '').slice(0, 3).map(([key, value]) => <span key={key} className="ml-2 inline-block text-xs text-muted-foreground">{caseFields.find(field => field.key === key)?.label || key}: {Array.isArray(value) ? value.join(', ') : String(value)}</span>)}</>}</td>
           <td className="px-4 py-3 capitalize">{active ? <select aria-label="Case priority" className="h-9 rounded-md border bg-background px-2" value={draft.priority} onChange={event => setDraft({ ...draft, priority: event.target.value as QuickChange['priority'] })}>{['low', 'medium', 'high', 'urgent'].map(value => <option key={value} value={value}>{value}</option>)}</select> : testCase.priority}</td>
-          <td className="px-4 py-3">{active ? <select aria-label="Case state" className="h-9 rounded-md border bg-background px-2" value={draft.state} onChange={event => setDraft({ ...draft, state: event.target.value as QuickChange['state'] })}>{['draft', 'active', 'retired'].map(value => <option key={value} value={value}>{value}</option>)}</select> : <Badge variant="outline" className="capitalize">{testCase.state}</Badge>}</td>
+          <td className="px-4 py-3">{active ? <select aria-label="Case state" className="h-9 rounded-md border bg-background px-2" value={draft.state} onChange={event => setDraft({ ...draft, state: event.target.value })}>{caseStatuses.filter(status => status.key === testCase.state || (caseTransitions[testCase.state] || []).includes(status.key)).map(status => <option key={status.key} value={status.key}>{status.label}</option>)}</select> : <Badge variant="outline" className="capitalize">{caseStatuses.find(status => status.key === testCase.state)?.label || testCase.state}</Badge>}</td>
           <td className="px-4 py-3 text-muted-foreground">v{testCase.currentRevision}</td>
           <td className="px-4 py-3">{active ? <div className="flex gap-1"><Button size="sm" disabled={saving} onClick={() => void save()}>{saving ? 'Saving…' : 'Save'}</Button><Button size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Button></div> : onQuickSave ? <Button size="sm" variant="ghost" onClick={() => beginEdit(testCase)}>Edit row</Button> : null}</td>
         </tr>;
