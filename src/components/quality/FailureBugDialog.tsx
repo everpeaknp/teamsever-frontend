@@ -6,11 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 type Input = { targetListId?: string; existingBugId?: string; idempotencyKey: string; severity?: string };
-type Props = { lists: Array<{ id: string; label: string }>; allowNew?: boolean; onCreate: (input: Input) => Promise<unknown> };
+type Props = { lists: Array<{ id: string; label: string }>; allowNew?: boolean; defaultListId?: string | null; onCreate: (input: Input) => Promise<unknown> };
 
-export function FailureBugDialog({ lists, allowNew = true, onCreate }: Props) {
+export function FailureBugDialog({ lists, allowNew = true, defaultListId, onCreate }: Props) {
   const [mode, setMode] = useState<'new' | 'existing'>(allowNew ? 'new' : 'existing');
-  const [targetListId, setTargetListId] = useState('');
+  const [targetListId, setTargetListId] = useState(defaultListId || '');
   const [existingBugId, setExistingBugId] = useState('');
   const [severity, setSeverity] = useState('medium');
   const [error, setError] = useState('');

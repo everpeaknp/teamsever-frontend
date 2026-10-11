@@ -14,13 +14,26 @@ export type QualityCapabilities = {
   canViewReport: boolean;
   canSignOff: boolean;
 };
+export type QualityProjectSettings = {
+  project: { _id: string; name: string; scopeType: 'workspace' | 'folder'; folder?: string | { _id: string; name: string } | null };
+  settings: {
+    caseTypes: Array<{ key: string; label: string; enabled: boolean }>;
+    caseStatuses: Array<{ key: string; label: string; terminal: boolean }>;
+    caseTransitions: Record<string, string[]>;
+    caseFields: Array<{ key: string; label: string; type: string; required: boolean; enabled: boolean; options: string[] }>;
+    run: { environments: string[]; platforms: string[]; requireFailureReason: boolean; requireFailureEvidence: boolean };
+    bugHandoff: { defaultListId: string | null; copyRunContext: boolean };
+    notifications: { runAssigned: boolean; failureRecorded: boolean; runClosed: boolean };
+    inherited?: boolean;
+  };
+};
 export type QualityFilters = { page: number; limit: number; search?: string; state?: string; moduleId?: string; suiteId?: string };
 export type Paginated<T> = { data: T[]; pagination: { page: number; limit: number; total: number } };
 export type QualityOption = { _id: string; name: string };
 export type QualityPlan = { _id: string; name: string; description?: string; caseIds: string[]; cases?: Array<{ _id: string; key: string; title: string; owner?: string; state: string }>; status: 'draft' | 'active' | 'archived'; updatedAt: string };
-export type QualityRun = { _id: string; plan: string; build: string; environment: string; status: 'open' | 'closed'; createdAt: string };
+export type QualityRun = { _id: string; plan: string; build: string; environment: string; platform?: string; status: 'open' | 'closed'; createdAt: string };
 export type QualityExecution = { _id: string; run: string; testCase: string; caseKey: string; revision: number; snapshot: { title: string; preconditions?: string; steps: Array<{ action: string; testData?: string; expectedResult: string }> }; assignedTo?: string; result: 'not_run' | 'pass' | 'fail' | 'blocked' | 'skipped'; reason?: string; stepResults?: Array<{ result: string; actualResult?: string; evidenceIds?: string[] }>; evidenceIds?: string[]; version: number; bugIds?: string[]; updatedAt?: string };
-export type QualityReport = { plan: { id: string; name: string }; latestRun: { id: string; build: string; environment: string; status: 'open' | 'closed' } | null; runIds: string[]; counts: { selected: number; pass: number; fail: number; blocked: number; skipped: number; notRun: number }; completion: { numerator: number; denominator: number; percent: number | null }; passRate: { numerator: number; denominator: number; percent: number | null }; gate: { ready: boolean; unresolvedHighBugs: number; blockers: number }; generatedAt: string };
+export type QualityReport = { plan: { id: string; name: string }; latestRun: { id: string; build: string; environment: string; platform?: string; status: 'open' | 'closed' } | null; runIds: string[]; counts: { selected: number; pass: number; fail: number; blocked: number; skipped: number; notRun: number }; completion: { numerator: number; denominator: number; percent: number | null }; passRate: { numerator: number; denominator: number; percent: number | null }; gate: { ready: boolean; unresolvedHighBugs: number; blockers: number }; generatedAt: string };
 export type QualitySnapshot = { _id: string; plan: string; signedBy: string; signedAt: string; exceptionReason?: string; report: QualityReport };
 export type QualityBug = { _id: string; title: string; status: string; priority: string; bugDetails: { severity: string; environment: string }; list: string; updatedAt: string };
 
@@ -31,6 +44,13 @@ export function useQualityCapabilities(workspaceId: string, listId?: string) {
     queryKey: ['quality', workspaceId, 'capabilities', listId || 'workspace'],
     enabled: Boolean(workspaceId),
     queryFn: async () => (await api.get(`${root(workspaceId)}/capabilities`, { params: listId ? { listId } : {} })).data.data as QualityCapabilities,
+  });
+}
+
+export function useQualitySettings(workspaceId: string, enabled = true) {
+  return useQuery({
+    queryKey: ['quality', workspaceId, 'project-settings'], enabled: Boolean(workspaceId) && enabled,
+    queryFn: async () => (await api.get(`${root(workspaceId)}/project-settings`)).data.data as QualityProjectSettings,
   });
 }
 

@@ -31,6 +31,19 @@ export const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
+      // Keep every QA request inside the project selected in the Quality
+      // header. The explicit URL scope wins, then the remembered workspace
+      // selection, then the workspace-root project.
+      if (config.url?.includes('/quality/')) {
+        const isProjectDirectory = /\/quality\/projects(?:\?|$)/.test(config.url);
+        const isWorkspaceDefaults = /\/quality\/settings\/defaults(?:\?|$)/.test(config.url);
+        if (!isProjectDirectory && !isWorkspaceDefaults) {
+          const workspaceId = config.url.match(/\/workspaces\/([^/?]+)\/quality\//)?.[1];
+          const urlProjectId = new URLSearchParams(window.location.search).get('projectId');
+          const rememberedProjectId = workspaceId ? localStorage.getItem(`qualityProject:${workspaceId}`) : null;
+          config.params = { ...(config.params || {}), projectId: urlProjectId || rememberedProjectId || 'workspace' };
+        }
+      }
       // Skip token validation for auth endpoints (login, register, google)
       const isAuthEndpoint =
         config.url?.includes('/auth/login') ||

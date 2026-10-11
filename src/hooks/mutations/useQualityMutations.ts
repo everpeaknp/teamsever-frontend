@@ -28,8 +28,8 @@ export function useCreateQualityPlan(workspaceId: string) {
 export function useStartQualityRun(workspaceId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { planId: string; build: string; environment: string; assignments?: Record<string, string> }) =>
-      (await api.post(`/workspaces/${workspaceId}/quality/plans/${input.planId}/runs`, { build: input.build, environment: input.environment, assignments: input.assignments })).data.data,
+    mutationFn: async (input: { planId: string; build: string; environment: string; platform?: string; assignments?: Record<string, string> }) =>
+      (await api.post(`/workspaces/${workspaceId}/quality/plans/${input.planId}/runs`, { build: input.build, environment: input.environment, platform: input.platform, assignments: input.assignments })).data.data,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['quality', workspaceId, 'runs'] }),
   });
 }
