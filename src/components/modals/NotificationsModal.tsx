@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { api } from '@/lib/axios';
 import { useNotificationStore } from '@/store/useNotificationStore';
 import { toast } from 'sonner';
@@ -30,6 +30,7 @@ interface NotificationsModalProps {
 }
 
 export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const workspaceMatch = pathname?.match(/\/workspace\/([^/]+)/);
   const scopedWorkspaceId = workspaceMatch?.[1];
@@ -169,6 +170,7 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
       case 'MEMBER_JOINED':
         return <UserPlus className="w-5 h-5 text-blue-500" />;
       case 'TASK_ASSIGNED':
+      case 'QA_RUN_ASSIGNED':
       case 'TASK_UPDATED':
         return <CheckCheck className="w-5 h-5 text-green-500" />;
       case 'COMMENT_ADDED':
@@ -255,6 +257,13 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
                 {filteredNotifications.map((notification) => (
                   <div
                     key={notification._id}
+                    onClick={() => {
+                      const runId = notification.data?.runId || notification.data?.resourceId;
+                      if (notification.type !== 'QA_RUN_ASSIGNED' || !notification.data?.workspaceId || !runId) return;
+                      if (!notification.read) void handleMarkAsRead(notification._id, notification.type);
+                      onClose();
+                      router.push(`/workspace/${notification.data.workspaceId}/quality/runs/${runId}`);
+                    }}
                     className={`rounded-lg border p-4 transition-all ${
                       notification.read
                         ? 'border-border hover:border-border/80'

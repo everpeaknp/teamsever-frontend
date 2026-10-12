@@ -164,7 +164,12 @@ export function KanbanColumn({
   return (
     <div className="flex-1 min-w-0">
       <div className="mb-2 flex items-center justify-between px-1">
-        <h3 className={`font-semibold text-sm ${headingColor}`}>{title}</h3>
+        <div>
+          <h3 className={`font-semibold text-sm ${headingColor}`}>{title}</h3>
+          <p className="text-[10px] text-muted-foreground font-medium">
+            {column === 'todo' ? 'Open' : column === 'inprogress' ? 'In Development' : column === 'review' ? 'Ready for QA' : 'Verified'}
+          </p>
+        </div>
         <span className="rounded text-sm text-muted-foreground">{filteredCards.length}</span>
       </div>
       <div

@@ -126,11 +126,11 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
           if (!window.isSecureContext || !navigator.geolocation) throw new Error('Geolocation unavailable');
           locationFix = await readAccurateLocation(maxAccuracyMeters, navigator.geolocation, newStatus === 'active' ? 20_000 : 5_000);
         } catch (locationError) {
-          if (newStatus === 'active') {
-            if (locationError instanceof Error && locationError.name === 'StaleLocationError') throw locationError;
-            throw new Error('Location is unavailable or permission was denied. Allow location access and try again.');
+          if (locationError instanceof Error && locationError.name === 'StaleLocationError' && newStatus === 'active') throw locationError;
+          if (newStatus === 'inactive') {
+            throw new Error('Clock-out is blocked because your location could not be verified. Allow location access and retry, or ask a workspace admin to stop your shift as an exception.');
           }
-          toast.warning('Clocked out without a fresh location. This shift will be flagged for review.');
+          throw new Error('Location is unavailable or permission was denied. Allow location access and try again.');
         }
       }
       

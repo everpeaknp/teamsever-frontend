@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Task } from '@/types';
 import { useRef } from 'react';
 import { TaskStatusChart } from '@/components/analytics/TaskStatusChart';
+import { MobileWorkspaceTabBar } from '@/components/layout/MobileWorkspaceTabBar';
 
 type AnalyticsView = 'workspace' | 'personal';
 type RangeKey = 'today' | '7d' | '30d' | '90d' | 'all' | 'custom';
@@ -628,9 +629,70 @@ export default function AnalyticsPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <main className="max-w-[1440px] mx-auto px-6 py-5">
+            <main className="mx-auto max-w-[1440px] overflow-x-hidden px-3 py-4 pb-28 sm:px-6 sm:py-5 lg:pb-5">
+                <section className="mb-4 space-y-3 sm:hidden" aria-label="Dashboard controls">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Dashboard</p>
+                            <h1 className="truncate text-xl font-bold text-foreground">{workspace?.name || workspace?.workspaceName || 'Workspace overview'}</h1>
+                        </div>
+                        {(loading || summaryLoading) && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-label="Updating dashboard" />}
+                    </div>
+                    <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Quick date range">
+                        {([
+                            ['today', 'Today'],
+                            ['7d', '7 days'],
+                            ['30d', '30 days'],
+                        ] as const).map(([value, label]) => (
+                            <Button
+                                key={value}
+                                type="button"
+                                size="sm"
+                                variant={range === value ? 'default' : 'outline'}
+                                aria-pressed={range === value}
+                                onClick={() => setRange(value)}
+                                className="h-8 shrink-0 rounded-full px-3 text-xs"
+                            >
+                                {label}
+                            </Button>
+                        ))}
+                        <select
+                            aria-label="More date ranges"
+                            className="h-8 shrink-0 rounded-full border border-input bg-background px-3 text-xs"
+                            value={range === '90d' || range === 'all' || range === 'custom' ? range : ''}
+                            onChange={(e) => e.target.value && setRange(e.target.value as RangeKey)}
+                        >
+                            <option value="" disabled>More</option>
+                            <option value="90d">90 days</option>
+                            <option value="all">All time</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    {(availableViews.length > 1 || range === 'custom') && (
+                        <div className="grid grid-cols-2 gap-2">
+                            {availableViews.length > 1 && (
+                                <select
+                                    aria-label="Analytics view"
+                                    className="h-9 min-w-0 rounded-xl border border-input bg-card px-3 text-xs"
+                                    value={selectedView}
+                                    onChange={(e) => setSelectedView(e.target.value as AnalyticsView)}
+                                >
+                                    {availableViews.includes('workspace') && <option value="workspace">Workspace view</option>}
+                                    {availableViews.includes('personal') && <option value="personal">Personal view</option>}
+                                </select>
+                            )}
+                            {range === 'custom' && (
+                                <>
+                                    <input aria-label="From date" type="date" className="h-9 min-w-0 rounded-xl border border-input bg-card px-2 text-xs" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+                                    <input aria-label="To date" type="date" className="h-9 min-w-0 rounded-xl border border-input bg-card px-2 text-xs" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+                                </>
+                            )}
+                        </div>
+                    )}
+                </section>
+
                 {/* Header Actions */}
-                <div className="flex flex-wrap items-center justify-end gap-3 mb-6">
+                <div className="hidden sm:flex flex-wrap items-center justify-end gap-3 mb-6">
                     {(loading || summaryLoading) && (
                         <div className="flex items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-xs text-muted-foreground">
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -692,7 +754,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Metrics Row */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-2 sm:gap-4 sm:mb-8 lg:grid-cols-4 lg:gap-6">
                     {loading && !stats ? (
                         <>
                             <Skeleton className="h-[128px] w-full rounded-2xl" />
@@ -711,7 +773,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Clock In & Charts */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid min-w-0 grid-cols-1 gap-3 mb-5 [&>*]:min-w-0 lg:grid-cols-3 lg:gap-6 lg:mb-8">
                     {loading && !stats ? (
                         <>
                             <Skeleton className="h-[400px] w-full rounded-2xl" />
@@ -734,7 +796,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Team & Tasks */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid min-w-0 grid-cols-1 gap-3 mb-5 [&>*]:min-w-0 lg:grid-cols-3 lg:gap-6 lg:mb-8">
                     {loading && !stats ? (
                         <>
                             <Skeleton className="h-[400px] w-full rounded-2xl" />
@@ -756,7 +818,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Health & Trends */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid min-w-0 grid-cols-1 gap-3 mb-5 [&>*]:min-w-0 lg:grid-cols-3 lg:gap-6 lg:mb-8">
                     {loading && !stats ? (
                         <>
                             <Skeleton className="h-[400px] w-full rounded-2xl" />
@@ -773,7 +835,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Utilities */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div className="grid min-w-0 grid-cols-1 gap-3 mb-5 [&>*]:min-w-0 lg:grid-cols-2 lg:gap-6 lg:mb-8">
                     <Announcements
                         workspaceId={workspaceId}
                         canCreateAnnouncement={announcementPermissions.canCreateAnnouncements}
@@ -789,7 +851,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Workspace Activity Timeline */}
-                <div className="mb-8">
+                <div className="mb-5 min-w-0 lg:mb-8">
                     <WorkspaceActivity
                         workspaceId={workspaceId}
                         userId={userId}
@@ -799,7 +861,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Performance Metrics */}
-                <div className="mb-8">
+                <div className="mb-5 min-w-0 lg:mb-8">
                     <PerformanceMetrics
                         workspaceId={workspaceId}
                         userId={userId}
@@ -810,6 +872,7 @@ export default function AnalyticsPage() {
                     />
                 </div>
             </main>
+            <MobileWorkspaceTabBar workspaceId={workspaceId} spaces={spaces} />
         </div>
     );
 }
@@ -817,29 +880,29 @@ export default function AnalyticsPage() {
 // Helper component for cleaner code
 function MetricCard({ title, value, icon, color, badge, subtext }: any) {
     const colors: any = {
-        blue: "bg-blue-50 text-blue-600",
+        blue: "bg-blue-500/10 text-blue-600 dark:text-blue-300",
         primary: "bg-primary/10 text-primary",
-        emerald: "bg-emerald-50 text-emerald-600",
-        amber: "bg-amber-50 text-amber-600"
+        emerald: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
+        amber: "bg-amber-500/10 text-amber-600 dark:text-amber-300"
     };
     return (
-        <Card>
-            <CardContent className="pt-6">
-                <div className="flex justify-between items-start mb-4">
-                    <span className="text-muted-foreground font-medium text-sm">{title}</span>
-                    <div className={`p-2 rounded-lg ${colors[color]}`}>{icon}</div>
+        <Card className="min-w-0 rounded-2xl border-border/70 shadow-sm">
+            <CardContent className="p-3 sm:p-6">
+                <div className="mb-3 flex min-h-10 items-start justify-between gap-2 sm:mb-4 sm:min-h-0">
+                    <span className="line-clamp-2 text-[11px] font-medium leading-snug text-muted-foreground sm:text-sm">{title}</span>
+                    <div className={`shrink-0 rounded-xl p-1.5 sm:p-2 ${colors[color]}`}>{icon}</div>
                 </div>
-                <div className="flex items-baseline gap-2">
-                    <h3 className="text-2xl font-bold">{value}</h3>
+                <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <h3 className="text-xl font-bold tabular-nums sm:text-2xl">{value}</h3>
                     {badge && (
                         <Badge
                             variant="outline"
-                            className="border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700"
+                            className="h-5 border-emerald-200 bg-emerald-50 px-1.5 text-[9px] text-emerald-700 hover:bg-emerald-50 hover:text-emerald-700 sm:text-xs"
                         >
                             {badge}
                         </Badge>
                     )}
-                    {subtext && <span className="text-xs font-semibold text-emerald-500">{subtext}</span>}
+                    {subtext && <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 sm:text-xs">{subtext}</span>}
                 </div>
             </CardContent>
         </Card>

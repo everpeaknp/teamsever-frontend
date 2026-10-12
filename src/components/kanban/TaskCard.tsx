@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { cn } from '@/lib/utils';
 import { useTaskSidebarStore } from '@/store/useTaskSidebarStore';
-import { Flag } from 'lucide-react';
+import { Flag, Bug } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
@@ -99,6 +99,12 @@ export function TaskCard({ task, handleDragStart, canDrag, isBlocked = false, sp
           </div>
           
           <div className="flex items-center gap-1.5">
+            {task.workItemType === 'bug' && (
+              <Badge variant="outline" className="px-1 py-0 text-[9px] h-4 font-bold uppercase tracking-tighter text-red-600 bg-red-100 dark:bg-red-900/40 border-red-300">
+                <Bug className="w-2.5 h-2.5 mr-1" />
+                Bug
+              </Badge>
+            )}
             <Badge variant="outline" className={cn("px-1 py-0 text-[9px] h-4 font-bold uppercase tracking-tighter", getPriorityColor(task.priority))}>
               <Flag className="w-2 h-2 mr-1 fill-current" />
               {task.priority}

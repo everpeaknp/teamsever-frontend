@@ -30,6 +30,7 @@ export interface Workspace {
     role: 'owner' | 'admin' | 'member';
   }>;
   logo?: string;
+  qualityEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -69,6 +70,17 @@ export interface Task {
   name: ReactNode;
   _id: string;
   title: string;
+  workItemType?: 'task' | 'bug';
+  moduleId?: string;
+  qaReviewer?: string | User;
+  bugDetails?: {
+    reproductionSteps: string;
+    expectedResult: string;
+    actualResult: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    environment: string;
+    build?: string;
+  };
   description?: string;
   status: 'todo' | 'inprogress' | 'review' | 'done' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';

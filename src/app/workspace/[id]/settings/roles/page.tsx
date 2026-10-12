@@ -60,6 +60,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ICustomRole } from '@/types/pro-features';
 import { TableSkeleton } from '@/components/skeletons/PageSkeleton';
 import { UserAvatar } from '@/components/ui/user-avatar';
+import { applyPermissionGroupSelection, getPermissionGroupToggleTargets } from '@/lib/permissionGroupSelection';
 
 interface PermissionCatalogItem {
   key: string;
@@ -502,6 +503,7 @@ function PermissionPicker({
   selectedPermissions,
   restrictedPermissions = [],
   togglePermission,
+  setPermissionGroup,
   isPermissionSelected,
   permissionSearch,
   setPermissionSearch,
@@ -516,6 +518,7 @@ function PermissionPicker({
   selectedPermissions: string[];
   restrictedPermissions?: string[];
   togglePermission: (permId: string) => void;
+  setPermissionGroup: (permissionKeys: string[], checked: boolean) => void;
   isPermissionSelected: (permId: string) => boolean;
   permissionSearch: string;
   setPermissionSearch: (value: string) => void;
@@ -567,7 +570,49 @@ function PermissionPicker({
         {filteredGroups.map((group) => (
           <div key={group.category} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h4 className="font-semibold text-foreground">{group.category}</h4>
+              <div className="flex min-w-0 items-center gap-2">
+                <h4 className="font-semibold text-foreground">{group.category}</h4>
+                {(() => {
+                  const editable = group.permissions.filter(
+                    (permission) => !lockedPermissions.has(permission.key) || allowRestrictInherited,
+                  );
+                  const isChecked = (key: string) => {
+                    const locked = lockedPermissions.has(key);
+                    return locked
+                      ? !restrictedPermissions.includes(key)
+                      : isPermissionSelected(key);
+                  };
+                  const count = editable.filter((permission) => isChecked(permission.key)).length;
+                  const checked = count === editable.length ? true : count > 0 ? 'indeterminate' : false;
+
+                  return (
+                    <>
+                      <Checkbox
+                        aria-label={`Select all ${group.category} permissions`}
+                        checked={checked}
+                        disabled={editable.length === 0}
+                        onCheckedChange={(value) => {
+                          const shouldSelect = value !== true;
+                          const targets = getPermissionGroupToggleTargets(
+                            editable.map((permission) => permission.key),
+                            isChecked,
+                          ).filter((target) => target.checked === shouldSelect);
+                          const ordinaryKeys: string[] = [];
+                          for (const target of targets) {
+                            if (lockedPermissions.has(target.key)) {
+                              toggleRestrictedPermission?.(target.key);
+                            } else {
+                              ordinaryKeys.push(target.key);
+                            }
+                          }
+                          if (ordinaryKeys.length) setPermissionGroup(ordinaryKeys, shouldSelect);
+                        }}
+                      />
+                      <span className="text-xs text-muted-foreground">All</span>
+                    </>
+                  );
+                })()}
+              </div>
               <Badge variant="outline" className="rounded-full text-[11px] uppercase tracking-wide">
                 {group.permissions.length} actions
               </Badge>
@@ -1500,6 +1545,7 @@ export default function RolesPage() {
                 groupedPermissions={groupedPermissions}
                 selectedPermissions={roleForm.permissions}
                 togglePermission={(permId) => togglePermissions(roleForm.permissions, setRolePermissions, permId)}
+                setPermissionGroup={(keys, checked) => setRolePermissions((prev) => applyPermissionGroupSelection(prev, keys, checked, LEGACY_PERMISSION_ALIASES))}
                 isPermissionSelected={(permId) => isPermissionSelected(permId, roleForm.permissions)}
                 permissionSearch={rolePermissionSearch}
                 setPermissionSearch={setRolePermissionSearch}
@@ -1589,6 +1635,7 @@ export default function RolesPage() {
                 groupedPermissions={groupedPermissions}
                 selectedPermissions={systemRolePermissions}
                 togglePermission={(permId) => togglePermissions(systemRolePermissions, setSystemRolePermissions, permId)}
+                setPermissionGroup={(keys, checked) => setSystemRolePermissions((prev) => applyPermissionGroupSelection(prev, keys, checked, LEGACY_PERMISSION_ALIASES))}
                 isPermissionSelected={(permId) => isPermissionSelected(permId, systemRolePermissions)}
                 permissionSearch={systemPermissionSearch}
                 setPermissionSearch={setSystemPermissionSearch}
@@ -1749,6 +1796,7 @@ export default function RolesPage() {
                   groupedPermissions={groupedPermissions}
                   selectedPermissions={memberAdditionalPermissions}
                   togglePermission={(permId) => togglePermissions(memberAdditionalPermissions, setMemberAdditionalPermissions, permId)}
+                  setPermissionGroup={(keys, checked) => setMemberAdditionalPermissions((prev) => applyPermissionGroupSelection(prev, keys, checked, LEGACY_PERMISSION_ALIASES))}
                   isPermissionSelected={(permId) => isPermissionSelected(permId, memberAdditionalPermissions)}
                   permissionSearch={memberPermissionSearch}
                   setPermissionSearch={setMemberPermissionSearch}

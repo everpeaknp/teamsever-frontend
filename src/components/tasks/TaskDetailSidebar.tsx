@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { useTaskSidebarStore } from '@/store/useTaskSidebarStore';
 import { api } from '@/lib/axios';
@@ -55,11 +56,18 @@ import {
   CommandItem,
 } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { BugHandoff } from '@/components/quality/BugHandoff';
 import { countTaskDescriptionWords, MAX_TASK_DESCRIPTION_WORDS } from '@/lib/taskDescription';
 
 interface Task {
   _id: string;
   title: string;
+  workItemType?: 'task' | 'bug';
+  qaProject?: string | { _id: string };
+  qaProjectName?: string;
+  qaSourceRun?: string;
+  qaSourceCaseKey?: string;
+  bugDetails?: { reproductionSteps: string; expectedResult: string; actualResult: string; severity: string; environment: string; build?: string };
   description?: string;
   status: 'todo' | 'inprogress' | 'review' | 'done' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
@@ -120,6 +128,7 @@ interface Activity {
   fieldChanged?: string;
   oldValue?: any;
   newValue?: any;
+  metadata?: any;
   user: {
     _id: string;
     name: string;
@@ -178,7 +187,7 @@ export function TaskDetailSidebar() {
       setError(null);
       const response = await api.get(`/tasks/${taskId}`);
       const taskData = response.data.data || response.data;
-      
+
       setTask(taskData);
       setTitle(taskData.title);
       setDescription(taskData.description || '');
@@ -187,7 +196,7 @@ export function TaskDetailSidebar() {
       setStartDate(taskData.startDate ? new Date(taskData.startDate).toISOString().split('T')[0] : '');
       setDueDate(taskData.dueDate ? new Date(taskData.dueDate).toISOString().split('T')[0] : '');
       setDeadline(taskData.deadline ? new Date(taskData.deadline).toISOString().split('T')[0] : '');
-      
+
       // Ensure assignee is handled as a string ID for the Select component
       if (taskData.assignee && typeof taskData.assignee === 'object' && taskData.assignee._id) {
         setAssigneeId(taskData.assignee._id);
@@ -325,7 +334,7 @@ export function TaskDetailSidebar() {
   const toggleSubtaskStatus = async (subtask: any, e: React.MouseEvent) => {
     e.stopPropagation(); // Don't open the subtask details
     const newStatus = subtask.status === 'done' ? 'todo' : 'done';
-    
+
     try {
       setSaving(true);
       await api.patch(`/tasks/${subtask._id}`, { status: newStatus });
@@ -427,6 +436,7 @@ export function TaskDetailSidebar() {
     if (typeof value === 'object') {
       if (value.name) return value.name;
       if (value.email) return value.email;
+      if (value.status) return value.status;
       return JSON.stringify(value);
     }
     return String(value);
@@ -501,7 +511,7 @@ export function TaskDetailSidebar() {
                 {task.parentTask && (
                   <>
                     <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                    <span 
+                    <span
                       onClick={() => openTask(task.parentTask!._id)}
                       className="text-purple-600 font-medium cursor-pointer hover:text-purple-500 transition-colors truncate max-w-[120px]"
                     >
@@ -521,7 +531,7 @@ export function TaskDetailSidebar() {
 
               {/* Status and Priority */}
               <div className="flex items-center gap-3">
-                <Select value={status} onValueChange={handleStatusChange}>
+                {task.workItemType === 'bug' ? <Badge variant="outline" className="h-8 px-3">{({ todo: 'Open', inprogress: 'In progress', review: 'Ready for QA', done: 'Verified', cancelled: 'Closed' } as Record<string, string>)[status]}</Badge> : <Select value={status} onValueChange={handleStatusChange}>
                   <SelectTrigger className={`w-[140px] h-8 ${getStatusColor(status)}`}>
                     <SelectValue />
                   </SelectTrigger>
@@ -532,7 +542,7 @@ export function TaskDetailSidebar() {
                     <SelectItem value="done">Done</SelectItem>
                     <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
-                </Select>
+                </Select>}
 
                 <Select value={priority} onValueChange={handlePriorityChange}>
                   <SelectTrigger className={`w-[120px] h-8 ${getPriorityColor(priority)}`}>
@@ -558,6 +568,15 @@ export function TaskDetailSidebar() {
             {/* Scrollable Content */}
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-6">
+                {task.workItemType === 'bug' && task.qaSourceRun && task.list.space?.workspace?._id && <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4" aria-label="QA source"><div><p className="text-xs font-semibold text-muted-foreground">Reported from QA</p><p className="mt-1 text-sm font-medium">{task.qaProjectName || 'QA project'}{task.qaSourceCaseKey ? ` · ${task.qaSourceCaseKey}` : ''}</p><p className="text-xs text-muted-foreground">Linked to the failed test execution that reported this bug.</p></div><Link className="text-sm font-medium text-primary hover:underline" href={`/workspace/${task.list.space.workspace._id}/quality/runs/${task.qaSourceRun}?projectId=${encodeURIComponent(typeof task.qaProject === 'string' ? task.qaProject : task.qaProject?._id || '')}`}>Open QA run</Link></section>}
+                {task.workItemType === 'bug' && task.bugDetails && <section className="space-y-3 rounded-lg border p-4" aria-label="Bug details">
+                  <div className="flex flex-wrap gap-2"><Badge variant="secondary">Bug</Badge><Badge variant="outline">{task.bugDetails.severity} severity</Badge>{task.bugDetails.build && <Badge variant="outline">Build {task.bugDetails.build}</Badge>}</div>
+                  <div><p className="text-xs font-semibold text-muted-foreground">Steps to reproduce</p><p className="whitespace-pre-wrap text-sm">{task.bugDetails.reproductionSteps}</p></div>
+                  <div><p className="text-xs font-semibold text-muted-foreground">Expected result</p><p className="whitespace-pre-wrap text-sm">{task.bugDetails.expectedResult}</p></div>
+                  <div><p className="text-xs font-semibold text-muted-foreground">Actual result</p><p className="whitespace-pre-wrap text-sm">{task.bugDetails.actualResult}</p></div>
+                  <div><p className="text-xs font-semibold text-muted-foreground">Environment</p><p className="text-sm">{task.bugDetails.environment}</p></div>
+                </section>}
+                {task.workItemType === 'bug' && task.list.space?.workspace?._id && <BugHandoff taskId={task._id} workspaceId={task.list.space.workspace._id} listId={task.list._id} status={task.status} assigneeId={task.assignee?._id} currentUserId={typeof window !== 'undefined' ? localStorage.getItem('userId') || undefined : undefined} onChanged={fetchTask} />}
                 {/* Meta Grid */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
@@ -576,18 +595,18 @@ export function TaskDetailSidebar() {
                           <div className="flex items-center gap-2 overflow-hidden">
                             {assigneeId && assigneeId !== 'null' ? (
                               <>
-                                <UserAvatar 
-                                  user={workspaceMembers.find(m => m._id === assigneeId)} 
+                                <UserAvatar
+                                  user={workspaceMembers.find(m => m._id === assigneeId)}
                                   className="h-5 w-5"
                                 />
                                 <span className="truncate">
                                   {workspaceMembers.find(m => m._id === assigneeId)?.name}
                                 </span>
                                 {workspaceMembers.find(m => m._id === assigneeId)?.customRole && (
-                                  <Badge 
-                                    variant="outline" 
+                                  <Badge
+                                    variant="outline"
                                     className="text-[10px] h-4 px-1.5 ml-1"
-                                    style={{ 
+                                    style={{
                                       backgroundColor: workspaceMembers.find(m => m._id === assigneeId).customRole.color + '20',
                                       color: workspaceMembers.find(m => m._id === assigneeId).customRole.color,
                                       borderColor: workspaceMembers.find(m => m._id === assigneeId).customRole.color + '40'
@@ -656,9 +675,9 @@ export function TaskDetailSidebar() {
                       <Calendar className="w-3 h-3" />
                       Due Date
                     </Label>
-                    <Input 
-                      type="date" 
-                      value={dueDate} 
+                    <Input
+                      type="date"
+                      value={dueDate}
                       onChange={(e) => handleDueDateChange(e.target.value)}
                       className="h-8 border-none p-0 focus-visible:ring-0 bg-transparent text-sm font-medium"
                     />
@@ -669,9 +688,9 @@ export function TaskDetailSidebar() {
                       <Clock className="w-3 h-3" />
                       Start Date
                     </Label>
-                    <Input 
-                      type="date" 
-                      value={startDate} 
+                    <Input
+                      type="date"
+                      value={startDate}
                       onChange={(e) => handleStartDateChange(e.target.value)}
                       className="h-8 border-none p-0 focus-visible:ring-0 bg-transparent text-sm font-medium"
                     />
@@ -682,9 +701,9 @@ export function TaskDetailSidebar() {
                       <Clock className="w-3 h-3" />
                       Deadline
                     </Label>
-                    <Input 
-                      type="date" 
-                      value={deadline} 
+                    <Input
+                      type="date"
+                      value={deadline}
                       onChange={(e) => handleDeadlineChange(e.target.value)}
                       className="h-8 border-none p-0 focus-visible:ring-0 bg-transparent text-sm font-medium"
                     />
@@ -748,17 +767,17 @@ export function TaskDetailSidebar() {
                   {/* Subtask List */}
                   <div className="space-y-1">
                     {task.subtasks?.map((subtask) => (
-                      <div 
+                      <div
                         key={subtask._id}
                         onClick={() => openTask(subtask._id)}
                         className="flex items-center gap-3 p-2 rounded-md hover:bg-purple-500/10 cursor-pointer group transition-all duration-200 border border-transparent hover:border-purple-500/20"
                       >
-                        <div 
+                        <div
                           onClick={(e) => toggleSubtaskStatus(subtask, e)}
                           className={cn(
                             "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all duration-200",
-                            subtask.status === 'done' 
-                              ? "bg-green-500 border-green-500 scale-110" 
+                            subtask.status === 'done'
+                              ? "bg-green-500 border-green-500 scale-110"
                               : "border-gray-500 hover:border-purple-500 hover:scale-110"
                           )}
                         >
@@ -791,10 +810,10 @@ export function TaskDetailSidebar() {
                         className="h-8 border-none bg-transparent p-0 focus-visible:ring-0 text-sm text-gray-200 placeholder:text-gray-500"
                       />
                       {subtaskTitle.trim() && (
-                        <Button 
-                          type="submit" 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          type="submit"
+                          size="sm"
+                          variant="ghost"
                           className="h-7 px-2 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
                           disabled={saving}
                         >
@@ -853,47 +872,72 @@ export function TaskDetailSidebar() {
                         Activity
                       </Label>
                       <div className="space-y-3">
-                        {task.activity.map((activity) => (
-                          <div key={activity._id} className="flex gap-3 text-sm">
-                          <UserAvatar 
-                            user={activity.user} 
-                            className="w-6 h-6 flex-shrink-0" 
-                          />
-                            <div className="flex-1">
-                              <p className="text-foreground">
-                                <span className="font-medium">{activity.user.name}</span>
-                                {activity.type === 'comment' ? (
-                                  <>
-                                    {' '}commented
-                                    {activity.content ? (
-                                      <>
-                                        : <span className="text-foreground">{activity.content}</span>
-                                      </>
-                                    ) : null}
-                                  </>
-                                ) : (
-                                  <>
-                                    {' '}changed{' '}
-                                    <span className="font-medium">
-                                      {formatActivityField(activity.fieldChanged || activity.field)}
+                        {task.activity.map((activity) => {
+                          const isStatusChange = (activity.fieldChanged || activity.field) === 'status';
+                          const isPriorityChange = (activity.fieldChanged || activity.field) === 'priority';
+                          const oldStatus = typeof activity.oldValue === 'object' ? activity.oldValue?.status : activity.oldValue;
+                          const newStatus = typeof activity.newValue === 'object' ? activity.newValue?.status : activity.newValue;
+                          const noteReason = activity.metadata?.reason || (typeof activity.newValue === 'object' ? activity.newValue?.reason : null);
+
+                          return (
+                            <div key={activity._id} className="p-2.5 rounded-lg border border-border/40 bg-muted/20 text-xs">
+                              <div className="flex gap-2.5 items-start">
+                                <UserAvatar
+                                  user={activity.user}
+                                  className="w-5 h-5 flex-shrink-0 mt-0.5"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="font-semibold text-foreground">{activity.user.name}</span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
-                                    {(activity.oldValue !== undefined || activity.newValue !== undefined) && (
-                                      <>
-                                        {' '}from{' '}
-                                        <span className="font-medium">{formatActivityValue(activity.oldValue)}</span>
-                                        {' '}to{' '}
-                                        <span className="font-medium">{formatActivityValue(activity.newValue)}</span>
-                                      </>
-                                    )}
-                                  </>
-                                )}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {new Date(activity.createdAt).toLocaleString()}
-                              </p>
+                                  </div>
+
+                                  {activity.type === 'comment' ? (
+                                    <p className="mt-1 text-foreground whitespace-pre-wrap">{activity.content}</p>
+                                  ) : isStatusChange ? (
+                                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                      <span className="text-muted-foreground font-medium">Status:</span>
+                                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] uppercase font-bold tracking-tight bg-muted">
+                                        {task.workItemType === 'bug' && oldStatus === 'review' ? 'Ready for QA' : oldStatus || 'none'}
+                                      </Badge>
+                                      <span className="text-muted-foreground font-bold">→</span>
+                                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] uppercase font-bold tracking-tight bg-primary/10 text-primary border-primary/20">
+                                        {task.workItemType === 'bug' && newStatus === 'review' ? 'Ready for QA' : newStatus || 'none'}
+                                      </Badge>
+                                    </div>
+                                  ) : isPriorityChange ? (
+                                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                      <span className="text-muted-foreground font-medium">Priority:</span>
+                                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] uppercase font-bold tracking-tight">
+                                        {String(activity.oldValue || 'none')}
+                                      </Badge>
+                                      <span className="text-muted-foreground font-bold">→</span>
+                                      <Badge variant="outline" className="px-1.5 py-0 text-[10px] uppercase font-bold tracking-tight">
+                                        {String(activity.newValue || 'none')}
+                                      </Badge>
+                                    </div>
+                                  ) : (
+                                    <p className="mt-1 text-muted-foreground">
+                                      Changed <span className="font-medium text-foreground">{formatActivityField(activity.fieldChanged || activity.field)}</span>
+                                      {' from '}
+                                      <span className="line-through">{formatActivityValue(activity.oldValue)}</span>
+                                      {' to '}
+                                      <span className="font-medium text-foreground">{formatActivityValue(activity.newValue)}</span>
+                                    </p>
+                                  )}
+
+                                  {noteReason && (
+                                    <div className="mt-2 p-1.5 rounded bg-muted/60 border border-border/70 text-[11px] text-muted-foreground italic">
+                                      <span className="not-italic font-semibold text-foreground">Note:</span> {noteReason}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                     <Separator />
@@ -906,14 +950,14 @@ export function TaskDetailSidebar() {
                     <MessageSquare className="w-4 h-4" />
                     Comments ({displayComments.length})
                   </Label>
-                  
+
                   {displayComments.length > 0 && (
                     <div className="space-y-4">
                       {displayComments.map((comment) => (
                         <div key={comment._id} className="flex gap-3">
-                          <UserAvatar 
-                            user={comment.author} 
-                            className="w-8 h-8 flex-shrink-0" 
+                          <UserAvatar
+                            user={comment.author}
+                            className="w-8 h-8 flex-shrink-0"
                           />
                           <div className="flex-1 space-y-1">
                             <div className="flex items-center gap-2">
@@ -944,8 +988,8 @@ export function TaskDetailSidebar() {
                       }}
                       disabled={saving}
                     />
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       onClick={handleCommentSubmit}
                       disabled={saving || !commentText.trim()}
                     >

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { login, loginWithGoogle, loginWithGithub, loginWithApple, getCurrentUser } from '@/lib/auth';
-import { signInWithGoogle, signInWithGithub, signInWithApple } from '@/lib/firebase';
+import { isFirebaseConfigured, signInWithGoogle, signInWithGithub, signInWithApple } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Eye, 
@@ -251,7 +251,8 @@ export default function LoginPage() {
           <div className="grid grid-cols-3 gap-3">
             <button
               onClick={handleGoogleLogin}
-              disabled={googleLoading}
+              disabled={googleLoading || !isFirebaseConfigured}
+              title={!isFirebaseConfigured ? 'Configure Firebase to enable social sign-in' : 'Continue with Google'}
               className="flex items-center justify-center gap-2 h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
             >
               {googleLoading ? (
@@ -267,7 +268,8 @@ export default function LoginPage() {
             </button>
             <button 
               onClick={handleGithubLogin}
-              disabled={githubLoading}
+              disabled={githubLoading || !isFirebaseConfigured}
+              title={!isFirebaseConfigured ? 'Configure Firebase to enable social sign-in' : 'Continue with GitHub'}
               className="flex items-center justify-center gap-2 h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
             >
               {githubLoading ? (
@@ -278,7 +280,8 @@ export default function LoginPage() {
             </button>
             <button
               onClick={handleAppleLogin}
-              disabled={appleLoading}
+              disabled={appleLoading || !isFirebaseConfigured}
+              title={!isFirebaseConfigured ? 'Configure Firebase to enable social sign-in' : 'Continue with Apple'}
               className="flex items-center justify-center gap-2 h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
               aria-label="Continue with Apple"
             >
@@ -291,6 +294,11 @@ export default function LoginPage() {
               )}
             </button>
           </div>
+          {!isFirebaseConfigured && (
+            <p className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
+              Social sign-in is unavailable until Firebase is configured.
+            </p>
+          )}
         </div>
 
         {/* Compact Footer */}

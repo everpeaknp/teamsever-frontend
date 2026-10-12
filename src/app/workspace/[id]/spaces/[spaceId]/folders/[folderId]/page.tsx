@@ -42,7 +42,7 @@ export default function FolderHomePage() {
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
   const { setWorkspaceContext } = useAuthStore();
-  const { currentSpace, folders, loading, fetchSpace, fetchFolders, deleteList } = useSpaceStore();
+  const { currentSpace, folders, loading, fetchSpace, deleteList } = useSpaceStore();
   const { deleteList: deleteListFromWorkspace } = useWorkspaceStore();
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
@@ -89,7 +89,14 @@ export default function FolderHomePage() {
     let active = true;
     const init = async () => {
       try {
-        const workspaceRes = await api.get(`/workspaces/${workspaceId}`);
+        const [workspaceRes, , , spaceMembersRes] = await Promise.all([
+          api.get(`/workspaces/${workspaceId}`),
+          fetchSpace(spaceId).catch(() => null),
+          api.get(`/folders/${folderId}`).then((res) => {
+            if (active) setFolderData(res.data?.data || null);
+          }).catch(() => null),
+          api.get(`/spaces/${spaceId}/space-members`).catch(() => null),
+        ]);
         if (!active) return;
         const workspaceData = workspaceRes.data.data;
         setWorkspace(workspaceData);
@@ -106,17 +113,7 @@ export default function FolderHomePage() {
           isOwnerUser ? 'owner' : (workspaceMember?.role === 'admin' || workspaceMember?.role === 'owner') ? 'admin' : 'member';
         setWorkspaceContext(workspaceId, role);
 
-        await Promise.all([
-          fetchSpace(spaceId).catch(() => null),
-          fetchFolders(spaceId).catch(() => null),
-          api.get(`/folders/${folderId}`).then((res) => {
-            if (!active) return;
-            setFolderData(res.data?.data || null);
-          }).catch(() => null),
-        ]);
-
-        try {
-          const spaceMembersRes = await api.get(`/spaces/${spaceId}/space-members`);
+        if (spaceMembersRes) {
           if (!active) return;
           const currentUserMember = spaceMembersRes.data.data.find((m: any) => {
             const memberId = typeof m.user === 'string' ? m.user : m.user?._id;
@@ -125,8 +122,6 @@ export default function FolderHomePage() {
           if (currentUserMember?.spacePermissionLevel) {
             setSpacePermissionLevel(currentUserMember.spacePermissionLevel);
           }
-        } catch {
-          // Best-effort only
         }
       } catch (error: any) {
         console.error('[FolderPage] Failed to initialize', error);
@@ -138,7 +133,7 @@ export default function FolderHomePage() {
     return () => {
       active = false;
     };
-  }, [workspaceId, spaceId, userId, fetchSpace, fetchFolders, setWorkspaceContext]);
+  }, [workspaceId, spaceId, userId, fetchSpace, setWorkspaceContext]);
 
   useEffect(() => {
     if (!folderId) return;

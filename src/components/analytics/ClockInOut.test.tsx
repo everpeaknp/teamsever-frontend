@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ClockInOut } from './ClockInOut';
 
-const { get, post, toastError, toastSuccess, desktopToggle, provision, consent } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), desktopToggle: vi.fn(), provision: vi.fn(), consent: vi.fn() }));
+const { get, post, toastError, toastSuccess, toastWarning, desktopToggle, provision, consent } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), toastWarning: vi.fn(), desktopToggle: vi.fn(), provision: vi.fn(), consent: vi.fn() }));
 vi.mock('@/lib/axios', () => ({ api: { get, post } }));
-vi.mock('sonner', () => ({ toast: { error: toastError, success: toastSuccess } }));
+vi.mock('sonner', () => ({ toast: { error: toastError, success: toastSuccess, warning: toastWarning } }));
 vi.mock('@/lib/desktopAttendance', () => ({ ensureTrustedDesktopDevice: provision, setDesktopActivityConsent: consent, disconnectDesktopDevice: vi.fn() }));
 
 describe('ClockInOut location enforcement', () => {
@@ -62,7 +62,7 @@ describe('ClockInOut location enforcement', () => {
     await act(async () => resolveInitialPolicy({ data: { data: { policy: { enabled: false } } } }));
   });
 
-  it('submits a clock-out location fix so the server can compare it with clock-in', async () => {
+  it('submits a clock-out location fix so the server can verify an allowed area', async () => {
     get.mockResolvedValue({ data: { data: { policy: { enabled: true } } } });
     post.mockResolvedValue({ data: { success: true, data: { timeEntry: null } } });
     Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
@@ -70,6 +70,19 @@ describe('ClockInOut location enforcement', () => {
     render(<ClockInOut workspaceId="workspace-1" currentStatus="active" runningTimer={{ startTime: new Date().toISOString() }} onStatusChange={vi.fn()} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Clock Out' }));
     await waitFor(() => expect(post).toHaveBeenCalledWith('/workspaces/workspace-1/clock/toggle', { status: 'inactive', locationFix: expect.objectContaining({ latitude: 40.0001 }) }));
+  });
+
+  it('does not clock out when location enforcement is on but fresh location cannot be read', async () => {
+    get.mockResolvedValue({ data: { data: { policy: { enabled: true } } } });
+    Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
+    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition: (_success: Function, failure: Function) => { failure(new Error('denied')); return 5; }, clearWatch: vi.fn() } });
+    render(<ClockInOut workspaceId="workspace-1" currentStatus="active" runningTimer={{ startTime: new Date().toISOString() }} onStatusChange={vi.fn()} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Clock Out' }));
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Clock-out is blocked because your location could not be verified. Allow location access and retry, or ask a workspace admin to stop your shift as an exception.'));
+    expect(post).not.toHaveBeenCalled();
+    expect(screen.getByText('CLOCKED IN')).toBeInTheDocument();
   });
 
   it('uses the trusted desktop bridge for desktop clock events', async () => {

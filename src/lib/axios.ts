@@ -1,9 +1,27 @@
 import axios from 'axios'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+const usesLocalBackendProxy = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(API_URL)
+
+export function getValidAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+  if (!token) return null;
+
+  const normalized = token.trim();
+  if (
+    !normalized ||
+    ['undefined', 'null', 'Bearer undefined', 'Bearer null'].includes(normalized)
+  ) {
+    return null;
+  }
+
+  return normalized;
+}
 
 export const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: usesLocalBackendProxy ? '/api-proxy' : `${API_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -13,6 +31,19 @@ export const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
+      // Keep every QA request inside the project selected in the Quality
+      // header. The explicit URL scope wins, then the remembered workspace
+      // selection, then the workspace-root project.
+      if (config.url?.includes('/quality/')) {
+        const isProjectDirectory = /\/quality\/projects(?:\?|$)/.test(config.url);
+        const isWorkspaceDefaults = /\/quality\/settings\/defaults(?:\?|$)/.test(config.url);
+        if (!isProjectDirectory && !isWorkspaceDefaults) {
+          const workspaceId = config.url.match(/\/workspaces\/([^/?]+)\/quality\//)?.[1];
+          const urlProjectId = new URLSearchParams(window.location.search).get('projectId');
+          const rememberedProjectId = workspaceId ? localStorage.getItem(`qualityProject:${workspaceId}`) : null;
+          config.params = { ...(config.params || {}), projectId: urlProjectId || rememberedProjectId || 'workspace' };
+        }
+      }
       // Skip token validation for auth endpoints (login, register, google)
       const isAuthEndpoint =
         config.url?.includes('/auth/login') ||
@@ -40,19 +71,11 @@ api.interceptors.request.use(
       }
       
       // Prioritize 'authToken' as it is the current standard
-      let token = localStorage.getItem('authToken');
-      if (!token || token === 'undefined' || token === 'null') {
-        token = localStorage.getItem('token');
-      }
+      const token = getValidAuthToken();
       
       // STRICT VALIDATION: Block request if token is invalid
       // This prevents "jwt malformed" errors on backend
-      if (!token || 
-          token === 'undefined' || 
-          token === 'null' || 
-          token.trim() === '' ||
-          token === 'Bearer undefined' ||
-          token === 'Bearer null') {
+      if (!token) {
         
         // Clear ALL invalid tokens silently
         localStorage.removeItem('token');

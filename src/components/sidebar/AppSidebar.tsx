@@ -20,6 +20,7 @@ import {
   MessageSquare,
   FolderOpen,
   Clock,
+  ClipboardCheck,
   MoreHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -49,10 +50,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
-import { api } from '@/lib/axios';
+import { api, getValidAuthToken } from '@/lib/axios';
 import UpgradeButton from '@/components/subscription/UpgradeButton';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
+import { useQualityCapabilities } from '@/hooks/queries/useQuality';
 
 interface AppSidebarProps {
   isMobile?: boolean;
@@ -156,6 +158,8 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
       if (workspaceId === 'undefined') workspaceId = '';
     }
   }
+
+  const qualityCapabilities = useQualityCapabilities(workspaceId);
 
   const expansionSessionKey =
     workspaceId && workspaceId !== 'undefined'
@@ -403,6 +407,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   // Fetch hierarchy using the optimized endpoint
   const loadHierarchy = useCallback(async () => {
     if (!workspaceId) return;
+    if (!getValidAuthToken()) return;
 
     if (!/^[0-9a-fA-F]{24}$/.test(workspaceId)) {
       console.error('Invalid workspace ID format:', workspaceId);
@@ -533,7 +538,9 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
         }
       }
     } catch (err: any) {
-      console.error('Failed to load hierarchy:', err);
+      if (err.response?.status !== 401 && err.message !== 'No valid authentication token') {
+        console.error('Failed to load hierarchy:', err);
+      }
       
       if (err.response?.status === 404) {
         setTimeout(() => {
@@ -1052,6 +1059,11 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                       <Clock className="w-3.5 h-3.5" />
                       Attendance
                     </Link>
+                    {qualityCapabilities.data?.canViewQuality && <Link
+                      href={`/workspace/${workspaceId}/quality`}
+                      className={cn('flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                        pathname?.includes('/quality') ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800')}
+                    ><ClipboardCheck className="w-3.5 h-3.5" />Quality</Link>}
                     <Link
                       href={`/workspace/${workspaceId}/notifications`}
                       className={cn(

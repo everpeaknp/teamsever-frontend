@@ -44,6 +44,10 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const [filterFolderId, setFilterFolderId] = useState<string>('all');
   const [filterSpaceName, setFilterSpaceName] = useState<string>('all');
   const [workspaceMembers, setWorkspaceMembers] = useState<any[]>([]);
+  const [memberLookupError, setMemberLookupError] = useState<string | null>(null);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [selectedMentionIds, setSelectedMentionIds] = useState<string[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -130,22 +134,33 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
 
-  // Fetch workspace members for filtering
-  useEffect(() => {
-    if (workspaceId && title.includes('Commit Log')) {
-      const fetchMembers = async () => {
-        try {
-          const response = await api.get(`/workspaces/${workspaceId}`);
-          if (response.data.success) {
-            setWorkspaceMembers(response.data.data.members || []);
-          }
-        } catch (err) {
-          console.error('Failed to fetch workspace members for filtering:', err);
-        }
-      };
-      fetchMembers();
+  // Fetch only people who can access this channel before offering @mentions.
+  const fetchChannelMembers = useCallback(async () => {
+    if (!workspaceId || type !== 'workspace' || !channelId || title.includes('Commit Log')) return;
+    setMembersLoading(true);
+    setMemberLookupError(null);
+    try {
+      const response = await api.get(`/chat/channels/${channelId}/members`, { params: { workspaceId } });
+      if (!response.data.success) throw new Error('Member lookup failed');
+      setWorkspaceMembers(response.data.data || []);
+    } catch (error) {
+      console.error('[ChatWindow] Failed to fetch channel members for mentions:', error);
+      setMemberLookupError('Could not load channel members. Click to retry.');
+    } finally {
+      setMembersLoading(false);
     }
-  }, [workspaceId, title]);
+  }, [workspaceId, type, channelId, title]);
+
+  useEffect(() => {
+    if (workspaceId && type === 'workspace' && channelId && !title.includes('Commit Log')) {
+      setWorkspaceMembers([]);
+      void fetchChannelMembers();
+    } else if (workspaceId && title.includes('Commit Log')) {
+      api.get(`/workspaces/${workspaceId}`).then((response) => {
+        if (response.data.success) setWorkspaceMembers(response.data.data.members || []);
+      }).catch((err) => console.error('Failed to fetch workspace members for filtering:', err));
+    }
+  }, [workspaceId, channelId, type, title, fetchChannelMembers]);
 
   // Sync draft to store
   useEffect(() => {
@@ -175,7 +190,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     sendMessage,
     sendTypingIndicator,
     loadMore,
-    refetch: refetchMessages
+    refetch: refreshMessages
   } = useChat({ 
     workspaceId, 
     channelId,
@@ -445,6 +460,11 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     if (!inputValue.trim() || sending || !currentUserId || !currentUserName) return;
 
     const messageContent = inputValue.trim();
+    const mentions = selectedMentionIds.filter((id) => {
+      const member = workspaceMembers.find((candidate) => (candidate._id || candidate.id) === id);
+      const name = member?.name;
+      return !!name && messageContent.includes(`@${name}`);
+    });
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     
     // Create optimistic message with sending status
@@ -462,6 +482,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       type: 'text',
+      mentions,
       sending: true,  // Mark as sending
       failed: false,
       ...(type === 'workspace' ? { workspace: workspaceId } : { conversation: conversationId }),
@@ -491,7 +512,9 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
     // Send message to backend
     try {
-      await sendMessage(messageContent);
+      await sendMessage(messageContent, mentions);
+      setSelectedMentionIds([]);
+      setMentionQuery(null);
       
       console.log('[ChatWindow] Message sent successfully, waiting for socket confirmation');
       
@@ -617,6 +640,10 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
   // Handle keyboard events - Enter to send
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionQuery !== null && e.key === 'Escape') {
+      setMentionQuery(null);
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -626,6 +653,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   // Handle input change with typing indicator
   const handleInputChange = (value: string) => {
     setInputValue(value);
+    const activeMention = value.match(/(?:^|\s)@([^\s@]*)$/);
+    setMentionQuery(activeMention ? activeMention[1] : null);
     
     if (value.trim() && type === 'workspace') {
       sendTypingIndicator();
@@ -636,6 +665,37 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
+  };
+
+  const insertMention = (member: any) => {
+    const user = member.user || member;
+    const memberId = user._id || user.id;
+    const name = user.name || 'Member';
+    const atIndex = inputValue.lastIndexOf('@');
+    const next = `${inputValue.slice(0, atIndex)}@${name} `;
+    setInputValue(next);
+    if (memberId && !selectedMentionIds.includes(memberId)) {
+      setSelectedMentionIds((previous) => [...previous, memberId]);
+    }
+    setMentionQuery(null);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
+  const renderMessageContent = (message: ChatMessage) => {
+    const mentionedIds = new Set((message.mentions || []).map((mention: any) => typeof mention === 'string' ? mention : mention?._id || mention?.id));
+    const names = workspaceMembers
+      .filter((member) => mentionedIds.has(member._id || member.id))
+      .map((member) => member.name as string)
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length);
+    if (!names.length) return message.content;
+    const escaped = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const matcher = new RegExp(`(@(?:${escaped.join('|')}))`, 'g');
+    return message.content.split(matcher).map((part, index) =>
+      part.startsWith('@') && names.some((name) => part === `@${name}`)
+        ? <span key={`${message._id}-mention-${index}`} className="rounded bg-primary/15 px-1 font-semibold text-primary">{part}</span>
+        : part
+    );
   };
 
   // Format message timestamp
@@ -1052,7 +1112,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
                     <div className="space-y-4">
                       <p className="text-sm font-medium text-foreground/80 leading-relaxed">
-                        {message.content}
+                        {renderMessageContent(message)}
                       </p>
 
                       {message.metadata?.commits && message.metadata.commits.length > 0 && (
@@ -1101,24 +1161,34 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
             // Leave Request Card Message (renders interactive card)
             if (message.type === 'leave_request' || (message.metadata && message.metadata.leaveRequestId)) {
               return (
-                <div
-                  key={message._id}
-                  className={cn(
-                    'flex gap-3 my-2',
-                    isOwnMessage ? 'justify-end' : 'justify-start'
-                  )}
-                >
-                  <LeaveCard
-                    message={message as any}
-                    currentUserId={currentUserId || ''}
-                    canManageLeaves={canManageLeaves}
-                    isWorkspaceOwner={isWorkspaceOwner}
-                    workspaceId={workspaceId || ''}
-                    onStatusUpdated={async () => {
-                      const refreshed = await refetchMessages(1, false);
-                      return refreshed?.find((item) => item._id === message._id)?.metadata?.status ?? null;
-                    }}
-                  />
+                <div key={message._id} className="my-2 w-full space-y-1.5">
+                  <div className={cn('flex gap-3', isOwnMessage ? 'justify-end' : 'justify-start')}>
+                    <LeaveCard
+                      message={message as any}
+                      currentUserId={currentUserId || ''}
+                      canManageLeaves={canManageLeaves}
+                      isWorkspaceOwner={isWorkspaceOwner}
+                      workspaceId={workspaceId || ''}
+                      onStatusUpdated={() => void refreshMessages(1, false)}
+                    />
+                  </div>
+                  {message.metadata?.status && message.metadata.status !== 'pending' && (() => {
+                    const resolver = message.metadata.status === 'approved' ? message.metadata.approvedBy : message.metadata.deniedBy;
+                    const resolverName = typeof resolver === 'string' ? resolver : resolver?.name || (message.metadata.status === 'approved' ? message.metadata.approvedByName : message.metadata.deniedByName);
+                    if (!resolverName) return null;
+                    const resolverId = typeof resolver === 'object' ? resolver?._id || resolver?.id : null;
+                    const resolvedByCurrentUser = resolverId === currentUserId;
+                    const decision = message.metadata.status === 'approved' ? `Approved by ${resolverName}` : `Denied by ${resolverName}`;
+                    const detail = message.metadata.status === 'denied' ? message.metadata.denialReason : null;
+                    return (
+                      <div className={cn('flex', resolvedByCurrentUser ? 'justify-end' : 'justify-start')}>
+                        <div className={cn('max-w-[min(72vw,22rem)] rounded-xl px-3 py-2 text-xs', resolvedByCurrentUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground')}>
+                          <div className="font-semibold">{decision}</div>
+                          {detail && <div className="mt-0.5 opacity-85">{detail}</div>}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             }
@@ -1150,7 +1220,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                         ? "bg-destructive/20 text-destructive border border-destructive" 
                         : "bg-primary text-primary-foreground"
                     )}>
-                      {message.content}
+                      {renderMessageContent(message)}
                       
                       {/* Status indicators */}
                       <div className="flex items-center gap-1 mt-1 justify-end text-xs opacity-70">
@@ -1237,7 +1307,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                     </div>
                   )}
                   <div className="bg-muted px-4 py-2 rounded-lg text-sm text-foreground whitespace-pre-wrap break-words w-fit min-w-[40px] max-w-full">
-                    {message.content}
+                    {renderMessageContent(message)}
                   </div>
 
                   {/* Reactions Bar */}
@@ -1269,6 +1339,24 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         <div className="border-t border-border p-4 pb-4 md:pb-6 bg-background/95 backdrop-blur-sm sticky bottom-0 z-10 transition-all">
           <div className="max-w-4xl mx-auto flex gap-2 items-end">
             <div className="flex-1 relative">
+              {mentionQuery !== null && type === 'workspace' && !isCommitLog && (
+                <div role="listbox" aria-label="Mention a channel member" className="absolute bottom-full left-0 z-30 mb-2 max-h-56 w-72 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-xl">
+                  {workspaceMembers
+                    .filter((member) => (member.name || '').toLowerCase().includes(mentionQuery.toLowerCase()))
+                    .slice(0, 12)
+                    .map((member) => (
+                      <button key={member._id || member.id} type="button" role="option" aria-selected="false" onClick={() => insertMention(member)} className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm hover:bg-accent">
+                        <span className="truncate font-medium">{member.name}</span>
+                        <span className="ml-auto pl-3 text-xs text-muted-foreground">@{member.name}</span>
+                      </button>
+                    ))}
+                  {workspaceMembers.filter((member) => (member.name || '').toLowerCase().includes(mentionQuery.toLowerCase())).length === 0 && (
+                    memberLookupError
+                      ? <button type="button" onClick={() => void fetchChannelMembers()} className="w-full px-3 py-2 text-left text-sm text-destructive">{memberLookupError}</button>
+                      : <p className="px-3 py-2 text-sm text-muted-foreground">{membersLoading ? 'Loading members…' : 'No channel members found'}</p>
+                  )}
+                </div>
+              )}
               <Textarea
                 ref={textareaRef}
                 value={inputValue}

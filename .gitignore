@@ -42,12 +42,16 @@ coverage
 *.spec.js
 *.spec.ts
 *.spec.jsx
+!src/lib/quality/bugLists.test.ts
 *.spec.tsx
 !src/components/chat/LeaveCard.test.tsx
 !src/components/layout/DesktopDownloadButton.spec.tsx
 !src/components/layout/AppUpdateNotifier.spec.tsx
+!src/components/layout/MobileWorkspaceTabBar.spec.tsx
 !src/components/attendance/DesktopPresenceSettings.spec.tsx
 !src/components/attendance/DesktopPresenceTimeline.spec.tsx
+!src/components/quality/*.test.tsx
+!src/components/quality/*.test.ts
 !desktop/**/*.test.ts
 !desktop/**/*.test.tsx
 __tests__
@@ -60,6 +64,9 @@ __mocks__
 !docs/superpowers/
 !docs/superpowers/specs/
 !docs/superpowers/specs/2026-09-30-electron-desktop-design.md
+!docs/superpowers/specs/2026-10-09-qa-test-management-design.md
+!docs/superpowers/plans/
+!docs/superpowers/plans/2026-10-09-qa-test-management.md
 
 # Misc
 .DS_Store
@@ -79,3 +86,5 @@ Thumbs.db
 # Cache
 .cache
 .eslintcache
+
+!src/components/chat/RequestLeaveModal.spec.tsx

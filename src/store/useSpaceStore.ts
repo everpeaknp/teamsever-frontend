@@ -52,7 +52,15 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const response = await api.get(`/spaces/${spaceId}`);
-      set({ currentSpace: response.data.data, loading: false });
+      const space = response.data.data;
+      set({
+        currentSpace: space,
+        // The space endpoint already includes its folder/list hierarchy. Reuse
+        // it so pages don't refetch and recount the same data via two endpoints.
+        ...(Array.isArray(space?.lists) ? { lists: space.lists } : {}),
+        ...(Array.isArray(space?.folders) ? { folders: space.folders } : {}),
+        loading: false,
+      });
     } catch (error: any) {
       set({ 
         error: error.response?.data?.message || 'Failed to fetch space',

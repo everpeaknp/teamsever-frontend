@@ -1,13 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Calendar, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Loader2, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
+import { Calendar, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Loader2, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/axios';
 import { toast } from 'sonner';
+
+const RemoteLocationMap = dynamic(() => import('./RemoteLocationMap').then((module) => module.RemoteLocationMap), { ssr: false, loading: () => <div className="h-36 w-full animate-pulse rounded-md bg-muted" /> });
 
 interface LeaveCardProps {
   message: {
@@ -23,12 +27,13 @@ interface LeaveCardProps {
       leaveRequestId?: string;
       requestType?: 'leave' | 'remote';
       proposedRemoteArea?: { name?: string; latitude?: number; longitude?: number };
+      remoteLocation?: { name?: string; latitude?: number; longitude?: number };
       remoteAreaName?: string;
       startDate?: string;
       endDate?: string;
       daysCount?: number;
       reason?: string;
-      status?: 'pending' | 'approved' | 'denied' | 'expired';
+      status?: 'pending' | 'approved' | 'denied';
       approvedBy?: { _id: string; name: string };
       approvedAt?: string;
       deniedBy?: { _id: string; name: string };
@@ -43,15 +48,7 @@ interface LeaveCardProps {
   canManageLeaves: boolean;
   isWorkspaceOwner: boolean;
   workspaceId: string;
-  onStatusUpdated?: () => Promise<string | null | undefined> | string | null | undefined | void;
-}
-
-type RequestStatus = 'pending' | 'approved' | 'denied' | 'expired';
-
-function terminalStatusFromError(error: any): RequestStatus | null {
-  const message = error?.response?.data?.message || '';
-  const match = String(message).match(/already been (approved|denied|expired)/i);
-  return match ? match[1].toLowerCase() as RequestStatus : null;
+  onStatusUpdated?: () => void;
 }
 
 export function LeaveCard({
@@ -63,66 +60,18 @@ export function LeaveCard({
   onStatusUpdated,
 }: LeaveCardProps) {
   const meta = message.metadata || {};
-  const [statusOverride, setStatusOverride] = useState<RequestStatus | null>(null);
-  const [statusRefreshRequired, setStatusRefreshRequired] = useState(false);
-  const [statusRefreshing, setStatusRefreshing] = useState(false);
-  const [statusRefreshError, setStatusRefreshError] = useState('');
-  const status = statusOverride || meta.status || 'pending';
+  const status = meta.status || 'pending';
   const leaveRequestId = meta.leaveRequestId;
   const isRemoteRequest = meta.requestType === 'remote';
+  const remoteLocation = meta.remoteLocation || meta.proposedRemoteArea;
+  const hasRemoteCoordinates = remoteLocation?.latitude != null && remoteLocation.longitude != null;
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDenyPopover, setShowDenyPopover] = useState(false);
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
   const [denialReason, setDenialReason] = useState('');
 
   const isRequester = message.sender._id === currentUserId;
-
-  useEffect(() => {
-    if (meta.status && meta.status !== 'pending') {
-      setStatusOverride(null);
-      setStatusRefreshRequired(false);
-      setStatusRefreshError('');
-    }
-  }, [message._id, meta.status]);
-
-  const refreshRequestStatus = async () => {
-    if (!onStatusUpdated) {
-      setStatusRefreshError('Could not refresh the conversation. The action stays disabled until you retry.');
-      return false;
-    }
-    setStatusRefreshing(true);
-    setStatusRefreshError('');
-    try {
-      const refreshedStatus = await onStatusUpdated();
-      if (typeof refreshedStatus === 'string' && ['pending', 'approved', 'denied', 'expired'].includes(refreshedStatus)) {
-        setStatusOverride(refreshedStatus as RequestStatus);
-        setStatusRefreshRequired(false);
-      } else if (refreshedStatus === null) {
-        throw new Error('Request status was not returned.');
-      }
-      return true;
-    } catch {
-      setStatusRefreshError('Could not refresh the conversation. The action stays disabled until you retry.');
-      return false;
-    } finally {
-      setStatusRefreshing(false);
-    }
-  };
-
-  const handleDecisionError = async (err: any, fallback: string) => {
-    const resolvedStatus = terminalStatusFromError(err);
-    if (err?.response?.status === 409 || resolvedStatus) {
-      setShowDenyPopover(false);
-      setStatusRefreshRequired(!resolvedStatus);
-      setStatusOverride(resolvedStatus);
-      toast.info(resolvedStatus
-        ? `This request was already ${resolvedStatus}. Showing its current status.`
-        : 'This request may have changed. Refreshing its status…');
-      await refreshRequestStatus();
-      return;
-    }
-    toast.error(err.response?.data?.message || fallback);
-  };
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -135,12 +84,12 @@ export function LeaveCard({
     setIsProcessing(true);
     try {
       await api.patch(`/workspaces/${workspaceId}/leaves/${leaveRequestId}/approve`);
-      setStatusOverride('approved');
       toast.success(`${isRemoteRequest ? 'Remote work' : 'Leave'} request approved!`);
-      await refreshRequestStatus();
+      if (onStatusUpdated) onStatusUpdated();
     } catch (err: any) {
       console.error('[LeaveCard] Approve error:', err);
-      await handleDecisionError(err, 'Failed to approve leave');
+      toast.error(err.response?.data?.message || 'Failed to approve leave');
+      onStatusUpdated?.();
     } finally {
       setIsProcessing(false);
     }
@@ -153,29 +102,28 @@ export function LeaveCard({
       await api.patch(`/workspaces/${workspaceId}/leaves/${leaveRequestId}/deny`, {
         denialReason: denialReason.trim() || undefined,
       });
-      setStatusOverride('denied');
       toast.success('Leave request denied');
       setShowDenyPopover(false);
       setDenialReason('');
-      await refreshRequestStatus();
+      if (onStatusUpdated) onStatusUpdated();
     } catch (err: any) {
       console.error('[LeaveCard] Deny error:', err);
-      await handleDecisionError(err, 'Failed to deny leave');
+      toast.error(err.response?.data?.message || 'Failed to deny leave');
+      onStatusUpdated?.();
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="w-full max-w-sm rounded-xl border border-border bg-card shadow-sm overflow-hidden text-card-foreground my-1.5 transition-all">
+    <div data-testid="leave-request-card" className="w-fit max-w-[min(82vw,30rem)] rounded-xl border border-border bg-card shadow-sm overflow-hidden text-card-foreground my-1 transition-all">
       {/* Top Banner / Status */}
       <div
         className={cn(
-          'flex items-center justify-between px-3.5 py-2 text-xs font-semibold border-b',
+          'flex items-center justify-between gap-4 px-3 py-1.5 text-xs font-semibold border-b',
           status === 'pending' && 'bg-amber-500/10 text-amber-500 border-amber-500/20',
           status === 'approved' && 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-          status === 'denied' && 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-          status === 'expired' && 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+          status === 'denied' && 'bg-rose-500/10 text-rose-500 border-rose-500/20'
         )}
       >
         <div className="flex items-center gap-1.5">
@@ -202,34 +150,50 @@ export function LeaveCard({
               <span>Denied</span>
             </>
           )}
-          {status === 'expired' && <><Clock className="h-3.5 w-3.5" /><span>Expired</span></>}
         </div>
       </div>
 
       {/* Body Content */}
-      <div className="p-3.5 space-y-2.5 text-xs">
+      <div className="px-3 py-2.5 space-y-2 text-xs">
         {/* Requester & Date Range */}
-        <div className="flex items-center justify-between text-muted-foreground pb-2 border-b border-border/50">
-          <div>
-            <span className="text-foreground font-semibold">{message.sender.name}</span>
-            <span className="block text-[11px] text-muted-foreground">
-              {formatDate(meta.startDate)} → {formatDate(meta.endDate)}
+        <div className="flex items-center justify-between gap-3 text-muted-foreground">
+          <div className="min-w-0">
+            <span className="font-semibold text-foreground">{message.sender.name}</span>
+            <span className="ml-2 whitespace-nowrap text-[11px]">
+              {formatDate(meta.startDate)}{meta.endDate && meta.endDate !== meta.startDate ? ` – ${formatDate(meta.endDate)}` : ''}
             </span>
           </div>
-          <div className="text-right">
-            <span className="text-sm font-bold text-foreground">{meta.daysCount || 1}</span>
-            <span className="block text-[10px] text-muted-foreground">
-              day{(meta.daysCount || 1) > 1 ? 's' : ''}
-            </span>
-          </div>
+          <span className="shrink-0 text-[11px]">{meta.daysCount || 1}d</span>
         </div>
 
-        {isRemoteRequest && <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Private remote place</span><p className="mt-0.5 text-xs">{meta.proposedRemoteArea?.name || meta.remoteAreaName || 'Existing approved private place'}</p>{meta.proposedRemoteArea?.latitude != null && meta.proposedRemoteArea.longitude != null && <p className="text-[10px] text-muted-foreground">{meta.proposedRemoteArea.latitude.toFixed(5)}, {meta.proposedRemoteArea.longitude.toFixed(5)} · shared in this DM only</p>}</div>}
+        {isRemoteRequest && <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Private remote place</span>
+          <p className="mt-0.5 text-xs">{remoteLocation?.name || meta.remoteAreaName || 'Existing approved private place'}</p>
+          {hasRemoteCoordinates ? <>
+            <div className="relative mt-2">
+              <RemoteLocationMap latitude={remoteLocation.latitude!} longitude={remoteLocation.longitude!} />
+              <Button type="button" variant="secondary" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="absolute left-2 top-2 z-[500] h-8 gap-1.5 bg-background/95 text-xs shadow-md">
+                <Maximize2 className="h-3.5 w-3.5" /> Expand map
+              </Button>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">{remoteLocation.latitude!.toFixed(5)}, {remoteLocation.longitude!.toFixed(5)} · shared in this DM only</p>
+            <Dialog open={isMapExpanded} onOpenChange={setIsMapExpanded}>
+              <DialogContent aria-label={`${remoteLocation.name || 'Requested remote location'} map`} className="w-[calc(100vw-1rem)] max-w-6xl p-3 sm:p-5">
+                <DialogHeader>
+                  <DialogTitle>{remoteLocation.name || 'Requested remote location'}</DialogTitle>
+                  <DialogDescription>Map of the location shared in this remote work request.</DialogDescription>
+                </DialogHeader>
+                <RemoteLocationMap latitude={remoteLocation.latitude!} longitude={remoteLocation.longitude!} className="h-[min(72vh,48rem)]" />
+                <p className="text-xs text-muted-foreground">{remoteLocation.latitude!.toFixed(5)}, {remoteLocation.longitude!.toFixed(5)} · shared in this DM only</p>
+              </DialogContent>
+            </Dialog>
+          </> : <p className="mt-2 rounded bg-muted/60 px-2 py-3 text-xs text-muted-foreground">Map coordinates are unavailable for this request.</p>}
+        </div>}
 
         {/* Reason (Compulsory) */}
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Reason</span>
-          <p className="text-xs text-foreground/90 mt-0.5 whitespace-pre-wrap bg-muted/30 p-2 rounded-md border border-border/40">
+          <p className="text-xs text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">
             {meta.reason || message.content}
           </p>
         </div>
@@ -254,24 +218,18 @@ export function LeaveCard({
 
         {/* Status resolved footer */}
         {status === 'approved' && meta.approvedBy && (
-          <div className="text-[10px] text-muted-foreground pt-1 flex items-center justify-between">
-            <span>Approved by {meta.approvedBy.name}</span>
-            {meta.approvedAt && <span>{new Date(meta.approvedAt).toLocaleDateString()}</span>}
+          <div className="text-[10px] text-muted-foreground">
+            Approved by {meta.approvedBy.name}{meta.approvedAt ? ` · ${new Date(meta.approvedAt).toLocaleDateString()}` : ''}
           </div>
         )}
         {status === 'denied' && meta.deniedBy && (
-          <div className="text-[10px] text-muted-foreground pt-1 flex items-center justify-between">
-            <span>Denied by {meta.deniedBy.name}</span>
-            {meta.deniedAt && <span>{new Date(meta.deniedAt).toLocaleDateString()}</span>}
+          <div className="text-[10px] text-muted-foreground">
+            Denied by {meta.deniedBy.name}{meta.deniedAt ? ` · ${new Date(meta.deniedAt).toLocaleDateString()}` : ''}
           </div>
         )}
 
-        {status !== 'pending' && <p className="rounded-md bg-muted/30 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">{status === 'expired' ? 'This request expired because its end date passed before a decision was made.' : status === 'approved' ? 'This request has been approved and is now closed.' : 'This request has been denied and is now closed.'}</p>}
-        {statusRefreshRequired && <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-muted-foreground" role={statusRefreshError ? 'alert' : 'status'}><p>{statusRefreshing ? 'Refreshing request status…' : statusRefreshError || 'This request changed elsewhere. Refresh its status before taking action.'}</p>{!statusRefreshing && <Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => void refreshRequestStatus()}><RefreshCw className="mr-2 h-3.5 w-3.5"/>Retry status refresh</Button>}</div>}
-        {!statusRefreshRequired && statusRefreshError && <div className="space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs text-muted-foreground" role="alert"><p>{statusRefreshError}</p><Button type="button" variant="outline" className="min-h-11 w-full" onClick={() => void refreshRequestStatus()}><RefreshCw className="mr-2 h-3.5 w-3.5"/>Refresh conversation</Button></div>}
-
         {/* Action Buttons for Managers with MANAGE_LEAVES permission */}
-        {status === 'pending' && !statusRefreshRequired && canManageLeaves && (!isRequester || isWorkspaceOwner) && (
+        {status === 'pending' && canManageLeaves && (!isRequester || isWorkspaceOwner) && (
           <div className="flex items-center gap-2 pt-2 border-t border-border/50">
             <Button
               type="button"

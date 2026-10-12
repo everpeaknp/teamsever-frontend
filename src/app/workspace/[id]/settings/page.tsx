@@ -20,16 +20,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function GeneralSettingsPage() {
   const router = useRouter();
   const params = useParams();
   const workspaceId = params.id as string;
   const { can } = usePermissions();
+  const queryClient = useQueryClient();
 
   const [workspaceName, setWorkspaceName] = useState('');
   const [workspaceLogo, setWorkspaceLogo] = useState<string | null>(null);
-  const [workspaceTimezone, setWorkspaceTimezone] = useState('UTC');
+  const [qualityEnabled, setQualityEnabled] = useState(false);
+  const [savingQuality, setSavingQuality] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -48,7 +51,7 @@ export default function GeneralSettingsPage() {
       const workspace = response.data.data;
       setWorkspaceName(workspace.name);
       setWorkspaceLogo(workspace.logo || null);
-      setWorkspaceTimezone(workspace.timezone || 'UTC');
+      setQualityEnabled(Boolean(workspace.qualityEnabled));
     } catch (error: any) {
       console.error('Failed to fetch workspace:', error);
       toast.error('Failed to load workspace settings');
@@ -65,7 +68,6 @@ export default function GeneralSettingsPage() {
       setSaving(true);
       await api.put(`/workspaces/${workspaceId}`, {
         name: workspaceName.trim(),
-        timezone: workspaceTimezone.trim(),
       });
       toast.success('Workspace updated successfully');
       window.dispatchEvent(new CustomEvent('workspace-updated'));
@@ -111,6 +113,20 @@ export default function GeneralSettingsPage() {
       toast.error(error.response?.data?.message || 'Failed to upload logo');
     } finally {
       setUploadingLogo(false);
+    }
+  };
+
+  const updateQuality = async () => {
+    try {
+      setSavingQuality(true);
+      const response = await api.patch(`/workspaces/${workspaceId}/quality/settings`, { qualityEnabled: !qualityEnabled });
+      setQualityEnabled(Boolean(response.data.data.qualityEnabled));
+      await queryClient.invalidateQueries({ queryKey: ['quality', workspaceId, 'capabilities'] });
+      toast.success(response.data.data.qualityEnabled ? 'Quality enabled for this workspace' : 'Quality paused for this workspace');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Could not update Quality settings');
+    } finally {
+      setSavingQuality(false);
     }
   };
 
@@ -262,17 +278,25 @@ export default function GeneralSettingsPage() {
                 className="min-h-[44px]"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="workspace-timezone">Workspace time zone</Label>
-              <Input id="workspace-timezone" value={workspaceTimezone} onChange={(e) => setWorkspaceTimezone(e.target.value)} placeholder="Asia/Kathmandu" required className="min-h-[44px]" />
-              <p className="text-sm text-muted-foreground">Use an IANA name such as Asia/Kathmandu or America/New_York. Leave requests expire according to the workspace calendar. Older workspaces default to UTC until you set this.</p>
-            </div>
             
             <Button type="submit" disabled={saving || !workspaceName.trim()} className="min-h-[44px]">
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" strokeWidth={1.5} /> : <Save className="w-4 h-4 mr-2" strokeWidth={1.5} />}
               Save Changes
             </Button>
           </form>
+        </section>
+
+        <section className="bg-card rounded-xl border border-border p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold">Quality and test management</h3>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Manage reusable cases, build-specific runs, developer bugs, and release reports. Existing QA records remain saved if you pause this feature.</p>
+              <p className="mt-2 text-xs text-muted-foreground">Status: {qualityEnabled ? 'Enabled' : 'Paused'}</p>
+            </div>
+            <Button type="button" variant={qualityEnabled ? 'outline' : 'default'} disabled={savingQuality} onClick={updateQuality}>
+              {savingQuality ? 'Saving…' : qualityEnabled ? 'Pause Quality' : 'Enable Quality'}
+            </Button>
+          </div>
         </section>
 
         {/* Danger Zone Section */}

@@ -184,6 +184,7 @@ interface ListItemProps {
 
 function ListItem({ list, spaceColor, workspaceId, spaceId, canManage, isReadOnly, onDelete }: ListItemProps) {
   const router = useRouter();
+  const listHref = `/workspace/${workspaceId}/spaces/${spaceId}/lists/${list._id}`;
   const taskCount = list.taskCount || 0;
   const completedCount = list.completedCount || 0;
   const progress = taskCount > 0 ? Math.round((completedCount / taskCount) * 100) : 0;
@@ -191,7 +192,8 @@ function ListItem({ list, spaceColor, workspaceId, spaceId, canManage, isReadOnl
   return (
     <Card 
       className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50" 
-      onClick={() => router.push(`/workspace/${workspaceId}/spaces/${spaceId}/lists/${list._id}`)}
+      onMouseEnter={() => router.prefetch(listHref)}
+      onClick={() => router.push(listHref)}
     >
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
