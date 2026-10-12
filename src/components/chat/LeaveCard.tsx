@@ -1,13 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Calendar, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Calendar, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Loader2, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/axios';
 import { toast } from 'sonner';
+
+const RemoteLocationMap = dynamic(() => import('./RemoteLocationMap').then((module) => module.RemoteLocationMap), { ssr: false, loading: () => <div className="h-36 w-full animate-pulse rounded-md bg-muted" /> });
 
 interface LeaveCardProps {
   message: {
@@ -60,12 +64,11 @@ export function LeaveCard({
   const leaveRequestId = meta.leaveRequestId;
   const isRemoteRequest = meta.requestType === 'remote';
   const remoteLocation = meta.remoteLocation || meta.proposedRemoteArea;
-  const remoteMapUrl = remoteLocation?.latitude != null && remoteLocation.longitude != null
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${remoteLocation.longitude - 0.008},${remoteLocation.latitude - 0.005},${remoteLocation.longitude + 0.008},${remoteLocation.latitude + 0.005}&layer=mapnik&marker=${remoteLocation.latitude},${remoteLocation.longitude}`
-    : undefined;
+  const hasRemoteCoordinates = remoteLocation?.latitude != null && remoteLocation.longitude != null;
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDenyPopover, setShowDenyPopover] = useState(false);
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
   const [denialReason, setDenialReason] = useState('');
 
   const isRequester = message.sender._id === currentUserId;
@@ -163,7 +166,29 @@ export function LeaveCard({
           <span className="shrink-0 text-[11px]">{meta.daysCount || 1}d</span>
         </div>
 
-        {isRemoteRequest && <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2"><span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Private remote place</span><p className="mt-0.5 text-xs">{remoteLocation?.name || meta.remoteAreaName || 'Existing approved private place'}</p>{remoteMapUrl && <iframe title={`Map pin for ${remoteLocation?.name || 'requested remote location'}`} src={remoteMapUrl} className="mt-2 h-36 w-full rounded-md border-0 bg-muted" loading="lazy" referrerPolicy="no-referrer" />}{remoteLocation?.latitude != null && remoteLocation.longitude != null && <p className="mt-1 text-[10px] text-muted-foreground">{remoteLocation.latitude.toFixed(5)}, {remoteLocation.longitude.toFixed(5)} · shared in this DM only</p>}</div>}
+        {isRemoteRequest && <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Private remote place</span>
+          <p className="mt-0.5 text-xs">{remoteLocation?.name || meta.remoteAreaName || 'Existing approved private place'}</p>
+          {hasRemoteCoordinates ? <>
+            <div className="relative mt-2">
+              <RemoteLocationMap latitude={remoteLocation.latitude!} longitude={remoteLocation.longitude!} />
+              <Button type="button" variant="secondary" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="absolute left-2 top-2 z-[500] h-8 gap-1.5 bg-background/95 text-xs shadow-md">
+                <Maximize2 className="h-3.5 w-3.5" /> Expand map
+              </Button>
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">{remoteLocation.latitude!.toFixed(5)}, {remoteLocation.longitude!.toFixed(5)} · shared in this DM only</p>
+            <Dialog open={isMapExpanded} onOpenChange={setIsMapExpanded}>
+              <DialogContent aria-label={`${remoteLocation.name || 'Requested remote location'} map`} className="w-[calc(100vw-1rem)] max-w-6xl p-3 sm:p-5">
+                <DialogHeader>
+                  <DialogTitle>{remoteLocation.name || 'Requested remote location'}</DialogTitle>
+                  <DialogDescription>Map of the location shared in this remote work request.</DialogDescription>
+                </DialogHeader>
+                <RemoteLocationMap latitude={remoteLocation.latitude!} longitude={remoteLocation.longitude!} className="h-[min(72vh,48rem)]" />
+                <p className="text-xs text-muted-foreground">{remoteLocation.latitude!.toFixed(5)}, {remoteLocation.longitude!.toFixed(5)} · shared in this DM only</p>
+              </DialogContent>
+            </Dialog>
+          </> : <p className="mt-2 rounded bg-muted/60 px-2 py-3 text-xs text-muted-foreground">Map coordinates are unavailable for this request.</p>}
+        </div>}
 
         {/* Reason (Compulsory) */}
         <div>

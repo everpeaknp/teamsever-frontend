@@ -10,11 +10,10 @@ type Props = {
   hasSelection: boolean;
   radiusMeters: number;
   onSelect: (latitude: number, longitude: number) => void;
+  mapHeightClassName?: string;
 };
 
-const FALLBACK_CENTER: L.LatLngExpression = [20, 0];
-
-export function AttendanceLocationMapPicker({ latitude, longitude, hasSelection, radiusMeters, onSelect }: Props) {
+export function AttendanceLocationMapPicker({ latitude, longitude, hasSelection, radiusMeters, onSelect, mapHeightClassName = 'h-[320px]' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -25,8 +24,8 @@ export function AttendanceLocationMapPicker({ latitude, longitude, hasSelection,
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const initialCenter: L.LatLngExpression = hasSelection ? [latitude, longitude] : FALLBACK_CENTER;
-    const map = L.map(containerRef.current, { center: initialCenter, zoom: hasSelection ? 15 : 2, scrollWheelZoom: true });
+    const initialCenter: L.LatLngExpression = [latitude, longitude];
+    const map = L.map(containerRef.current, { center: initialCenter, zoom: hasSelection ? 15 : 10, scrollWheelZoom: true });
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
@@ -81,7 +80,7 @@ export function AttendanceLocationMapPicker({ latitude, longitude, hasSelection,
   }, [latitude, longitude, hasSelection, radiusMeters]);
 
   return <div className="overflow-hidden rounded-lg border">
-    <div ref={containerRef} role="application" aria-label="Pick an attendance area on the map" className="h-[320px] w-full bg-muted" />
+    <div ref={containerRef} role="application" aria-label="Pick an attendance area on the map" className={`${mapHeightClassName} w-full bg-muted`} />
     <p className="border-t px-3 py-2 text-xs text-muted-foreground">Click the map or drag the pin to choose the area center. The circle shows its allowed radius.</p>
     <style jsx global>{`
       .attendance-location-pin { background: transparent; border: 0; }

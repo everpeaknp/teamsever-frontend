@@ -25,6 +25,7 @@ import {
   Clock3,
   Check,
   ChevronsUpDown,
+  Bug,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,7 +82,7 @@ export default function ListView() {
   const workspaceId = params.id as string;
   const spaceId = params.spaceId as string;
   const listId = params.listId as string;
-  
+
   // Get userId from localStorage since it's not in the auth store
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
@@ -153,17 +154,17 @@ export default function ListView() {
       console.error('[ListPage] listId is null or undefined!');
       return;
     }
-    
+
     if (!spaceId) {
       console.error('[ListPage] spaceId is null or undefined!');
       return;
     }
-    
+
     if (!workspaceId) {
       console.error('[ListPage] workspaceId is null or undefined!');
       return;
     }
-    
+
     try {
       if (inFlightFetchRef.current && fetchKey && activeFetchKeyRef.current === fetchKey) {
         return;
@@ -199,12 +200,12 @@ export default function ListView() {
 
       // Check if space is inactive
       const spaceStatus = spaceData.status || 'active';
-      
+
       // Determine user role
-      const workspaceOwnerId = typeof workspaceData.owner === 'string' 
-        ? workspaceData.owner 
+      const workspaceOwnerId = typeof workspaceData.owner === 'string'
+        ? workspaceData.owner
         : workspaceData.owner?._id;
-      
+
       const isOwner = workspaceOwnerId === userId;
       const workspaceMember = membersData.find((m: any) => {
         const memberId = typeof m._id === 'string' ? m._id : m._id?.toString?.();
@@ -212,7 +213,7 @@ export default function ListView() {
       });
       const isAdmin = workspaceMember?.role === 'admin' || workspaceMember?.role === 'owner';
       setCanMarkTaskDone(Boolean(workspaceMember?.canMarkTaskDone));
-      
+
       // Set user role state
       if (isOwner) {
         setUserRole('owner');
@@ -221,14 +222,14 @@ export default function ListView() {
       } else {
         setUserRole('member');
       }
-      
+
       // Check if user is a space member
-      const spaceMemberIds = spaceData.members?.map((m: any) => 
+      const spaceMemberIds = spaceData.members?.map((m: any) =>
         typeof m.user === 'string' ? m.user : m.user?._id
       ) || [];
       const isSpaceMember = spaceMemberIds.includes(userId);
       setIsSpaceMember(isSpaceMember);
-      
+
       // Load tasks and scoped permissions together; neither depends on the other.
       const taskLoad = fetchTasks(listId);
       const [listMembersResult, spaceMembersResult, folderMembersResult] = await Promise.allSettled([
@@ -244,13 +245,13 @@ export default function ListView() {
       try {
         if (listMembersResult.status !== 'fulfilled') throw listMembersResult.reason;
         const listMembersData = listMembersResult.value.data.data || [];
-        
+
         // Filter to only show members with list access (hasOverride = true)
         const membersWithAccess = listMembersData.filter((m: any) => m.hasOverride);
         setListMembers(membersWithAccess);
-        
+
         userListMember = listMembersData.find((m: any) => m._id === userId);
-        
+
         if (userListMember && userListMember.hasOverride) {
           setIsListMember(true);
           setListPermissionLevel(userListMember.listPermissionLevel);
@@ -322,7 +323,7 @@ export default function ListView() {
       } else {
         setIsReadOnly(true);
       }
-      
+
       // Set list settings
       if (listData) {
         setListSettings({ name: listData.name, description: listData.description || '' });
@@ -385,7 +386,7 @@ export default function ListView() {
       await updateTask(taskId, { priority: newPriority });
 
       toast.success('Task priority updated');
-      
+
       // Refresh activities if on activity view
       if (view === 'activity') {
         fetchActivities({ listId });
@@ -407,13 +408,13 @@ export default function ListView() {
       }
 
       await updateTask(taskId, { assignee: assigneeId || undefined });
-      
+
       const member = space?.members?.find((m: any) => {
         const userId = typeof m.user === 'object' ? m.user._id : m.user;
         return userId === assigneeId;
       });
-      
-      const assigneeName = assigneeId 
+
+      const assigneeName = assigneeId
         ? (typeof member?.user === 'object' ? member.user.name : 'Unknown')
         : 'Unassigned';
 
@@ -439,7 +440,7 @@ export default function ListView() {
         ...newTaskData,
         deadline: newTaskData.deadline ? newTaskData.deadline.toISOString() : undefined,
       };
-      
+
       const task = await createTask(listId, taskData);
 
       setShowCreateModal(false);
@@ -451,7 +452,7 @@ export default function ListView() {
         assignee: undefined,
         deadline: undefined,
       });
-      
+
       // Refresh activities if on activity view
       if (view === 'activity') {
         fetchActivities({ listId });
@@ -474,7 +475,7 @@ export default function ListView() {
       if (!task) return;
 
       await deleteTask(taskId);
-      
+
       // Refresh activities if on activity view
       if (view === 'activity') {
         fetchActivities({ listId });
@@ -508,7 +509,7 @@ export default function ListView() {
 
       setSelectedTasks([]);
       toast.success(`${selectedTasks.length} tasks deleted`);
-      
+
       // Refresh activities if on activity view
       if (view === 'activity') {
         fetchActivities({ listId });
@@ -527,7 +528,7 @@ export default function ListView() {
 
       setSelectedTasks([]);
       toast.success(`${selectedTasks.length} tasks updated`);
-      
+
       // Refresh activities if on activity view
       if (view === 'activity') {
         fetchActivities({ listId });
@@ -555,12 +556,12 @@ export default function ListView() {
   const canEditTask = (task: Task) => {
     // Owner/Admin: Full access
     if (userRole === 'owner' || userRole === 'admin') return true;
-    
+
     // Scoped FULL/EDIT permissions
     if (spacePermissionLevel === 'FULL' || spacePermissionLevel === 'EDIT') return true;
     if (folderPermissionLevel === 'FULL' || folderPermissionLevel === 'EDIT') return true;
     if (isListMember && (listPermissionLevel === 'EDIT' || listPermissionLevel === 'FULL')) return true;
-    
+
     // Task assignee can edit their own tasks
     const assigneeId = typeof task.assignee === 'string' ? task.assignee : task.assignee?._id;
     return assigneeId === userId;
@@ -569,24 +570,24 @@ export default function ListView() {
   const canDeleteTask = (task: Task) => {
     // Owner/Admin: Full access
     if (userRole === 'owner' || userRole === 'admin') return true;
-    
+
     // Scoped FULL permissions
     if (spacePermissionLevel === 'FULL') return true;
     if (folderPermissionLevel === 'FULL') return true;
     if (isListMember && listPermissionLevel === 'FULL') return true;
-    
+
     return false;
   };
 
   const canCreateTask = () => {
     // Owner/Admin: Full access
     if (userRole === 'owner' || userRole === 'admin') return true;
-    
+
     // Space/FOLDER/LIST FULL or EDIT can create tasks
     if (spacePermissionLevel === 'FULL' || spacePermissionLevel === 'EDIT') return true;
     if (folderPermissionLevel === 'FULL' || folderPermissionLevel === 'EDIT') return true;
     if (isListMember && (listPermissionLevel === 'FULL' || listPermissionLevel === 'EDIT')) return true;
-    
+
     return false;
   };
 
@@ -646,7 +647,7 @@ export default function ListView() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-3">
                   <h1 className="text-lg sm:text-2xl font-bold truncate">{list?.name}</h1>
-                  
+
                   {/* View Tabs - Next to Title */}
                   <div className="hidden md:flex items-center gap-1 bg-muted p-1 rounded-lg">
                     <button
@@ -728,11 +729,11 @@ export default function ListView() {
                   {listMembers.slice(0, 3).map((member: any, idx: number) => {
                     const user = typeof member.user === 'object' ? member.user : member;
                     return (
-                      <UserAvatar 
-                        key={idx} 
-                        user={user} 
-                        className="w-7 h-7 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110" 
-                        onClick={() => setShowListMemberManagement(true)} 
+                      <UserAvatar
+                        key={idx}
+                        user={user}
+                        className="w-7 h-7 border-2 border-background cursor-pointer hover:z-10 transition-transform hover:scale-110"
+                        onClick={() => setShowListMemberManagement(true)}
                       />
                     );
                   })}
@@ -767,7 +768,7 @@ export default function ListView() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  
+
                   <Sheet open={showSettingsSheet} onOpenChange={setShowSettingsSheet}>
                     <SheetContent>
                       <SheetHeader>
@@ -805,7 +806,7 @@ export default function ListView() {
                       </div>
                     </SheetContent>
                   </Sheet>
-                  
+
                   {/* List Member Management Modal */}
                   <ListMemberManagement
                     open={showListMemberManagement}
@@ -1043,7 +1044,7 @@ export default function ListView() {
             <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
               <AlertCircle className="w-5 h-5" />
               <p className="text-sm font-medium">
-                {listPermissionLevel === 'VIEW' 
+                {listPermissionLevel === 'VIEW'
                   ? 'You have view-only access to this list.'
                   : 'You do not have access to modify this list. Contact an admin to request access.'}
               </p>
@@ -1115,8 +1116,8 @@ export default function ListView() {
         )}
 
         {view === 'activity' && (
-          <ActivityLogView 
-            activities={activities} 
+          <ActivityLogView
+            activities={activities}
             loading={activitiesLoading}
           />
         )}
@@ -1295,7 +1296,7 @@ function TaskRow({
   spaceMembers,
 }: TaskRowProps) {
   const { isHighlighted } = useHighlight(task._id);
-  
+
   const priorityConfig = {
     low: { icon: Flag, color: 'text-slate-400', label: 'Low' },
     medium: { icon: Flag, color: 'text-blue-500', label: 'Medium' },
@@ -1309,9 +1310,9 @@ function TaskRow({
 
   const { openTask } = useTaskSidebarStore();
   const { openProfile } = useProfileModalStore();
-  
+
   return (
-    <div 
+    <div
       id={task._id}
       onClick={() => openTask(task._id)}
       className={`flex items-center gap-4 p-4 hover:bg-accent/50 transition-colors cursor-pointer ${isDone ? 'opacity-60' : ''} ${isHighlighted ? 'ring-2 ring-primary' : ''}`}
@@ -1421,7 +1422,7 @@ function TaskRow({
             {spaceMembers.map((member) => {
               const user = typeof member.user === 'object' ? member.user : null;
               if (!user) return null;
-              
+
               return (
                 <DropdownMenuItem
                   key={user._id}
@@ -1534,13 +1535,13 @@ function ActivityLogView({ activities, loading }: ActivityLogViewProps) {
 
   // Filter activities
   const filteredActivities = activities.filter(activity => {
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
       activity.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       activity.content?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       activity.fieldChanged?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesType = filterType === 'all' || activity.type === filterType;
-    
+
     return matchesSearch && matchesType;
   });
 
@@ -1649,91 +1650,48 @@ interface ActivityItemProps {
 }
 
 function ActivityItem({ activity }: ActivityItemProps) {
+  const { openTask } = useTaskSidebarStore();
   const user = activity.user || { name: 'Unknown User', avatar: null };
-  
-  // activity.task is already populated from backend with { _id, title, status }
-  // Handle both populated object and string reference
+
   let taskTitle = 'Unknown Task';
-  let taskId = null;
-  
+  let taskId: string | null = null;
+  let isBug = false;
+
   if (activity.task) {
     if (typeof activity.task === 'string') {
       taskId = activity.task;
-      taskTitle = 'Task'; // Fallback if not populated
+      taskTitle = 'Task';
     } else {
       taskId = activity.task._id;
       taskTitle = activity.task.title || 'Unknown Task';
+      isBug = activity.task.workItemType === 'bug';
     }
   }
-  
+
   const getInitials = (name: string) => {
     return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: 'numeric',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
-  const getActivityDescription = () => {
-    if (activity.type === 'comment') {
-      return (
-        <>
-          <span className="font-semibold">{user.name}</span>
-          {' commented on '}
-          <span className="text-blue-600 dark:text-blue-400 font-medium">{taskTitle}</span>
-        </>
-      );
-    } else if (activity.type === 'update') {
-      const fieldLabels: any = {
-        status: 'status',
-        assignee: 'assignee',
-        priority: 'priority',
-        dueDate: 'due date',
-        startDate: 'start date',
-        title: 'title',
-        description: 'description',
-      };
-      
-      const field = fieldLabels[activity.fieldChanged] || activity.fieldChanged;
-      
-      // Special case for task creation (title field with null oldValue)
-      if (activity.fieldChanged === 'title' && !activity.oldValue) {
-        return (
-          <>
-            <span className="font-semibold">{user.name}</span>
-            {' created task '}
-            <span className="text-blue-600 dark:text-blue-400 font-medium">{taskTitle}</span>
-          </>
-        );
-      }
-      
-      return (
-        <>
-          <span className="font-semibold">{user.name}</span>
-          {' changed '}
-          <span className="font-medium">{field}</span>
-          {' on '}
-          <span className="text-blue-600 dark:text-blue-400 font-medium">{taskTitle}</span>
-        </>
-      );
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: any) => {
+    const raw = typeof status === 'object' ? status?.status || 'todo' : status;
     const statusConfig: any = {
-      todo: { label: 'To Do', color: 'bg-slate-100 text-slate-700 dark:bg-slate-900/20 dark:text-slate-400' },
-      inprogress: { label: 'In Progress', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' },
-      review: { label: 'Review', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400' },
-      done: { label: 'Done', color: 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' },
-      cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' },
+      todo: { label: isBug ? 'Open' : 'To Do', color: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
+      inprogress: { label: 'In Progress', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+      review: { label: isBug ? 'Ready for QA' : 'In Review', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' },
+      done: { label: isBug ? 'Verified' : 'Done', color: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' },
+      cancelled: { label: isBug ? 'Closed' : 'Cancelled', color: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
     };
-    
-    const config = statusConfig[status] || statusConfig.todo;
-    return <Badge className={config.color}>{config.label}</Badge>;
+
+    const config = statusConfig[raw] || statusConfig.todo;
+    return <Badge variant="outline" className={`px-2 py-0.5 text-xs font-semibold ${config.color}`}>{config.label}</Badge>;
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -1743,63 +1701,98 @@ function ActivityItem({ activity }: ActivityItemProps) {
       high: { label: 'High', color: 'bg-orange-100 text-orange-600' },
       urgent: { label: 'Urgent', color: 'bg-red-100 text-red-600' },
     };
-    
+
     const config = priorityConfig[priority] || priorityConfig.medium;
     return <Badge className={config.color}>{config.label}</Badge>;
   };
 
+  const noteReason = activity.metadata?.reason || (typeof activity.newValue === 'object' ? activity.newValue?.reason : null);
+
   return (
-    <div className="py-3">
-      <div className="flex gap-3">
-        <Avatar className="w-10 h-10 flex-shrink-0">
-          <AvatarImage src={user.avatar} />
-          <AvatarFallback className="bg-blue-600 text-white text-sm">
+    <div className="py-3 px-3 rounded-lg border border-border/50 bg-card hover:bg-accent/30 transition-colors">
+      <div className="flex gap-3 items-start">
+        <Avatar className="w-8 h-8 flex-shrink-0 mt-0.5">
+          <AvatarImage src={user.avatar || user.profilePicture} />
+          <AvatarFallback className="bg-primary/20 text-primary font-semibold text-xs">
             {getInitials(user.name)}
           </AvatarFallback>
         </Avatar>
 
         <div className="flex-1 min-w-0">
-          <div className="text-sm text-foreground leading-7">
-            {getActivityDescription()}
+          <div className="flex flex-wrap items-center gap-1.5 text-sm">
+            <span className="font-semibold text-foreground">{user.name}</span>
+            <span className="text-muted-foreground">
+              {activity.type === 'comment' ? 'commented on' : 'updated'}
+            </span>
+
+            {/* Jira-style Task identifier pill */}
+            <button
+              onClick={() => taskId && openTask(taskId)}
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted hover:bg-muted/80 text-foreground font-medium transition-colors text-xs border border-border"
+            >
+              {isBug ? (
+                <span className="text-red-500 font-bold inline-flex items-center gap-0.5">
+                  <Bug className="w-3 h-3" /> Bug:
+                </span>
+              ) : (
+                <span className="text-blue-500 font-bold">Task:</span>
+              )}
+              <span className="truncate max-w-[240px] hover:underline">{taskTitle}</span>
+            </button>
           </div>
 
           {activity.type === 'comment' && activity.content && (
-            <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap">
+            <div className="mt-2 p-2.5 rounded-md bg-muted/40 border border-border text-xs text-foreground whitespace-pre-wrap">
               {activity.content}
-            </p>
+            </div>
           )}
 
-          {activity.type === 'update' && activity.fieldChanged !== 'title' && (
-            <div className="mt-2 flex items-center gap-2 text-sm">
+          {activity.type === 'update' && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               {activity.fieldChanged === 'status' && (
-                <>
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground font-medium">Status:</span>
                   {getStatusBadge(activity.oldValue)}
-                  <span className="text-muted-foreground">→</span>
+                  <span className="text-muted-foreground font-bold">→</span>
                   {getStatusBadge(activity.newValue)}
-                </>
+                </div>
               )}
               {activity.fieldChanged === 'priority' && (
-                <>
+                <div className="inline-flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground font-medium">Priority:</span>
                   {getPriorityBadge(activity.oldValue)}
-                  <span className="text-muted-foreground">→</span>
+                  <span className="text-muted-foreground font-bold">→</span>
                   {getPriorityBadge(activity.newValue)}
-                </>
+                </div>
               )}
               {activity.fieldChanged === 'assignee' && (
-                <span className="text-muted-foreground">
-                  {activity.oldValue?.name || 'Unassigned'} → {activity.newValue?.name || 'Unassigned'}
-                </span>
+                <div className="inline-flex items-center gap-1 text-muted-foreground">
+                  <span className="font-medium text-foreground">Assignee:</span>
+                  <span>{activity.oldValue?.name || 'Unassigned'}</span>
+                  <span className="font-bold">→</span>
+                  <span className="font-semibold text-foreground">{activity.newValue?.name || 'Unassigned'}</span>
+                </div>
               )}
-              {!['status', 'priority', 'assignee'].includes(activity.fieldChanged) && (
-                <span className="text-muted-foreground">
-                  {String(activity.oldValue || 'None')} → {String(activity.newValue || 'None')}
-                </span>
+              {!['status', 'priority', 'assignee', 'title'].includes(activity.fieldChanged) && (
+                <div className="text-muted-foreground">
+                  <span>Changed {activity.fieldChanged}: </span>
+                  <span className="line-through">{String(activity.oldValue || 'none')}</span>
+                  <span> → </span>
+                  <span className="text-foreground font-medium">{String(activity.newValue || 'none')}</span>
+                </div>
               )}
             </div>
           )}
 
-          <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock3 className="w-4 h-4" />
+          {/* If there is a note (e.g. from QA verification or reason) */}
+          {noteReason && (
+            <div className="mt-2 p-2 rounded bg-muted/60 border border-border/80 text-xs text-muted-foreground italic flex items-center gap-1.5">
+              <span className="not-italic font-semibold text-foreground">Note:</span> {noteReason}
+            </div>
+          )}
+
+          <div className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Clock3 className="w-3 h-3" />
             <span>{formatTime(activity.createdAt)}</span>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ExecutionPlayer } from './ExecutionPlayer';
 
 vi.mock('@/lib/axios', () => ({ api: { get: vi.fn().mockResolvedValue({ data: { data: [] } }) } }));
+vi.mock('@/components/quality/QualityProjectContext', () => ({ useQualityProject: () => ({ projectId: 'quality-project' }) }));
 
 const execution = {
   _id: 'execution-1', run: 'run-1', testCase: 'case-1', caseKey: 'TC-014', revision: 3,

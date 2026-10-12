@@ -1,17 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Calendar, Loader2 } from 'lucide-react';
+import { AlertCircle, Calendar, Loader2, Maximize2 } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 
-const AttendanceLocationMapPicker = dynamic(() => import('@/components/attendance/AttendanceLocationMapPicker').then((module) => module.AttendanceLocationMapPicker), { ssr: false, loading: () => <div className="h-52 rounded-md border bg-muted animate-pulse" /> });
+const AttendanceLocationMapPicker = dynamic(() => import('@/components/attendance/AttendanceLocationMapPicker').then((module) => module.AttendanceLocationMapPicker), { ssr: false, loading: () => <div className="h-40 rounded-md border bg-muted animate-pulse" /> });
 
 interface RequestLeaveModalProps {
   isOpen: boolean;
@@ -42,6 +42,7 @@ export function RequestLeaveModal({
   const [remoteAreaId, setRemoteAreaId] = useState('propose');
   const [remotePoint, setRemotePoint] = useState<{ latitude: number; longitude: number } | null>(null);
   const [remoteAreaName, setRemoteAreaName] = useState('');
+  const [isMapExpanded, setIsMapExpanded] = useState(false);
   const [quotaInfo, setQuotaInfo] = useState<{
     approvedDaysThisMonth: number;
     standardLimit: number;
@@ -58,6 +59,8 @@ export function RequestLeaveModal({
       setEndDate(tomorrowStr);
       setReason('');
       setRequestType('leave');
+      setIsMapExpanded(false);
+      setRemoteAreaId('propose');
       setRemotePoint(null);
       setRemoteAreaName('');
       api.get(`/attendance/workspace/${workspaceId}/location-policy`).then((res) => {
@@ -139,18 +142,18 @@ export function RequestLeaveModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md bg-card border-border">
+      <DialogContent className="w-[calc(100%-2rem)] max-h-[calc(100dvh-2rem)] max-w-4xl overflow-y-auto overscroll-contain bg-card border-border">
         <DialogHeader>
           <div className="flex items-center gap-2 text-primary">
             <Calendar className="h-5 w-5" />
             <DialogTitle className="text-lg font-bold">Request time away or Remote work</DialogTitle>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <DialogDescription className="text-xs text-muted-foreground mt-1">
             Submitting directly in DM with <strong className="text-foreground">{managerName}</strong>
-          </p>
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-2"><Button type="button" variant={requestType === 'leave' ? 'default' : 'outline'} onClick={() => setRequestType('leave')}>Leave</Button><Button type="button" variant={requestType === 'remote' ? 'default' : 'outline'} onClick={() => setRequestType('remote')}>Remote</Button></div>
+        <div className="grid grid-cols-2 gap-2"><Button type="button" variant={requestType === 'leave' ? 'default' : 'outline'} onClick={() => { setRequestType('leave'); setIsMapExpanded(false); }}>Leave</Button><Button type="button" variant={requestType === 'remote' ? 'default' : 'outline'} onClick={() => setRequestType('remote')}>Remote</Button></div>
 
         {/* 2-Day Monthly Limit Warning Banner */}
         {requestType === 'leave' && willExceedQuota && (
@@ -166,7 +169,8 @@ export function RequestLeaveModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+        <form onSubmit={handleSubmit} className={`grid grid-cols-1 gap-4 py-2 ${requestType === 'remote' ? 'md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : ''}`}>
+          <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-foreground">From Date</Label>
@@ -213,10 +217,37 @@ export function RequestLeaveModal({
               className="text-xs resize-none bg-muted/40 focus-visible:ring-primary"
             />
           </div>
+          </div>
 
-          {requestType === 'remote' && <div className="space-y-2 rounded-lg border p-3"><Label className="text-xs font-semibold">Remote work location</Label>{remoteAreas.length > 0 && <select className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={remoteAreaId} onChange={(event) => setRemoteAreaId(event.target.value)}><option value="propose">Request approval for a new private place</option>{remoteAreas.filter((area) => area.isActive).map((area) => <option key={area._id} value={area._id}>{area.name} (approved private place)</option>)}</select>}{remoteAreaId === 'propose' && <><p className="text-xs text-muted-foreground">This proposed address is shared only with you and {managerName}. Approval adds it to your private places and authorizes it for these dates.</p><AttendanceLocationMapPicker latitude={remotePoint?.latitude ?? 27.7172} longitude={remotePoint?.longitude ?? 85.324} hasSelection={!!remotePoint} radiusMeters={60} onSelect={(latitude, longitude) => setRemotePoint({ latitude, longitude })} /><div className="grid grid-cols-2 gap-2"><Input aria-label="Private area name" value={remoteAreaName} onChange={(event) => setRemoteAreaName(event.target.value)} placeholder="Home / Kathmandu" /><Button type="button" variant="outline" onClick={() => navigator.geolocation?.getCurrentPosition(({ coords }) => setRemotePoint({ latitude: coords.latitude, longitude: coords.longitude }), () => toast.error('Location unavailable'), { enableHighAccuracy: true, timeout: 15000 })}>Use my location</Button></div>{remotePoint && <p className="text-xs text-muted-foreground">Selected point: {remotePoint.latitude.toFixed(5)}, {remotePoint.longitude.toFixed(5)}</p>}</>}</div>}
+          {requestType === 'remote' && <div className="space-y-2 rounded-lg border p-3">
+            <Label htmlFor="remote-work-location" className="text-xs font-semibold">Remote work location</Label>
+            <select id="remote-work-location" aria-label="Remote work location" className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={remoteAreaId} onChange={(event) => { setRemoteAreaId(event.target.value); setRemotePoint(null); setRemoteAreaName(''); }}>
+              <option value="propose">Request approval for another address (temporary)</option>
+              {remoteAreas.filter((area) => area.isActive).map((area) => <option key={area._id} value={area._id}>{area.name} (approved private place)</option>)}
+            </select>
+            {remoteAreaId === 'propose' && <>
+              <p className="text-xs text-muted-foreground">{remoteAreas.some((area) => area.isActive) ? 'Need to work from another address?' : 'No approved place yet?'} Propose a private address for {startDate === endDate ? 'this date' : 'these dates'}. It becomes authorized only for these dates after {managerName} approves it.</p>
+              <div className="relative">
+                <AttendanceLocationMapPicker latitude={remotePoint?.latitude ?? 27.7172} longitude={remotePoint?.longitude ?? 85.324} hasSelection={!!remotePoint} radiusMeters={60} mapHeightClassName="h-40" onSelect={(latitude, longitude) => setRemotePoint({ latitude, longitude })} />
+                <Button type="button" variant="secondary" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="absolute right-2 top-2 z-[500] h-8 gap-1.5 bg-background/95 text-xs shadow-md">
+                  <Maximize2 className="h-3.5 w-3.5" /> Expand map
+                </Button>
+              </div>
+              <Dialog open={isMapExpanded} onOpenChange={setIsMapExpanded}>
+                <DialogContent className="w-[calc(100vw-1rem)] max-w-6xl p-3 sm:p-5">
+                  <DialogHeader>
+                    <DialogTitle>Choose remote work location</DialogTitle>
+                    <DialogDescription>Click or drag the pin to adjust the address. Your selection will be used in the request.</DialogDescription>
+                  </DialogHeader>
+                  <AttendanceLocationMapPicker latitude={remotePoint?.latitude ?? 27.7172} longitude={remotePoint?.longitude ?? 85.324} hasSelection={!!remotePoint} radiusMeters={60} mapHeightClassName="h-[min(72vh,48rem)]" onSelect={(latitude, longitude) => setRemotePoint({ latitude, longitude })} />
+                </DialogContent>
+              </Dialog>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]"><Input aria-label="Private area name" value={remoteAreaName} onChange={(event) => setRemoteAreaName(event.target.value)} placeholder="Name this place, e.g. Home" /><Button type="button" variant="outline" onClick={() => navigator.geolocation?.getCurrentPosition(({ coords }) => setRemotePoint({ latitude: coords.latitude, longitude: coords.longitude }), () => toast.error('Location unavailable'), { enableHighAccuracy: true, timeout: 15000 })}>Use my location</Button></div>
+              {remotePoint && <p className="text-xs text-muted-foreground">Selected point: {remotePoint.latitude.toFixed(5)}, {remotePoint.longitude.toFixed(5)}</p>}
+            </>}
+          </div>}
 
-          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+          <DialogFooter className="gap-2 pt-2 md:col-span-2 sm:gap-0">
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
               Cancel
             </Button>

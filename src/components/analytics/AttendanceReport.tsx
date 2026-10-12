@@ -32,8 +32,9 @@ interface AttendanceEntry {
   clockOutSource?: 'web' | 'desktop' | null;
   clockInLocation?: { areaName?: string; latitude?: number; longitude?: number; accuracyMeters?: number } | null;
   clockInVerificationMethod?: 'gps' | 'network_confirmed' | null;
-  clockOutLocation?: { latitude?: number; longitude?: number; distanceFromClockInMeters?: number; withinRange?: boolean } | null;
+  clockOutLocation?: { latitude?: number; longitude?: number; areaId?: string; areaName?: string; verificationMethod?: 'gps' | 'network_confirmed'; distanceFromClockInMeters?: number; withinRange?: boolean } | null;
   locationReviewReason?: string | null;
+  adminClockOutReason?: string | null;
 }
 
 interface Member {
@@ -385,8 +386,9 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {entry.clockOutLocation ? <div className="text-xs"><div>{entry.clockOutLocation.latitude != null && entry.clockOutLocation.longitude != null ? `${entry.clockOutLocation.latitude.toFixed(5)}, ${entry.clockOutLocation.longitude.toFixed(5)}` : 'Location hidden'}</div><div className={entry.clockOutLocation.withinRange ? 'text-emerald-600' : 'text-amber-600'}>{entry.clockOutLocation.distanceFromClockInMeters != null ? `${entry.clockOutLocation.distanceFromClockInMeters} m from clock-in` : 'Distance unavailable'}</div><div className="text-muted-foreground">Source: {entry.clockOutSource === 'desktop' ? 'Trusted desktop' : entry.clockOutSource === 'web' ? 'Web' : 'Not recorded'}</div></div> : <span className="text-xs text-muted-foreground">{entry.clockOut === 'Running' ? '—' : 'Location not recorded'}</span>}
+                        {entry.clockOutLocation ? <div className="text-xs"><div>{entry.clockOutLocation.latitude != null && entry.clockOutLocation.longitude != null ? `${entry.clockOutLocation.latitude.toFixed(5)}, ${entry.clockOutLocation.longitude.toFixed(5)}` : 'Location hidden'}</div><div className={entry.clockOutLocation.areaName || entry.clockOutLocation.withinRange ? 'text-emerald-600' : 'text-amber-600'}>{entry.clockOutLocation.areaName ? `Verified in ${entry.clockOutLocation.areaName}${entry.clockOutLocation.verificationMethod === 'network_confirmed' ? ' (network confirmed)' : ''}` : entry.clockOutLocation.distanceFromClockInMeters != null ? `${entry.clockOutLocation.distanceFromClockInMeters} m from clock-in (legacy record)` : 'Location verified'}</div><div className="text-muted-foreground">Source: {entry.clockOutSource === 'desktop' ? 'Trusted desktop' : entry.clockOutSource === 'web' ? 'Web' : 'Not recorded'}</div></div> : <span className="text-xs text-muted-foreground">{entry.clockOut === 'Running' ? '—' : 'Location not recorded'}</span>}
                         {entry.locationReviewReason && <div className="mt-1 text-xs text-amber-600" title={entry.locationReviewReason}>Review: {entry.locationReviewReason}</div>}
+                        {entry.adminClockOutReason && <div className="mt-1 text-xs text-amber-600" title={entry.adminClockOutReason}>Admin clock-out: {entry.adminClockOutReason}</div>}
                       </TableCell>
                     </TableRow>
                   ))

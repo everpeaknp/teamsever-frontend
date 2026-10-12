@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import { uniqueBugLists } from '@/lib/quality/bugLists';
 
 type QualitySettings = {
   caseTypes: Array<{ key: string; label: string; enabled: boolean }>;
@@ -69,7 +70,12 @@ export default function QualitySettingsPage() {
           const lists: Array<{ _id: string; name: string; folderId?: string }> = [...spaceLists, ...folderGroups.flat()];
           return { space, lists };
         }));
-        if (active) setBugLists(groups.flatMap(({ space, lists }) => lists.filter(list => !folderId || list.folderId === folderId).map(list => ({ _id: list._id, name: list.name, spaceName: space.name }))));
+        if (active) {
+          const availableLists = groups.flatMap(({ space, lists }) => lists
+            .filter(list => !folderId || list.folderId === folderId)
+            .map(list => ({ _id: list._id, name: list.name, spaceName: space.name })));
+          setBugLists(uniqueBugLists(availableLists));
+        }
       } catch { if (active) setBugLists([]); }
     })();
     return () => { active = false; };
@@ -99,8 +105,8 @@ export default function QualitySettingsPage() {
     finally { setSaving(false); }
   };
 
-  if (!can('MANAGE_SETTINGS')) return <div className="mx-auto max-w-3xl p-8"><h1 className="text-xl font-semibold">Quality settings</h1><p className="mt-2 text-sm text-muted-foreground">You need Manage Settings permission to change Quality configuration.</p></div>;
   if (loading) return <div className="mx-auto max-w-4xl p-8 text-sm text-muted-foreground">Loading Quality settings…</div>;
+  if (!can('MANAGE_SETTINGS')) return <div className="mx-auto max-w-3xl p-8"><h1 className="text-xl font-semibold">Quality settings</h1><p className="mt-2 text-sm text-muted-foreground">You need Manage Settings permission to change Quality configuration.</p></div>;
   if (!settings) return <div className="mx-auto max-w-4xl p-8"><p role="alert" className="text-sm text-destructive">{error || 'Quality settings are unavailable.'}</p><Button className="mt-3" variant="outline" onClick={() => void load()}>Retry</Button></div>;
 
   const toggleNotification = (key: keyof QualitySettings['notifications']) => update({ notifications: { ...settings.notifications, [key]: !settings.notifications[key] } });
@@ -132,7 +138,7 @@ export default function QualitySettingsPage() {
 
     <section className="space-y-4 rounded-xl border bg-card p-5">
       <div><h2 className="font-semibold">Case fields</h2><p className="text-sm text-muted-foreground">Add project-specific information. Required fields are checked when a case is saved.</p></div>
-      <div className="space-y-3">{settings.caseFields.map((field, index) => <div key={field.key} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_150px_1fr_auto_auto]"><div className="space-y-1"><Label>Field label</Label><Input value={field.label} maxLength={80} onChange={event => update({ caseFields: settings.caseFields.map((item, i) => i === index ? { ...item, label: event.target.value } : item) })} /></div><div className="space-y-1"><Label>Type</Label><select className="h-10 w-full rounded-md border bg-background px-2 text-sm" value={field.type} onChange={event => update({ caseFields: settings.caseFields.map((item, i) => i === index ? { ...item, type: event.target.value } : item) })}><option value="text">Text</option><option value="number">Number</option><option value="select">Select</option><option value="multiselect">Multi-select</option><option value="checkbox">Checkbox</option><option value="date">Date</option></select></div><div className="space-y-1"><Label>Options (comma-separated)</Label><Input value={(field.options || []).join(', ')} disabled={!['select', 'multiselect'].includes(field.type)} onChange={event => update({ caseFields: settings.caseFields.map((item, i) => i === index ? { ...item, options: splitLines(event.target.value) } : item) })} /></div><label className="flex items-center gap-2 self-end pb-2 text-sm"><input type="checkbox" checked={field.required} onChange={event => update({ caseFields: settings.caseFields.map((item, i) => i === index ? { ...item, required: event.target.checked } : item) })} />Required</label><label className="flex items-center gap-2 self-end pb-2 text-sm"><input type="checkbox" checked={field.enabled} onChange={event => update({ caseFields: settings.caseFields.map((item, i) => i === index ? { ...item, enabled: event.target.checked } : item) })} />Enabled</label><p className="text-xs text-muted-foreground sm:col-span-5">Key: {field.key}</p></div>)}</div>
+      <div className="space-y-3">{settings.caseFields.map((field, index) => <div key={field.key} className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[1fr_150px_1fr_auto_auto]"><div className="space-y-1"><Label>Field label</Label><Input value={field.label} maxLength={80} disabled={field.key === 'priority'} onChange={event => update({ caseFields: settings.caseFields.map((item, i) => i === index ? { ...item, label: event.target.value } : item) })} /></div><div className="space-y-1"><Label>Type</Label><select className="h-10 w-full rounded-md border bg-background px-2 text-sm" value={field.type} disabled={field.key === 'priority'} onChange={event => update({ caseFields: settings.caseFields.map((item, i) => i === index ? { ...item, type: event.target.value } : item) })}><option value="text">Text</option><option value="number">Number</option><option value="select">Select</option><option value="multiselect">Multi-select</option><option value="checkbox">Checkbox</option><option value="date">Date</option></select></div><div className="space-y-1"><Label>Options (comma-separated)</Label><Input value={(field.options || []).join(', ')} disabled={field.key === 'priority' || !['select', 'multiselect'].includes(field.type)} onChange={event => update({ caseFields: settings.caseFields.map((item, i) => i === index ? { ...item, options: splitLines(event.target.value) } : item) })} /></div><label className="flex items-center gap-2 self-end pb-2 text-sm"><input type="checkbox" checked={field.required} disabled={field.key === 'priority'} onChange={event => update({ caseFields: settings.caseFields.map((item, i) => i === index ? { ...item, required: event.target.checked } : item) })} />Required</label><label className="flex items-center gap-2 self-end pb-2 text-sm"><input type="checkbox" checked={field.enabled} onChange={event => update({ caseFields: settings.caseFields.map((item, i) => i === index ? { ...item, enabled: event.target.checked } : item) })} />Enabled</label><p className="text-xs text-muted-foreground sm:col-span-5">Key: {field.key}{field.key === 'priority' ? ' · Built-in field; its type and choices are fixed.' : ''}</p></div>)}</div>
       <NewNamedItem label="case field" onAdd={item => update({ caseFields: [...settings.caseFields, { ...item, type: 'text', required: false, enabled: true, options: [] }] })} disabled={settings.caseFields.length >= 30} />
     </section>
 

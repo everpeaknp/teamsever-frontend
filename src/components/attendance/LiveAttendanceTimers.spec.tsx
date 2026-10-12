@@ -43,6 +43,16 @@ describe('LiveAttendanceTimers', () => {
     expect(api.get).toHaveBeenCalledTimes(2);
   });
 
+  it('sends an optional admin clock-out reason for an exception', async () => {
+    vi.mocked(api.get).mockResolvedValue(payload() as any);
+    vi.mocked(api.post).mockResolvedValue({ data: { success: true } } as any);
+    render(<LiveAttendanceTimers workspaceId="workspace-1" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Clock out Sam Worker' }));
+    fireEvent.change(screen.getByLabelText(/reason \(optional\)/i), { target: { value: 'Left the approved site before clocking out' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm clock out' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/time/admin/stop/entry-1', { reason: 'Left the approved site before clocking out' }));
+  });
+
   it('uses the dashboard active-timer endpoint when the shared route is not available yet', async () => {
     vi.mocked(api.get)
       .mockRejectedValueOnce({ response: { status: 404 } })

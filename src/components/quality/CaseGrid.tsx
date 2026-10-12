@@ -18,9 +18,10 @@ type Props = {
   caseStatuses?: Array<{ key: string; label: string }>;
   caseTransitions?: Record<string, string[]>;
   caseFields?: Array<{ key: string; label: string; enabled: boolean }>;
+  emptyMessage?: string;
 };
 
-export function CaseGrid({ cases, page, limit, total, onPageChange, onOpen, onQuickSave, caseStatuses = [], caseTransitions = {}, caseFields = [] }: Props) {
+export function CaseGrid({ cases, page, limit, total, onPageChange, onOpen, onQuickSave, caseStatuses = [], caseTransitions = {}, caseFields = [], emptyMessage = 'No cases match these filters.' }: Props) {
   const [editing, setEditing] = useState<QualityCase | null>(null);
   const [draft, setDraft] = useState<QuickChange | null>(null);
   const [saving, setSaving] = useState(false);
@@ -64,7 +65,7 @@ export function CaseGrid({ cases, page, limit, total, onPageChange, onOpen, onQu
       })}</tbody>
     </table></div>
     {error && <div role="alert" className="border-t px-4 py-3 text-sm text-destructive">{error}</div>}
-    {!cases.length && <div className="px-5 py-12 text-center text-sm text-muted-foreground">No cases match these filters.</div>}
+    {!cases.length && <div className="px-5 py-12 text-center text-sm text-muted-foreground">{emptyMessage}</div>}
     <div className="flex items-center justify-between gap-3 border-t px-4 py-3 text-xs text-muted-foreground"><span>{start}–{end} of {total}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)} aria-label="Previous page">Previous</Button><Button type="button" size="sm" variant="outline" disabled={page * limit >= total} onClick={() => onPageChange(page + 1)} aria-label="Next page">Next</Button></div></div>
   </div>;
 }

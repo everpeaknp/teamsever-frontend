@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -144,6 +144,7 @@ export function EditChannelModal({ isOpen, onClose, workspaceId, channelId, onSu
               Channel Settings
               {isDefault && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase tracking-wider">Default</span>}
             </DialogTitle>
+            <DialogDescription>Update this channel’s name, description, and membership settings.</DialogDescription>
           </DialogHeader>
 
           {fetchingData ? (

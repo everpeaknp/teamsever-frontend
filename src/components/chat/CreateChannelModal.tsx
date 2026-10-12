@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -121,6 +121,7 @@ export const CreateChannelModal = ({ isOpen, onClose, workspaceId, onSuccess }: 
             {type === 'public' ? <Hash className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
             Create Chat Channel
           </DialogTitle>
+          <DialogDescription>Set up a channel for conversations with your workspace members.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col overflow-hidden">

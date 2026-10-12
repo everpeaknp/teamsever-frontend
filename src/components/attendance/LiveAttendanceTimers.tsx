@@ -30,6 +30,7 @@ export function LiveAttendanceTimers({ workspaceId }: { workspaceId: string }) {
   const [now, setNow] = useState(Date.now());
   const [selectedTimer, setSelectedTimer] = useState<ActiveTimer | null>(null);
   const [stopping, setStopping] = useState(false);
+  const [stopReason, setStopReason] = useState('');
 
   const refresh = useCallback(async (quiet = false) => {
     if (!quiet) setRefreshing(true);
@@ -69,8 +70,9 @@ export function LiveAttendanceTimers({ workspaceId }: { workspaceId: string }) {
     if (!selectedTimer) return;
     setStopping(true);
     try {
-      await api.post(`/time/admin/stop/${selectedTimer._id}`, { reason: 'Admin clock-out from Attendance' });
+      await api.post(`/time/admin/stop/${selectedTimer._id}`, { reason: stopReason.trim() || 'Admin clock-out from Attendance' });
       setSelectedTimer(null);
+      setStopReason('');
       await refresh(true);
     } catch (cause: any) {
       setError(cause.response?.data?.message || 'Could not clock out this member. Refresh and try again.');
@@ -139,14 +141,26 @@ export function LiveAttendanceTimers({ workspaceId }: { workspaceId: string }) {
       </div>}
     </section>
 
-    <Dialog open={!!selectedTimer} onOpenChange={(open) => { if (!open && !stopping) setSelectedTimer(null); }}>
+    <Dialog open={!!selectedTimer} onOpenChange={(open) => { if (!open && !stopping) { setSelectedTimer(null); setStopReason(''); } }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Clock out {selectedTimer ? memberName(selectedTimer) : 'member'}?</DialogTitle>
-          <DialogDescription>This ends the active attendance timer now and records the clock-out time. The action cannot be undone.</DialogDescription>
+          <DialogDescription>This ends the active attendance timer now, including when the member cannot clock out from an approved location. Add an optional reason for the attendance record.</DialogDescription>
         </DialogHeader>
+        <div className="space-y-2">
+          <label htmlFor="admin-clock-out-reason" className="text-sm font-medium">Reason (optional)</label>
+          <textarea
+            id="admin-clock-out-reason"
+            value={stopReason}
+            onChange={(event) => setStopReason(event.target.value)}
+            maxLength={500}
+            rows={3}
+            placeholder="e.g. Left the approved site before clocking out"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setSelectedTimer(null)} disabled={stopping}>Cancel</Button>
+          <Button variant="outline" onClick={() => { setSelectedTimer(null); setStopReason(''); }} disabled={stopping}>Cancel</Button>
           <Button variant="destructive" onClick={() => void confirmClockOut()} disabled={stopping}>{stopping ? 'Clocking out…' : 'Confirm clock out'}</Button>
         </DialogFooter>
       </DialogContent>

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Lock, Edit2, Trash2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { IWorkspaceMember } from '@/types/pro-features';
 import { api } from '@/lib/axios';
 import { UpgradePrompt } from './UpgradePrompt';
@@ -177,6 +177,7 @@ export const CustomRoleManager: React.FC<CustomRoleManagerProps> = ({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Assign Custom Role</DialogTitle>
+            <DialogDescription>Choose or enter the custom role to assign to this workspace member.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>

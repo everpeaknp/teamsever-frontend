@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { api } from '@/lib/axios';
 import type { QualityExecution } from '@/hooks/queries/useQuality';
+import { useQualityProject } from '@/components/quality/QualityProjectContext';
 
 type Outcome = QualityExecution['result'];
 type StepOutcome = { result: Outcome; actualResult: string };
 type Props = { workspaceId: string; execution: QualityExecution; onSave: (input: { executionId: string; expectedVersion: number; result: Outcome; reason: string; stepResults: StepOutcome[]; evidenceIds: string[] }) => Promise<unknown> };
 
 export function ExecutionPlayer({ workspaceId, execution, onSave }: Props) {
+  const { projectId } = useQualityProject();
   const [result, setResult] = useState<Outcome>(execution.result);
   const [reason, setReason] = useState(execution.reason || '');
   const [steps, setSteps] = useState<StepOutcome[]>(() => execution.snapshot.steps.map((_, index) => ({ result: execution.stepResults?.[index]?.result as Outcome || 'not_run', actualResult: execution.stepResults?.[index]?.actualResult || '' })));
@@ -22,8 +24,9 @@ export function ExecutionPlayer({ workspaceId, execution, onSave }: Props) {
   const [uploadedFiles, setUploadedFiles] = useState<Array<{ _id: string; originalName: string; url: string }>>([]);
   const [uploading, setUploading] = useState(false);
   const linkedEvidence = useQuery({
-    queryKey: ['quality', workspaceId, 'executions', execution._id, 'evidence', execution.version],
-    queryFn: async () => (await api.get(`/workspaces/${workspaceId}/quality/executions/${execution._id}/evidence`)).data.data as Array<{ _id: string; originalName: string; url: string }>,
+    queryKey: ['quality', workspaceId, projectId, 'executions', execution._id, 'evidence', execution.version],
+    enabled: Boolean(projectId),
+    queryFn: async () => (await api.get(`/workspaces/${workspaceId}/quality/executions/${execution._id}/evidence`, { params: { projectId } })).data.data as Array<{ _id: string; originalName: string; url: string }>,
   });
 
   useEffect(() => {
@@ -46,10 +49,11 @@ export function ExecutionPlayer({ workspaceId, execution, onSave }: Props) {
     finally { setSaving(false); }
   };
   const uploadEvidence = async (file: File) => {
+    if (!projectId) return setError('Wait for the QA project to load, then try again.');
     setUploading(true); setError('');
     try {
       const form = new FormData(); form.append('file', file);
-      const response = await api.post(`/workspaces/${workspaceId}/quality/executions/${execution._id}/evidence`, form);
+      const response = await api.post(`/workspaces/${workspaceId}/quality/executions/${execution._id}/evidence`, form, { params: { projectId } });
       setEvidenceIds(previous => [...previous, response.data.data._id]);
       setUploadedFiles(previous => [...previous, response.data.data]);
     } catch (caught: any) { setError(caught?.response?.data?.message || 'Could not upload evidence. Your result is still here.'); }

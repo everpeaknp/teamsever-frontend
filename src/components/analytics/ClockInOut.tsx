@@ -112,25 +112,21 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
       const newStatus = optimisticStatus === 'active' ? 'inactive' : 'active';
 
       let locationFix: { latitude: number; longitude: number; accuracyMeters: number; capturedAt: string } | undefined;
-      let maxAccuracyMeters = 100;
-      let enforceLocation = locationPolicyEnabled;
-      if (newStatus === 'active') {
-        const policyResponse = await api.get(`/attendance/workspace/${workspaceId}/location-policy`);
-        enforceLocation = !!policyResponse.data.data.policy.enabled;
-        maxAccuracyMeters = Number(policyResponse.data.data.policy.maxAccuracyMeters) || 100;
-        setLocationPolicyEnabled(enforceLocation);
-      }
+      const policyResponse = await api.get(`/attendance/workspace/${workspaceId}/location-policy`);
+      const enforceLocation = !!policyResponse.data.data.policy.enabled;
+      const maxAccuracyMeters = Number(policyResponse.data.data.policy.maxAccuracyMeters) || 100;
+      setLocationPolicyEnabled(enforceLocation);
       if (enforceLocation) {
-        if ((!window.isSecureContext || !navigator.geolocation) && newStatus === 'active') throw new Error('Location-based clock-in requires HTTPS and browser location permission.');
+        if (!window.isSecureContext || !navigator.geolocation) throw new Error('Location-based clock-in and clock-out require HTTPS and browser location permission.');
         try {
           if (!window.isSecureContext || !navigator.geolocation) throw new Error('Geolocation unavailable');
           locationFix = await readAccurateLocation(maxAccuracyMeters, navigator.geolocation, newStatus === 'active' ? 20_000 : 5_000);
         } catch (locationError) {
-          if (newStatus === 'active') {
-            if (locationError instanceof Error && locationError.name === 'StaleLocationError') throw locationError;
-            throw new Error('Location is unavailable or permission was denied. Allow location access and try again.');
+          if (locationError instanceof Error && locationError.name === 'StaleLocationError' && newStatus === 'active') throw locationError;
+          if (newStatus === 'inactive') {
+            throw new Error('Clock-out is blocked because your location could not be verified. Allow location access and retry, or ask a workspace admin to stop your shift as an exception.');
           }
-          toast.warning('Clocked out without a fresh location. This shift will be flagged for review.');
+          throw new Error('Location is unavailable or permission was denied. Allow location access and try again.');
         }
       }
       

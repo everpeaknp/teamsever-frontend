@@ -3,12 +3,14 @@
 import { useState } from 'react';
 import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
+import { useQualityProject } from '@/components/quality/QualityProjectContext';
 
 type PreviewRow = { line: number; key?: string; draft: { title: string }; errors: string[] };
 type Preview = { previewToken: string; rows: PreviewRow[]; valid: number; invalid: number };
 type Outcome = { created: number; updated: number; skipped: number; errors: Array<{ line: number; message: string }> };
 
 export function CaseImportWizard({ workspaceId, onComplete }: { workspaceId: string; onComplete: () => void }) {
+  const { projectId } = useQualityProject();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -17,22 +19,24 @@ export function CaseImportWizard({ workspaceId, onComplete }: { workspaceId: str
   const [busy, setBusy] = useState(false);
 
   const previewFile = async () => {
+    if (!projectId) return setError('Wait for the QA project to load, then try again.');
     if (!file) return setError('Choose a CSV or XLSX file.');
     if (file.size > 2 * 1024 * 1024) return setError('File must be smaller than 2 MB.');
     setBusy(true); setError(''); setOutcome(null);
     try {
       const form = new FormData(); form.append('file', file);
-      const response = await api.post(`/workspaces/${workspaceId}/quality/cases/import/preview`, form);
+      const response = await api.post(`/workspaces/${workspaceId}/quality/cases/import/preview`, form, { params: { projectId } });
       setPreview(response.data.data);
     } catch (caught: any) { setError(caught?.response?.data?.message || 'Could not preview this file.'); }
     finally { setBusy(false); }
   };
 
   const commit = async () => {
+    if (!projectId) return setError('Choose a QA project before importing cases.');
     if (!preview || preview.invalid) return;
     setBusy(true); setError('');
     try {
-      const response = await api.post(`/workspaces/${workspaceId}/quality/cases/import/commit`, { previewToken: preview.previewToken, mode });
+      const response = await api.post(`/workspaces/${workspaceId}/quality/cases/import/commit`, { previewToken: preview.previewToken, mode }, { params: { projectId } });
       setOutcome(response.data.data); onComplete();
     } catch (caught: any) { setError(caught?.response?.data?.message || 'Import did not finish. Retry with this preview.'); }
     finally { setBusy(false); }

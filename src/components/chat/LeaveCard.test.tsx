@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { LeaveCard } from './LeaveCard';
+
+vi.mock('next/dynamic', () => ({ default: () => ({ latitude, longitude }: { latitude: number; longitude: number }) => <div data-testid="remote-location-map">Map at {latitude}, {longitude}<span>© OpenStreetMap contributors</span></div> }));
 
 const message = {
   _id: 'message-1',
@@ -27,6 +30,26 @@ function renderCard({ currentUserId, canManageLeaves, isWorkspaceOwner = false }
 }
 
 describe('LeaveCard decision actions', () => {
+  it('shows a received remote location map and lets the approver expand it without embed-provider clutter', () => {
+    const remoteMessage = {
+      ...message,
+      metadata: {
+        ...message.metadata,
+        requestType: 'remote' as const,
+        remoteLocation: { name: 'Temporary apartment', latitude: 28.21555, longitude: 83.98274 },
+      },
+    };
+    render(<LeaveCard message={remoteMessage} currentUserId="approver-1" canManageLeaves={true} isWorkspaceOwner={false} workspaceId="workspace-1" />);
+
+    expect(screen.getByTestId('remote-location-map')).toBeInTheDocument();
+    expect(screen.getByText(/© OpenStreetMap contributors/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Report a problem|Make a Donation/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand map' }));
+
+    expect(screen.getByRole('dialog', { name: 'Temporary apartment' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('remote-location-map')).toHaveLength(2);
+  });
+
   it('renders as a compact message-sized card rather than filling the conversation width', () => {
     renderCard({ currentUserId: 'approver-1', canManageLeaves: true });
     const card = screen.getByTestId('leave-request-card');

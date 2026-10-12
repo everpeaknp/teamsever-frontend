@@ -31,8 +31,24 @@ export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const lastNetworkWarningAt = useRef(0);
   const workspaceMatch = pathname?.match(/\/workspace\/([^/]+)/);
   const scopedWorkspaceId = workspaceMatch?.[1];
+
+  const reportNotificationRequestError = (message: string, error: any) => {
+    // Polling continues every 10 seconds, so a temporary backend outage should
+    // not fill the console with the same Axios stack trace on every retry.
+    if (!error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error')) {
+      const now = Date.now();
+      if (now - lastNetworkWarningAt.current >= 60_000) {
+        console.warn('Notification service is temporarily unreachable; retrying automatically.');
+        lastNetworkWarningAt.current = now;
+      }
+      return;
+    }
+
+    console.error(message, error);
+  };
 
   // Fetch notifications on mount and poll periodically
   useEffect(() => {
@@ -103,7 +119,7 @@ export function NotificationBell() {
       const notifications = response.data.data || [];
       replaceBellNotifications(notifications);
     } catch (error: any) {
-      console.error('Failed to fetch notifications:', error);
+      reportNotificationRequestError('Failed to fetch notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -132,7 +148,7 @@ export function NotificationBell() {
       const response = await api.get(url);
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error: any) {
-      console.error('Failed to fetch unread count:', error);
+      reportNotificationRequestError('Failed to fetch unread count:', error);
     }
   };
 
