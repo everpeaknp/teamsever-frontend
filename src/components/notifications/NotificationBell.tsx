@@ -228,7 +228,7 @@ export function NotificationBell() {
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative h-9 w-9 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626] rounded-lg transition-colors"
+        className="relative grid h-11 w-11 place-items-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-[#262626] dark:hover:text-white"
         title="Notifications"
       >
         <Bell className="w-5 h-5" />
@@ -241,7 +241,7 @@ export function NotificationBell() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-card rounded-lg shadow-2xl border border-border z-50 max-h-[600px] flex flex-col">
+        <div className="absolute right-0 mt-2 flex max-h-[calc(100dvh-5rem)] w-96 max-w-[calc(100vw-1rem)] flex-col rounded-lg border border-border bg-card shadow-2xl z-50">
           {/* Header */}
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="font-semibold text-foreground">Notifications</h3>

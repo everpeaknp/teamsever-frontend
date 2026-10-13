@@ -764,7 +764,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       <div className="h-14 border-b border-border px-4 md:px-6 flex items-center justify-between flex-shrink-0 bg-background/80 backdrop-blur-md sticky top-0 z-20">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <button
-            className="md:hidden p-2 -ml-2 hover:bg-muted rounded-lg transition-colors"
+            className="md:hidden -ml-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg transition-colors hover:bg-muted"
             onClick={onMenuClick}
             aria-label={type === 'direct' ? 'Back to conversations' : 'Open filters'}
           >
@@ -1336,9 +1336,9 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
       {/* Input Area - Hidden for Commit Log */}
       {!isCommitLog && (
-        <div className="border-t border-border p-4 pb-4 md:pb-6 bg-background/95 backdrop-blur-sm sticky bottom-0 z-10 transition-all">
-          <div className="max-w-4xl mx-auto flex gap-2 items-end">
-            <div className="flex-1 relative">
+        <div className="sticky bottom-0 z-10 border-t border-border bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-sm transition-all sm:p-4 md:pb-6">
+          <div className="mx-auto flex min-w-0 max-w-4xl items-end gap-2">
+            <div className="relative min-w-0 flex-1">
               {mentionQuery !== null && type === 'workspace' && !isCommitLog && (
                 <div role="listbox" aria-label="Mention a channel member" className="absolute bottom-full left-0 z-30 mb-2 max-h-56 w-72 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-xl">
                   {workspaceMembers

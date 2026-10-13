@@ -100,7 +100,7 @@ export function GlobalSearch() {
       />
 
       {/* Search Modal */}
-      <div className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 animate-in zoom-in-95 fade-in duration-150">
+      <div role="dialog" aria-modal="true" aria-label="Global search" className="fixed left-1/2 top-[calc(env(safe-area-inset-top)+1rem)] z-50 w-[calc(100vw-1rem)] max-w-2xl -translate-x-1/2 animate-in zoom-in-95 fade-in duration-150 sm:top-20">
         <div className="bg-white dark:bg-[#1a1a1a] rounded-lg shadow-2xl border border-slate-200 dark:border-[#262626] overflow-hidden">
           {/* Search Input */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-[#262626]">
@@ -121,7 +121,7 @@ export function GlobalSearch() {
           </div>
 
           {/* Results */}
-          <div className="max-h-[60vh] overflow-y-auto">
+          <div className="max-h-[calc(100dvh-8rem)] overflow-y-auto sm:max-h-[60vh]">
             {!query.trim() ? (
               <div className="px-4 py-8 text-center text-slate-500 dark:text-slate-400">
                 <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />

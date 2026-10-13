@@ -60,7 +60,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none focus:outline-none min-h-[500px] px-8 py-4',
+        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none break-words focus:outline-none min-h-[500px] px-3 py-4 sm:px-8',
       },
     },
   });
@@ -118,11 +118,11 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
     <div className="w-full">
       {/* Toolbar */}
       {editable && (
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-2 flex flex-wrap gap-1">
+        <div className="sticky top-0 z-10 flex flex-wrap gap-1 border-b border-gray-200 bg-white px-2 py-2 sm:px-4">
           {/* Text Formatting */}
           <button
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('bold') ? 'bg-gray-200' : ''
             }`}
             title="Bold"
@@ -131,7 +131,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           </button>
           <button
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('italic') ? 'bg-gray-200' : ''
             }`}
             title="Italic"
@@ -140,7 +140,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           </button>
           <button
             onClick={() => editor.chain().focus().toggleStrike().run()}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('strike') ? 'bg-gray-200' : ''
             }`}
             title="Strikethrough"
@@ -149,7 +149,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           </button>
           <button
             onClick={() => editor.chain().focus().toggleCode().run()}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('code') ? 'bg-gray-200' : ''
             }`}
             title="Code"
@@ -162,7 +162,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           {/* Headings */}
           <button
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('heading', { level: 1 }) ? 'bg-gray-200' : ''
             }`}
             title="Heading 1"
@@ -171,7 +171,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           </button>
           <button
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('heading', { level: 2 }) ? 'bg-gray-200' : ''
             }`}
             title="Heading 2"
@@ -180,7 +180,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           </button>
           <button
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('heading', { level: 3 }) ? 'bg-gray-200' : ''
             }`}
             title="Heading 3"
@@ -193,7 +193,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           {/* Lists */}
           <button
             onClick={() => editor.chain().focus().toggleBulletList().run()}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('bulletList') ? 'bg-gray-200' : ''
             }`}
             title="Bullet List"
@@ -202,7 +202,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           </button>
           <button
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('orderedList') ? 'bg-gray-200' : ''
             }`}
             title="Numbered List"
@@ -211,7 +211,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           </button>
           <button
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('blockquote') ? 'bg-gray-200' : ''
             }`}
             title="Quote"
@@ -224,7 +224,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           {/* Insert */}
           <button
             onClick={setLink}
-            className={`p-2 rounded hover:bg-gray-100 ${
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 ${
               editor.isActive('link') ? 'bg-gray-200' : ''
             }`}
             title="Add Link"
@@ -233,7 +233,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           </button>
           <button
             onClick={addImage}
-            className="p-2 rounded hover:bg-gray-100"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100"
             title="Add Image"
           >
             <ImageIcon className="w-4 h-4" />
@@ -245,7 +245,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           <button
             onClick={() => editor.chain().focus().undo().run()}
             disabled={!editor.can().undo()}
-            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
             title="Undo"
           >
             <Undo className="w-4 h-4" />
@@ -253,7 +253,7 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
           <button
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().redo()}
-            className="p-2 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
             title="Redo"
           >
             <Redo className="w-4 h-4" />

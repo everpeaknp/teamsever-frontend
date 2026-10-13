@@ -169,7 +169,7 @@ export default function DocumentPage() {
       </header>
 
       {/* Document Content */}
-      <main className="max-w-5xl mx-auto">
+      <main className="mx-auto min-w-0 max-w-5xl">
         {/* Cover Image */}
         {document.coverImage && (
           <div className="w-full h-64 overflow-hidden">
@@ -182,7 +182,7 @@ export default function DocumentPage() {
         )}
 
         {/* Title Section */}
-        <div className="px-8 pt-12 pb-4">
+        <div className="min-w-0 px-3 pt-8 pb-4 sm:px-8 sm:pt-12">
           <div className="flex items-center gap-4 mb-4">
             <button
               onClick={handleIconChange}
@@ -197,12 +197,12 @@ export default function DocumentPage() {
             type="text"
             value={title}
             onChange={(e) => handleTitleChange(e.target.value)}
-            className="text-5xl font-bold w-full border-none outline-none bg-transparent placeholder-gray-300"
+            className="min-w-0 w-full border-none bg-transparent text-3xl font-bold outline-none placeholder-gray-300 sm:text-5xl"
             placeholder="Untitled"
           />
 
-          <div className="flex items-center gap-4 mt-4 text-sm text-gray-500">
-            <span>By {document.owner.name}</span>
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 break-words text-sm text-gray-500">
+            <span className="break-all">By {document.owner.name}</span>
             <span>•</span>
             <span>Last edited {new Date(document.updatedAt).toLocaleDateString()}</span>
           </div>

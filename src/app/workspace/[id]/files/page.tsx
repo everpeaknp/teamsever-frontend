@@ -417,12 +417,12 @@ export default function FilesPage() {
   };
 
   return (
-    <div className="flex-1 flex bg-background h-screen overflow-hidden">
+    <div className="flex min-h-0 min-w-0 flex-1 bg-background overflow-hidden">
       {/* Space Folders Sidebar */}
       <div 
         ref={sidebarRef}
         className={cn(
-          "border-r border-border flex flex-col flex-shrink-0 relative bg-background",
+          "hidden lg:flex border-r border-border flex-col flex-shrink-0 relative bg-background",
           !isResizing && "transition-[width] duration-300"
         )}
         style={{ width: `${sidebarWidth}px` }}
@@ -492,11 +492,21 @@ export default function FilesPage() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="px-8 py-5 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div>
-                <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+        <div className="flex-shrink-0 p-3 sm:px-8 sm:py-5">
+          <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <label htmlFor="mobile-file-location" className="sr-only">Choose a file location</label>
+              <select
+                id="mobile-file-location"
+                value={activeSpaceId || ''}
+                onChange={(event) => setActiveSpaceId(event.target.value || null)}
+                className="h-11 min-w-0 flex-1 rounded-lg border border-border bg-background px-3 text-sm lg:hidden"
+              >
+                <option value="">Global files</option>
+                {spaces.map((space) => <option key={space._id} value={space._id}>{space.name}</option>)}
+              </select>
+              <div className="hidden min-w-0 lg:block">
+                <h1 className="flex min-w-0 items-center gap-2 break-words text-xl font-bold text-foreground">
                   {activeSpaceId ? (
                     <>
                       <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: spaces.find(s => s._id === activeSpaceId)?.color || 'currentColor' }} />
@@ -509,13 +519,13 @@ export default function FilesPage() {
                     </>
                   )}
                 </h1>
-                <p className="text-[11px] font-medium text-muted-foreground mt-0.5 opacity-60">
+                <p className="mt-0.5 text-[11px] font-medium text-muted-foreground opacity-60">
                   {activeSpaceId ? "Space-specific storage" : "Shared workspace files"}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 w-full flex-wrap items-center gap-2 lg:w-auto lg:flex-nowrap lg:gap-4">
               {files.length > 0 && (
                 <div className="flex items-center gap-1 bg-muted/20 p-1 rounded-xl mr-2">
                   <Button
@@ -543,14 +553,14 @@ export default function FilesPage() {
                 </div>
               )}
 
-              <div className="relative group">
+              <div className="relative group min-w-0 w-full flex-1 sm:w-auto">
                 <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors" />
                 <Input
                   placeholder="Find a file..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                  className="w-56 h-9 pl-9 bg-muted/20 border-transparent focus:border-primary/20 focus:bg-white dark:focus:bg-muted/40 transition-all rounded-xl text-xs"
+                  className="h-11 w-full min-w-0 rounded-xl border-transparent bg-muted/20 pl-9 text-xs transition-all focus:border-primary/20 focus:bg-white dark:focus:bg-muted/40 sm:h-9 sm:w-56"
                 />
               </div>
               
@@ -565,7 +575,7 @@ export default function FilesPage() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
                 variant="outline"
-                className="gap-2 h-9 rounded-xl px-4 border-primary/10 hover:border-primary/30 hover:bg-primary/5 transition-all text-xs font-semibold"
+                className="h-11 flex-1 gap-2 rounded-xl border-primary/10 px-4 text-xs font-semibold transition-all hover:border-primary/30 hover:bg-primary/5 sm:flex-none sm:h-9"
               >
                 {uploading ? (
                   <>
@@ -603,7 +613,7 @@ export default function FilesPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 bg-[#fcfcfc] dark:bg-transparent relative">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 bg-[#fcfcfc] dark:bg-transparent relative sm:p-6 lg:p-8">
           {loading ? (
             <CardGridSkeleton count={12} />
           ) : files.length === 0 ? (
@@ -637,28 +647,25 @@ export default function FilesPage() {
                     )}
                   >
                     {/* Select Checkbox */}
-                    <div 
+                    <button
+                      type="button"
+                      aria-label={`${isSelected ? 'Deselect' : 'Select'} ${file.fileName}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleFileSelection(file._id);
                       }}
                       className={cn(
-                        "absolute top-3 right-3 z-10 w-5 h-5 rounded-md border transition-all cursor-pointer flex items-center justify-center",
+                        "absolute right-2 top-2 z-10 grid h-11 w-11 place-items-center rounded-md border transition-all sm:right-3 sm:top-3 sm:h-8 sm:w-8",
                         isSelected 
                           ? "bg-primary border-primary text-white scale-110" 
-                          : "bg-white/80 dark:bg-muted/80 border-border opacity-0 group-hover:opacity-100"
+                          : "bg-white/80 dark:bg-muted/80 border-border opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                       )}
                     >
                       {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                    </div>
+                    </button>
 
-                    <div className="flex items-start gap-3 mb-4" onClick={() => openPreview(file)}>
-                      <div
-                        className={cn(
-                          'w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105 cursor-pointer shadow-inner',
-                          'bg-slate-900 text-slate-100'
-                        )}
-                      >
+                    <button type="button" className="mb-4 flex w-full min-w-0 items-start gap-3 text-left" onClick={() => openPreview(file)}>
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-slate-100 shadow-inner transition-transform group-hover:scale-105">
                         {getFileIcon(file.fileType, file.resourceType)}
                       </div>
                       
@@ -673,7 +680,7 @@ export default function FilesPage() {
                           {file.format} <span className="mx-1">•</span> {formatFileSize(file.fileSize)}
                         </p>
                       </div>
-                    </div>
+                    </button>
 
                     <div className="flex items-center justify-between mt-auto pt-3 border-t border-border/10">
                       <div className="flex items-center gap-2">
@@ -687,7 +694,8 @@ export default function FilesPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 rounded-lg hover:bg-primary/10 hover:text-primary opacity-0 group-hover:opacity-100 transition-all"
+                          aria-label={`Preview ${file.fileName}`}
+                          className="h-11 w-11 rounded-lg hover:bg-primary/10 hover:text-primary sm:h-9 sm:w-9 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
                           onClick={() => openPreview(file)}
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -695,7 +703,8 @@ export default function FilesPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 rounded-lg hover:bg-primary/10 hover:text-primary opacity-0 group-hover:opacity-100 transition-all"
+                          aria-label={`Download ${file.fileName}`}
+                          className="h-11 w-11 rounded-lg hover:bg-primary/10 hover:text-primary sm:h-9 sm:w-9 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
                           onClick={() => handleDownload(file)}
                         >
                           <Download className="w-3.5 h-3.5" />
@@ -704,7 +713,8 @@ export default function FilesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 rounded-lg hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                          aria-label={`Delete ${file.fileName}`}
+                          className="h-11 w-11 rounded-lg hover:bg-destructive/10 hover:text-destructive sm:h-9 sm:w-9 lg:opacity-0 lg:group-hover:opacity-100 transition-all"
                             onClick={() => openDeleteModal(file)}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -724,51 +734,55 @@ export default function FilesPage() {
                   <div
                     key={file._id}
                     className={cn(
-                      "group flex items-center gap-4 p-3 rounded-2xl transition-all duration-200 border border-transparent",
+                      "group flex flex-wrap items-center gap-2 p-3 rounded-2xl transition-all duration-200 border border-transparent",
                       isSelected 
                         ? "bg-primary/5 border-primary/20 shadow-sm" 
                         : "hover:bg-white dark:hover:bg-muted/40 hover:border-border/40 hover:shadow-sm"
                     )}
                   >
-                    <div 
+                    <button
+                      type="button"
+                      aria-label={`${isSelected ? 'Deselect' : 'Select'} ${file.fileName}`}
                       onClick={() => toggleFileSelection(file._id)}
                       className={cn(
-                        "w-5 h-5 rounded-md border transition-all cursor-pointer flex items-center justify-center",
+                        "grid h-11 w-11 shrink-0 place-items-center rounded-md border transition-all sm:h-8 sm:w-8",
                         isSelected 
                           ? "bg-primary border-primary text-white" 
-                          : "bg-background dark:bg-muted/50 border-border opacity-40 group-hover:opacity-100"
+                          : "bg-background dark:bg-muted/50 border-border opacity-100 sm:opacity-40 sm:group-hover:opacity-100"
                       )}
                     >
                       {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                    </div>
+                    </button>
 
-                    <div
+                    <button
+                      type="button"
+                      aria-label={`Preview ${file.fileName}`}
                       onClick={() => openPreview(file)}
                       className={cn(
-                        'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 cursor-pointer shadow-sm transition-transform group-hover:scale-105',
+                        'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm transition-transform group-hover:scale-105 sm:h-10 sm:w-10',
                         'bg-slate-900 text-slate-100'
                       )}
                     >
                       {getFileIcon(file.fileType, file.resourceType)}
-                    </div>
+                    </button>
 
-                    <div className="flex-1 min-w-0 grid grid-cols-12 gap-4 items-center" onClick={() => openPreview(file)}>
-                      <div className="col-span-5 truncate">
+                    <div className="grid min-w-0 flex-1 grid-cols-1 items-center gap-1 sm:grid-cols-12 sm:gap-4" onClick={() => openPreview(file)}>
+                      <div className="truncate sm:col-span-5">
                         <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors cursor-pointer">{file.fileName}</span>
                       </div>
-                      <div className="col-span-2 text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">{file.format}</div>
-                      <div className="col-span-2 text-xs font-medium text-muted-foreground/60">{formatFileSize(file.fileSize)}</div>
-                      <div className="col-span-3 flex items-center gap-2">
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 sm:col-span-2">{file.format}</div>
+                      <div className="text-xs font-medium text-muted-foreground/60 sm:col-span-2">{formatFileSize(file.fileSize)}</div>
+                      <div className="flex min-w-0 items-center gap-2 sm:col-span-3">
                         <UserAvatar user={file.uploadedBy} className="h-6 w-6 border-2 border-white dark:border-muted shadow-sm" />
                         <span className="text-xs font-semibold text-muted-foreground/80 truncate">{file.uploadedBy.name}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary" onClick={() => openPreview(file)}><Eye className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary" onClick={() => handleDownload(file)}><Download className="w-4 h-4" /></Button>
+                    <div className="ml-auto flex w-full shrink-0 translate-x-0 items-center justify-end gap-1 transition-all sm:w-auto sm:translate-x-2 sm:opacity-0 sm:group-hover:translate-x-0 sm:group-hover:opacity-100">
+                      <Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg hover:bg-primary/10 hover:text-primary sm:h-8 sm:w-8" aria-label={`Preview ${file.fileName}`} onClick={() => openPreview(file)}><Eye className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg hover:bg-primary/10 hover:text-primary sm:h-8 sm:w-8" aria-label={`Download ${file.fileName}`} onClick={() => handleDownload(file)}><Download className="w-4 h-4" /></Button>
                       {canDelete(file) && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive" onClick={() => openDeleteModal(file)}><Trash2 className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-11 w-11 rounded-lg hover:bg-destructive/10 hover:text-destructive sm:h-8 sm:w-8" aria-label={`Delete ${file.fileName}`} onClick={() => openDeleteModal(file)}><Trash2 className="w-4 h-4" /></Button>
                       )}
                     </div>
                   </div>
@@ -779,8 +793,8 @@ export default function FilesPage() {
 
           {/* Floating Batch Action Bar */}
           {selectedFileIds.length > 0 && (
-            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <div className="bg-foreground text-background dark:bg-background dark:text-foreground shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-8 border border-border/50 backdrop-blur-xl">
+            <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom)+0.5rem)] left-1/2 z-50 w-[calc(100%-1rem)] max-w-lg -translate-x-1/2 animate-in fade-in slide-in-from-bottom-4 duration-300 lg:bottom-8">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/50 bg-foreground px-3 py-3 text-background shadow-2xl backdrop-blur-xl dark:bg-background dark:text-foreground sm:gap-8 sm:px-6 sm:py-4">
                 <div className="flex flex-col">
                   <span className="text-sm font-bold">{selectedFileIds.length} files selected</span>
                   <span className="text-[10px] opacity-60 uppercase tracking-widest font-bold">Manage selection</span>
