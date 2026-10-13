@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatWindow } from '@/components/chat/ChatWindow';
+import { MessageModeNav } from '@/components/chat/MessageModeNav';
 import { useSocket } from '@/contexts/SocketContext';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { usePresence } from '@/hooks/usePresence';
@@ -283,7 +284,9 @@ export default function InboxPage() {
   }
 
   return (
-    <div className="flex h-full min-h-0 bg-background overflow-hidden">
+    <div className="flex h-full min-h-0 flex-col bg-background overflow-hidden">
+      <MessageModeNav workspaceId={workspaceId} />
+      <div className="flex min-h-0 flex-1 overflow-hidden">
       {/* Members List Sidebar - Responsive */}
       <div className={cn(
         "border-r border-border flex flex-col bg-background",
@@ -300,9 +303,9 @@ export default function InboxPage() {
           onMouseDown={startSidebarResizing}
           onDoubleClick={resetSidebarWidth}
         />
-        <div className="p-4 border-b border-border flex-shrink-0 sticky top-0 z-20 bg-background">
-          <h2 className="text-lg font-semibold text-foreground">Direct Messages</h2>
-          <p className="text-sm text-muted-foreground">Chat with workspace members</p>
+        <div className="border-b border-border bg-background px-4 py-3">
+          <h2 className="text-base font-semibold text-foreground">Start a conversation</h2>
+          <p className="text-xs text-muted-foreground">Choose a workspace member</p>
         </div>
         
         <div className="flex-1 overflow-y-auto overflow-x-hidden chat-scrollbar">
@@ -406,9 +409,9 @@ export default function InboxPage() {
 
       {/* Chat Window - Responsive */}
       <div className={cn(
-        "flex-1 flex flex-col",
-        // Show on mobile only when chat is selected
-        showMembersList && selectedMember && "hidden md:flex"
+        "hidden min-w-0 flex-1 flex-col md:flex",
+        // On phones, use the full width for the member list until a conversation is selected.
+        !showMembersList && selectedMember && "flex"
       )}>
         {selectedMember && conversationId ? (
           <div className="flex flex-col h-full">
@@ -430,6 +433,7 @@ export default function InboxPage() {
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

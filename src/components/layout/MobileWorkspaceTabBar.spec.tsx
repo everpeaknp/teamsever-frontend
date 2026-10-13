@@ -38,6 +38,13 @@ describe('MobileWorkspaceTabBar', () => {
     expect(screen.getByRole('link', { name: 'Spaces' })).toHaveAttribute('href', '/workspace/ws1/spaces');
   });
 
+  it('keeps Messages active while the group chat view is open', () => {
+    navigation.pathname = '/workspace/ws1/chat';
+    render(<MobileWorkspaceTabBar workspaceId="ws1" />);
+
+    expect(screen.getByRole('link', { name: 'Messages' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('provides an accessible More control for destinations outside the primary tabs', () => {
     render(<MobileWorkspaceTabBar workspaceId="ws1" />);
 

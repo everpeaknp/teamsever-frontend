@@ -18,6 +18,9 @@ export function MobileWorkspaceTabBar({
   workspaceId: string;
 }) {
   const pathname = usePathname();
+  const isMessageRoute =
+    pathname.startsWith(`/workspace/${workspaceId}/inbox`) ||
+    pathname.startsWith(`/workspace/${workspaceId}/chat`);
 
   return (
     <nav
@@ -27,7 +30,9 @@ export function MobileWorkspaceTabBar({
       <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
         {tabs.map(({ label, path, Icon }) => {
           const href = `/workspace/${workspaceId}/${path}`;
-          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+          const isActive = path === 'inbox'
+            ? isMessageRoute
+            : pathname === href || pathname.startsWith(`${href}/`);
 
           return (
             <Link
@@ -48,7 +53,7 @@ export function MobileWorkspaceTabBar({
           active={
             !pathname.startsWith(`/workspace/${workspaceId}/analytics`) &&
             !pathname.startsWith(`/workspace/${workspaceId}/spaces/`) &&
-            !pathname.startsWith(`/workspace/${workspaceId}/inbox`) &&
+            !isMessageRoute &&
             !pathname.startsWith(`/workspace/${workspaceId}/attendance`)
           }
         />

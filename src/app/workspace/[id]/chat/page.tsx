@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ChatWindow, ChatSidebar } from '@/components/chat';
+import { MessageModeNav } from '@/components/chat/MessageModeNav';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/useChatStore';
 import { useProfileModalStore } from '@/store/useProfileModalStore';
@@ -186,7 +187,9 @@ export default function GroupChatPage() {
   // Lock screen logic remains the same...
   if (!hasGroupChat) {
     return (
-      <div className="relative flex h-full bg-background overflow-hidden font-sans">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans">
+        <MessageModeNav workspaceId={workspaceId} />
+        <div className="relative flex min-h-0 flex-1 overflow-hidden bg-background">
         {/* Blurred Background */}
         <div className="absolute inset-0 blur-[2px] opacity-60 pointer-events-none">
           <div className="flex h-full">
@@ -218,6 +221,7 @@ export default function GroupChatPage() {
             </div>
           </div>
         </div>
+        </div>
       </div>
     );
   }
@@ -225,7 +229,9 @@ export default function GroupChatPage() {
 
 
   return (
-    <div className="flex h-full bg-background overflow-hidden font-sans relative">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans">
+      <MessageModeNav workspaceId={workspaceId} />
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {mobileSidebarOpen && (
         <div 
@@ -272,6 +278,7 @@ export default function GroupChatPage() {
           isAdmin={isAdmin}
           onMenuClick={() => setMobileSidebarOpen(true)}
         />
+      </div>
       </div>
     </div>
   );
