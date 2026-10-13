@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BarChart3, CalendarCheck2, Layers3, MessageCircle } from 'lucide-react';
+import { MobileSidebar } from '@/components/sidebar/MobileSidebar';
 
 const tabs = [
   { label: 'Dashboard', path: 'analytics', Icon: BarChart3 },
@@ -26,7 +27,7 @@ export function MobileWorkspaceTabBar({
       aria-label="Workspace navigation"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border/80 bg-background/95 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] shadow-[0_-8px_24px_rgba(0,0,0,0.08)] backdrop-blur-xl lg:hidden"
     >
-      <div className="mx-auto grid max-w-md grid-cols-4 gap-1">
+      <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
         {tabs.map(({ label, path, Icon }) => {
           const href = path === 'spaces'
             ? firstSpaceId ? `/workspace/${workspaceId}/spaces/${firstSpaceId}` : null
@@ -61,6 +62,15 @@ export function MobileWorkspaceTabBar({
             </Link>
           );
         })}
+        <MobileSidebar
+          variant="bottom"
+          active={
+            !pathname.startsWith(`/workspace/${workspaceId}/analytics`) &&
+            !pathname.startsWith(`/workspace/${workspaceId}/spaces/`) &&
+            !pathname.startsWith(`/workspace/${workspaceId}/inbox`) &&
+            !pathname.startsWith(`/workspace/${workspaceId}/attendance`)
+          }
+        />
       </div>
     </nav>
   );

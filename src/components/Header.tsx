@@ -12,7 +12,6 @@ import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { DesktopDownloadButton } from '@/components/layout/DesktopDownloadButton';
 import { CustomizeModal } from '@/components/theme/CustomizeModal';
 import { HelpModal } from '@/components/modals/HelpModal';
-import { MobileSidebar } from '@/components/sidebar/MobileSidebar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,12 +52,9 @@ export function Header() {
 
   return (
     <>
-      <header className="h-14 border-b border-slate-200 dark:border-[#262626] bg-white dark:bg-[#1a1a1a] flex items-center justify-between px-2 sm:px-4 flex-shrink-0">
+      <header className="h-14 min-w-0 border-b border-slate-200 dark:border-[#262626] bg-white dark:bg-[#1a1a1a] flex items-center justify-between gap-2 px-3 sm:px-4 flex-shrink-0">
         {/* Left Section */}
-        <div className="flex items-center gap-2 sm:gap-4">
-          {/* Mobile Menu Button */}
-          <MobileSidebar />
-          
+        <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-4">
           {/* Desktop Sidebar Toggle - Hidden on mobile */}
           <Button
             variant="ghost"
@@ -70,9 +66,9 @@ export function Header() {
             <Menu className="h-5 w-5" />
           </Button>
           
-          <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <Image src="/teamsever_logo.png" alt="TeamsEver Logo" width={24} height={24} className="rounded-md" />
-            <h1 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-white">TeamsEver</h1>
+          <Link href="/dashboard" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+            <Image src="/teamsever_logo.png" alt="TeamsEver Logo" width={22} height={22} className="rounded-md" />
+            <h1 className="text-base sm:text-xl font-semibold text-slate-900 dark:text-white">TeamsEver</h1>
           </Link>
         </div>
 
@@ -84,17 +80,19 @@ export function Header() {
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-1 sm:gap-3">
           <div className="h-6 w-px bg-slate-200 dark:bg-[#262626] hidden sm:block" />
 
-          <DesktopDownloadButton />
+          <div className="hidden sm:block"><DesktopDownloadButton /></div>
+
+          <div className="sm:hidden"><SearchButton compact /></div>
           
           <NotificationBell />
           
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626]"
+            className="hidden sm:flex h-11 w-11 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626]"
             onClick={() => setCustomizeOpen(true)}
             title="Customize Theme"
           >
@@ -104,7 +102,7 @@ export function Header() {
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-9 w-9 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626]"
+            className="hidden sm:flex h-11 w-11 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626]"
             onClick={handleHelpCenter}
             title="Help Center"
           >
@@ -116,7 +114,7 @@ export function Header() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-9 w-9 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626]"
+                className="h-11 w-11 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#262626]"
                 title="Settings & Account"
               >
                 <Settings className="h-5 w-5" />
@@ -130,6 +128,14 @@ export function Header() {
               <DropdownMenuItem onClick={handleSwitchWorkspace}>
                 <Building2 className="w-4 h-4 mr-2" />
                 Switch Workspace
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setCustomizeOpen(true)}>
+                <Palette className="w-4 h-4 mr-2" />
+                Customize theme
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleHelpCenter}>
+                <HelpCircle className="w-4 h-4 mr-2" />
+                Help center
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleKeyboardShortcuts}>

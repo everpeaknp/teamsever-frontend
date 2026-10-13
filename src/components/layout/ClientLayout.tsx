@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { AppUpdateNotifier } from '@/components/layout/AppUpdateNotifier';
 import { DesktopUpdateNotifier } from '@/components/layout/DesktopUpdateNotifier';
+import { MobileWorkspaceNavigation } from '@/components/layout/MobileWorkspaceNavigation';
 
 // Dynamic imports so these heavy components are excluded from pages that don't need them
 const AppSidebar = dynamic(
@@ -140,16 +141,17 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       {showShell && <GlobalTimer />}
 
       {showShell ? (
-        <div className="flex h-screen overflow-hidden bg-background">
+        <div className="flex h-[100dvh] overflow-hidden bg-background lg:h-screen">
           <div className="hidden lg:flex">
             <AppSidebar />
           </div>
           <div className="flex-1 flex flex-col overflow-hidden">
             <Header />
-            <main className="flex-1 overflow-auto bg-background">
+            <main className="min-h-0 min-w-0 flex-1 overflow-auto bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
               {children}
             </main>
           </div>
+          <MobileWorkspaceNavigation />
         </div>
       ) : (
         <main className="min-h-screen">{children}</main>

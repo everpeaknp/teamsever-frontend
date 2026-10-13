@@ -25,4 +25,10 @@ describe('MobileWorkspaceTabBar', () => {
 
     expect(screen.getByText('Spaces').closest('[aria-disabled="true"]')).toBeInTheDocument();
   });
+
+  it('provides an accessible More control for destinations outside the primary tabs', () => {
+    render(<MobileWorkspaceTabBar workspaceId="ws1" spaces={[{ _id: 'space1' }]} />);
+
+    expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
+  });
 });
