@@ -11,8 +11,9 @@ import {
 } from '@/components/ui/sheet';
 import { AppSidebar } from './AppSidebar';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { usePathname } from 'next/navigation';
 
 export function MobileSidebar({
   variant = 'header',
@@ -22,7 +23,12 @@ export function MobileSidebar({
   active?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname();
   const isBottomTab = variant === 'bottom';
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
