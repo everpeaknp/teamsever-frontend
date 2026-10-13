@@ -163,7 +163,7 @@ export function SpaceMemberManagement({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div role="region" aria-label="Space members and permissions" tabIndex={0} className="min-w-0 flex-1 overflow-auto overscroll-contain px-3 py-4 sm:px-6">
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
@@ -248,7 +248,7 @@ export function SpaceMemberManagement({
                           }}
                           disabled={updating === member._id}
                         >
-                          <SelectTrigger className="w-[170px] h-9">
+                          <SelectTrigger className="w-[170px] min-h-11">
                             <SelectValue>
                               {member.spacePermissionLevel ? (
                                 <div className="flex items-center gap-2">
@@ -302,7 +302,7 @@ export function SpaceMemberManagement({
                               size="sm"
                               onClick={() => handleRemoveOverride(member._id)}
                               disabled={updating === member._id}
-                              className="h-8 px-2.5 text-xs"
+                              className="min-h-11 px-2.5 text-xs"
                             >
                               Reset
                             </Button>
@@ -313,7 +313,7 @@ export function SpaceMemberManagement({
                               size="sm"
                               onClick={() => handleRemoveMember(member._id, member.name)}
                               disabled={updating === member._id}
-                              className="h-8 px-2.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                              className="min-h-11 px-2.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
                             >
                               Remove
                             </Button>

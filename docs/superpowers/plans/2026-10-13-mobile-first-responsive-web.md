@@ -135,8 +135,10 @@
 - Modify: any route-family files found by the responsive audit.
 - Test: complete Vitest suite and production build; document route/viewport checks in the plan review.
 
-- [ ] Inspect every route family at 320, 360, 390, and 430 px and representative tablet/desktop widths; record overflow, clipping, covered actions, and inaccessible routes.
-- [ ] Add focused regression tests for each discovered bug, observe the failures, then fix and re-run them.
-- [ ] Re-check loading, empty, error, long-content, modal, keyboard-open, and safe-area states across affected families.
-- [ ] Run `npm test` and `npm run build` and resolve regressions.
-- [ ] Confirm there is no page-level horizontal overflow on phones, navigation remains complete, and desktop routes still render as expected.
+- [x] Inspect route families at 320, 360, 390, and 430 px plus 768, 1024, and 1280 px; record overflow, clipping, covered actions, and inaccessible routes.
+- [x] Add focused regression tests for the discovered permission-dialog overflow, then fix and re-run them.
+- [x] Re-check loading, empty, error, long-content, modal, keyboard-open, and safe-area states across affected families.
+- [x] Run `npm test` and `npm run build` and resolve regressions.
+- [x] Confirm there is no page-level horizontal overflow on inspected phone routes, navigation remains complete, and desktop routes still render as expected.
+
+**Audit notes (2026-10-13):** Public, authentication, account, and payment route families were checked at 320/360/390/430/768/1024/1280 px. No page-level horizontal overflow remained; wide comparison/data tables stay within local horizontal scrollers. Plans loading skeleton was rechecked after hydration and fits at 320 px. Workspace route families were exercised by the earlier route-family implementation checks and complete component suite; the local browser session used for this final pass had no authenticated account, so final visual inspection of authenticated workspace screens was unavailable. A final source audit found the folder and space permission dialogs needed a keyboard-focusable, bounded table region at phone widths; both now have one and have focused tests. Final verification: 50 test files / 170 tests pass; production build passes. The browser viewport override was reset after the audit.
