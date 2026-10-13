@@ -22,8 +22,9 @@ export function NotificationBell() {
   const router = useRouter();
   const pathname = usePathname();
   const {
-    notifications: bellNotifications,
+    bellNotifications,
     unreadCount,
+    isLoading,
     setUnreadCount,
     setLoading,
   } = useNotificationStore();
@@ -52,16 +53,11 @@ export function NotificationBell() {
 
   // Fetch notifications on mount and poll periodically
   useEffect(() => {
-    // Check if user is authenticated before fetching
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token') || localStorage.getItem('authToken');
-      
-      if (!token || token === 'undefined' || token === 'null') {
-        // User not authenticated, skip fetch
-        return;
-      }
+      if (!token || token === 'undefined' || token === 'null') return;
     }
-    
+
     fetchNotifications();
     fetchUnreadCount();
 
@@ -271,7 +267,11 @@ export function NotificationBell() {
 
           {/* Notifications List */}
           <div className="overflow-y-auto flex-1">
-            {bellNotifications.length === 0 ? (
+            {isLoading && bellNotifications.length === 0 ? (
+              <div className="flex justify-center p-8" role="status" aria-label="Loading notifications">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : bellNotifications.length === 0 ? (
               <div className="p-8 text-center">
                 <Bell className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">No notifications yet</p>
