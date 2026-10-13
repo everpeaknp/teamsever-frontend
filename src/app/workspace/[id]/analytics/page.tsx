@@ -15,7 +15,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Task } from '@/types';
 import { useRef } from 'react';
 import { TaskStatusChart } from '@/components/analytics/TaskStatusChart';
-import { MobileWorkspaceTabBar } from '@/components/layout/MobileWorkspaceTabBar';
 
 type AnalyticsView = 'workspace' | 'personal';
 type RangeKey = 'today' | '7d' | '30d' | '90d' | 'all' | 'custom';
@@ -872,7 +871,6 @@ export default function AnalyticsPage() {
                     />
                 </div>
             </main>
-            <MobileWorkspaceTabBar workspaceId={workspaceId} spaces={spaces} />
         </div>
     );
 }

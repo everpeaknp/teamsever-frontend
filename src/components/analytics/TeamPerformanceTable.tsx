@@ -130,7 +130,7 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
 
   return (
     <Card className="overflow-hidden">
-      <div className="px-6 py-4 border-b">
+      <div className="min-w-0 px-3 py-4 border-b sm:px-6">
         <h4 className="font-bold">Team Performance Overview</h4>
         <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
           <div className="rounded-md border px-3 py-2">
@@ -152,7 +152,39 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
         </div>
       </div>
       
-      <div className="overflow-x-auto">
+      <div className="space-y-3 p-3 lg:hidden" data-testid="team-performance-mobile-cards">
+        {filteredMembers.length === 0 ? (
+          <p className="rounded-lg border p-5 text-center text-sm text-muted-foreground">No team members found</p>
+        ) : filteredMembers.map((member, index) => {
+          const perfData = getPerformanceLabel(member.performance);
+          const timeFeedback = getTimePerformanceFeedback(member.avgTimeHours);
+          return (
+            <article key={member.id} className="min-w-0 rounded-xl border bg-background p-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold" aria-label={`Rank ${index + 1}`}>
+                  {index < 3 ? <Trophy aria-hidden="true" className={`h-4 w-4 ${index === 0 ? 'text-amber-500' : index === 1 ? 'text-slate-400' : 'text-orange-600'}`} /> : `#${index + 1}`}
+                </div>
+                <UserAvatar user={{ name: member.name, avatar: member.avatar, _id: member.id }} className="h-9 w-9 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="break-words text-sm font-bold">{member.name}</p>
+                  <p className="break-words text-xs capitalize text-muted-foreground">{member.role}</p>
+                </div>
+                <div className="shrink-0">{getStatusBadge(member.status)}</div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3 text-xs">
+                <div><span className="text-muted-foreground">Done / assigned</span><p className="mt-0.5 font-semibold">{member.tasksFinished} / {member.totalAssigned}</p></div>
+                <div><span className="text-muted-foreground">Avg. time / task</span><p className="mt-0.5 font-semibold">{member.avgTime}</p><span className={`flex items-center gap-1 ${timeFeedback.color}`}>{timeFeedback.icon}{timeFeedback.text}</span></div>
+                <div className="col-span-2">
+                  <div className="mb-1 flex items-center justify-between gap-2"><span className="text-muted-foreground">Performance</span><span className="text-right font-semibold">{member.performance}% {perfData.label}</span></div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted"><div className={`h-full ${perfData.color}`} style={{ width: `${member.performance}%` }} /></div>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-x-auto lg:block">
         <table className="w-full text-left">
           <thead className="bg-slate-50 dark:bg-slate-800/50 text-muted-foreground text-xs font-bold uppercase tracking-wider">
             <tr>
@@ -225,7 +257,7 @@ export function TeamPerformanceTable({ members, tasks, searchQuery }: TeamPerfor
         </table>
       </div>
       
-      <div className="px-6 py-4 border-t">
+      <div className="px-3 py-4 border-t sm:px-6">
         <span className="text-xs text-muted-foreground">
           Showing {filteredMembers.length} of {members.length} members
         </span>
