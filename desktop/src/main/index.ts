@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, powerMonitor, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Notification, powerMonitor, safeStorage, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import fs from 'node:fs/promises';
 import { foregroundAppSupport, getForegroundProcessName } from './foregroundProcess';
@@ -29,6 +29,14 @@ let deviceMonitoringConsent = false;
 let allowNormalQuitAfterUpdateCheck = false;
 let updateCheckTimer: NodeJS.Timeout | null = null;
 let companionPromptOpen = false;
+function showPresenceNotice(body: string): void {
+  if (!Notification.isSupported()) return;
+  try {
+    new Notification({ title: 'TeamsEver attendance', body, silent: true }).show();
+  } catch (error) {
+    console.warn('[Desktop notification] Could not show attendance notice:', error);
+  }
+}
 const dismissedMobileEntries = new Set<string>();
 const presenceSession = new DesktopPresenceSession({
   getAuthorization: async () => {
@@ -116,7 +124,10 @@ async function promptForMobileShift(pending: { timeEntryId: string; workspaceId:
       method: 'POST',
       body: JSON.stringify({ action }),
     });
-    if (action === 'sync_once' || action === 'always') await syncDesktopStatus();
+    if (action === 'sync_once' || action === 'always') {
+      const status = await syncDesktopStatus();
+      if (status?.presenceTrackingActive) showPresenceNotice('This PC is paired to your active mobile shift. It reports foreground app names and Active/AFK state only.');
+    }
   } catch (error) {
     dismissedMobileEntries.delete(pending.timeEntryId);
     console.warn('[Desktop companion] Could not sync mobile shift:', error instanceof Error ? error.message : 'unknown error');
@@ -252,7 +263,10 @@ function registerSecureIpc(): void {
         updateTracker();
       }
     }
-    await syncStatus().catch(() => undefined);
+    const status = await syncStatus().catch(() => null);
+    if (input.status === 'active' && status?.presenceTrackingActive) {
+      showPresenceNotice('Clocked in from this desktop. Foreground app names and Active/AFK state are being reported during this shift.');
+    }
     return { data: result };
   });
 }
