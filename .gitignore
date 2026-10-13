@@ -48,6 +48,7 @@ coverage
 !src/components/layout/AppUpdateNotifier.spec.tsx
 !src/components/attendance/DesktopPresenceSettings.spec.tsx
 !src/components/attendance/DesktopPresenceTimeline.spec.tsx
+!src/components/layout/DesktopShiftSyncPrompt.test.tsx
 !desktop/**/*.test.ts
 !desktop/**/*.test.tsx
 __tests__

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppWindow, CircleHelp } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { Button } from '@/components/ui/button';
-import { ensureTrustedDesktopDevice, setDesktopActivityConsent } from '@/lib/desktopAttendance';
 import { formatAppDuration, formatAppLabel, formatAppTimer, summarizeDesktopAppUsage } from './desktopAppUsage';
 
 type PresenceEvent = {
@@ -13,7 +12,7 @@ type PresenceEvent = {
   timeEntry?: string; user?: { name?: string } | string;
 };
 type PresenceGap = { _id?: string; gapStartedAt: string; gapEndedAt: string; reason?: string; active?: boolean; user?: { name?: string } | string };
-type DesktopStatus = { clockedIn: boolean; clockedInOnThisDevice: boolean; presenceTrackingActive: boolean; workspaceId: string | null; activityMonitoringEnabled: boolean };
+type DesktopStatus = { clockedIn: boolean; clockedInOnThisDevice: boolean; presenceTrackingActive: boolean; workspaceId: string | null; activityMonitoringEnabled: boolean; canAttachPresence: boolean };
 type CurrentAppSession = { appId: string | null; presenceStatus: 'active' | 'afk' | 'unavailable'; startedAt: string };
 
 const day = (date: Date) => date.toISOString().slice(0, 10);
@@ -48,8 +47,6 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
   const [desktopStatus, setDesktopStatus] = useState<DesktopStatus | null>(null);
   const [currentAppSession, setCurrentAppSession] = useState<CurrentAppSession | null>(null);
   const [desktopCapabilities, setDesktopCapabilities] = useState<Awaited<ReturnType<NonNullable<Window['teamseverDesktop']>['getCapabilities']>> | null>(null);
-  const [attaching, setAttaching] = useState(false);
-  const [attachError, setAttachError] = useState('');
   const [nowMs, setNowMs] = useState(Date.now());
   const isDesktop = typeof window !== 'undefined' && !!window.teamseverDesktop;
 
@@ -107,32 +104,12 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
     ...gaps.map((gap, index) => ({ kind: 'gap' as const, at: gap.gapStartedAt, key: `gap-${gap._id || gap.gapStartedAt}-${index}`, gap })),
   ].sort((left, right) => Date.parse(right.at) - Date.parse(left.at));
 
-  const attachLaptopPresence = async () => {
-    const desktop = window.teamseverDesktop;
-    if (!desktop) return;
-    setAttaching(true); setAttachError('');
-    try {
-      const device = await ensureTrustedDesktopDevice();
-      if (!device) throw new Error('Could not connect this trusted desktop.');
-      await setDesktopActivityConsent(device.deviceId, true);
-      await desktop.attachPresenceToActiveShift();
-      const status = await desktop.getStatus();
-      setDesktopStatus(status);
-      await refresh();
-    } catch (cause: any) {
-      setAttachError(cause?.response?.data?.message || cause?.message || 'Could not start laptop presence tracking.');
-      try { setDesktopStatus(await desktop.getStatus()); } catch { /* keep last known state */ }
-    } finally { setAttaching(false); }
-  };
-
   return <section className="space-y-4 rounded-xl border bg-card p-5" aria-label="Desktop presence timeline">
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">Presence & activity</h2><p className="text-sm text-muted-foreground">Desktop reports are shown only during an explicitly consented shift. Missing heartbeats are tracking gaps, never AFK.</p></div>{canViewTeam && <Button type="button" variant={teamView ? 'default' : 'outline'} onClick={() => setTeamView((value) => !value)}>{teamView ? 'Show my timeline' : 'Show team timeline'}</Button>}</div>
-    {isDesktop && desktopStatus?.clockedIn && !desktopStatus.presenceTrackingActive && <div className="space-y-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-4">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">Presence & activity</h2><p className="text-sm text-muted-foreground">Desktop reports run during a clocked-in shift. Missing heartbeats are tracking gaps, never AFK.</p></div>{canViewTeam && <Button type="button" variant={teamView ? 'default' : 'outline'} onClick={() => setTeamView((value) => !value)}>{teamView ? 'Show my timeline' : 'Show team timeline'}</Button>}</div>
+    {isDesktop && desktopStatus?.canAttachPresence && !desktopStatus.presenceTrackingActive && <div className="space-y-2 rounded-lg border border-blue-500/30 bg-blue-500/5 p-4">
       <p className="font-medium">This shift started on another device</p>
-      <p className="text-sm text-muted-foreground">You can separately share this laptop’s foreground app name and active/AFK state for the current shift. Attendance clock-in/out and location remain attributed to the device that recorded them. No keys, text, window titles, or screenshots are collected.</p>
+      <p className="text-sm text-muted-foreground">TeamsEver Desktop pairs automatically when it detects the same public network as your active mobile shift. It reports this laptop’s foreground app name and Active/AFK state. Attendance clock-in/out and location remain attributed to the device that recorded them. No keys, text, window titles, or screenshots are collected.</p>
       {desktopCapabilities?.foregroundMonitoringSupported === false && <p className="text-sm text-amber-600">App detection unavailable on this system{desktopCapabilities.foregroundUnavailableReason ? `: ${desktopCapabilities.foregroundUnavailableReason}` : ''}. Idle detection may still be reported.</p>}
-      {attachError && <p role="alert" className="text-sm text-destructive">{attachError}</p>}
-      <Button type="button" disabled={attaching || desktopStatus.workspaceId !== workspaceId} onClick={() => void attachLaptopPresence()}>{attaching ? 'Starting laptop tracking…' : 'Consent and track from this laptop'}</Button>
       {desktopStatus.workspaceId !== workspaceId && <p className="text-xs text-muted-foreground">Open the attendance page for the workspace where this shift is active.</p>}
     </div>}
     {isDesktop && desktopStatus?.presenceTrackingActive && <div className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
@@ -145,7 +122,7 @@ export function DesktopPresenceTimeline({ workspaceId, canViewTeam = false }: { 
       <div className="min-w-0 flex-1"><p className="text-xs uppercase tracking-wider text-muted-foreground">Current foreground app · {statusLabel(currentAppSession.presenceStatus)}</p><p className="truncate font-medium">{currentAppSession.appId ? formatAppLabel(currentAppSession.appId) : 'App name unavailable'}</p></div>
       <span className="font-mono text-lg font-semibold">{formatAppTimer(Math.max(0, nowMs - Date.parse(currentAppSession.startedAt)))}</span>
     </div>}
-    {!isDesktop && <p className="rounded-lg border p-3 text-sm text-muted-foreground">App detection is available only from the paired TeamsEver desktop app. A phone or browser clock-in does not report laptop activity automatically; open this workspace in TeamsEver Desktop and explicitly consent to attach the laptop to the active shift.</p>}
+    {!isDesktop && <p className="rounded-lg border p-3 text-sm text-muted-foreground">App detection is available from TeamsEver Desktop. A mobile-started shift pairs automatically when the desktop app is open on the same public network.</p>}
     <div className="flex flex-wrap items-end gap-3"><div className="space-y-1"><label htmlFor="presence-start-date" className="text-sm">From</label><input id="presence-start-date" type="date" className="h-10 rounded-md border bg-background px-3" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div><div className="space-y-1"><label htmlFor="presence-end-date" className="text-sm">To</label><input id="presence-end-date" type="date" className="h-10 rounded-md border bg-background px-3" value={endDate} onChange={(event) => setEndDate(event.target.value)} /></div>{teamView && canViewTeam && <div className="space-y-1"><label htmlFor="presence-member-filter" className="text-sm">Member</label><select id="presence-member-filter" className="h-10 rounded-md border bg-background px-3" value={teamMemberId} onChange={(event) => setTeamMemberId(event.target.value)}><option value="all">Entire team</option>{members.map((member) => <option key={member.id} value={member.id}>{member.name}</option>)}</select></div>}<Button type="button" variant="outline" disabled={loading} onClick={() => void refresh()}>Refresh</Button></div>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {appUsage.length > 0 && <div className="space-y-3 rounded-lg border p-4"><div><h3 className="font-semibold">App usage</h3><p className="text-xs text-muted-foreground">Time is summed from received desktop intervals; gaps are excluded. Sessions count each return to an app after switching apps or a tracking gap.</p></div><ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{appUsage.map((app) => <li key={app.appId} className="flex items-center gap-3 rounded-lg bg-muted/30 p-3"><AppIcon appId={app.appId} label={app.label} /><div className="min-w-0 flex-1"><p className="truncate font-medium">{app.label}</p><p className="text-xs text-muted-foreground">{app.sessions} {app.sessions === 1 ? 'session' : 'sessions'}</p></div><span className="shrink-0 text-sm font-semibold">{formatAppDuration(app.durationMs)}</span></li>)}</ul></div>}

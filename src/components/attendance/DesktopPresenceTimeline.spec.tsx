@@ -3,9 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { api } from '@/lib/axios';
 import { DesktopPresenceTimeline } from './DesktopPresenceTimeline';
 
-const { provisionDesktop, saveConsent } = vi.hoisted(() => ({ provisionDesktop: vi.fn(), saveConsent: vi.fn() }));
 vi.mock('@/lib/axios', () => ({ api: { get: vi.fn() } }));
-vi.mock('@/lib/desktopAttendance', () => ({ ensureTrustedDesktopDevice: provisionDesktop, setDesktopActivityConsent: saveConsent }));
 
 describe('DesktopPresenceTimeline', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -71,23 +69,17 @@ describe('DesktopPresenceTimeline', () => {
     expect(screen.getByText('2m')).toBeInTheDocument();
   });
 
-  it('attaches the paired laptop to a different-device shift only after an explicit action', async () => {
+  it('explains automatic desktop pairing without a consent button for a same-network shift', async () => {
     vi.mocked(api.get).mockResolvedValue({ data: { data: { events: [], gaps: [] } } } as any);
-    provisionDesktop.mockResolvedValue({ deviceId: 'device-1' });
-    saveConsent.mockResolvedValue(undefined);
-    const getStatus = vi.fn()
-      .mockResolvedValueOnce({ clockedIn: true, clockedInOnThisDevice: false, presenceTrackingActive: false, workspaceId: 'ws1', activityMonitoringEnabled: false })
-      .mockResolvedValueOnce({ clockedIn: true, clockedInOnThisDevice: false, presenceTrackingActive: true, workspaceId: 'ws1', activityMonitoringEnabled: true });
-    const attachPresenceToActiveShift = vi.fn().mockResolvedValue({ attached: true });
+    const getStatus = vi.fn().mockResolvedValue({ clockedIn: true, clockedInOnThisDevice: false, presenceTrackingActive: false, workspaceId: 'ws1', activityMonitoringEnabled: false, canAttachPresence: true });
     Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: {
       getStatus, getCapabilities: vi.fn().mockResolvedValue({ platform: 'win32', foregroundMonitoringSupported: true, idleDetectionSupported: true }),
-      getCurrentPresence: vi.fn().mockResolvedValue(null), attachPresenceToActiveShift,
+      getCurrentPresence: vi.fn().mockResolvedValue(null),
     } });
     render(<DesktopPresenceTimeline workspaceId="ws1" />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Consent and track from this laptop' }));
-    await waitFor(() => expect(attachPresenceToActiveShift).toHaveBeenCalled());
-    expect(saveConsent).toHaveBeenCalledWith('device-1', true);
-    expect(await screen.findByText('This laptop is reporting app and active/AFK presence')).toBeInTheDocument();
+    await waitFor(() => expect(getStatus).toHaveBeenCalled());
+    expect(screen.queryByRole('button', { name: /track from this laptop/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/pairs automatically when it detects the same public network as your active mobile shift/i)).toBeInTheDocument();
     delete (window as any).teamseverDesktop;
   });
 

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, powerMonitor, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Notification, powerMonitor, safeStorage, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import fs from 'node:fs/promises';
 import { foregroundAppSupport, getForegroundProcessName } from './foregroundProcess';
@@ -28,6 +28,15 @@ let trackerGeneration = 0;
 let deviceMonitoringConsent = false;
 let allowNormalQuitAfterUpdateCheck = false;
 let updateCheckTimer: NodeJS.Timeout | null = null;
+function showPresenceNotice(body: string): void {
+  if (!Notification.isSupported()) return;
+  try {
+    new Notification({ title: 'TeamsEver attendance', body, silent: true }).show();
+  } catch (error) {
+    // OS notifications are informational and must never affect clocking or tracking.
+    console.warn('[Desktop notification] Could not show attendance notice:', error);
+  }
+}
 const presenceSession = new DesktopPresenceSession({
   getAuthorization: async () => {
     const result = await authorizedFetch('/attendance/desktop/status');
@@ -175,8 +184,9 @@ function registerSecureIpc(): void {
   register('desktop:get-status', async () => syncStatus());
   register('desktop:get-current-presence', async () => presenceSession.currentSession);
   register('desktop:attach-presence-to-active-shift', async () => {
-    const result = await authorizedFetch('/attendance/desktop/presence-session', { method: 'POST', body: JSON.stringify({ consent: true }) });
+    const result = await authorizedFetch('/attendance/desktop/presence-session', { method: 'POST', body: JSON.stringify({}) });
     await syncDesktopStatus();
+    if (result.data?.presenceTrackingActive) showPresenceNotice('This PC is paired to your active mobile shift. Foreground app name and Active/AFK state are now reported. No keys, text, window titles, or screenshots are collected.');
     return { attached: !!result.data?.presenceTrackingActive };
   });
   register('desktop:get-update-state', async () => desktopUpdater.currentState);
@@ -205,6 +215,9 @@ function registerSecureIpc(): void {
       }
     }
     await syncStatus().catch(() => undefined);
+    if (input.status === 'active' && result.data?.status === 'active') {
+      showPresenceNotice('Clocked in from this desktop. Foreground app name and Active/AFK state are reported during your shift. No keys, text, window titles, or screenshots are collected.');
+    }
     return { data: result };
   });
 }

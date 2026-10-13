@@ -142,11 +142,7 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
             if (newStatus === 'active') {
               const device = await ensureTrustedDesktopDevice();
               if (!device) throw new Error('Could not connect this trusted desktop. Please retry.');
-              const desktopStatus = await window.teamseverDesktop!.getStatus();
-              const consentGiven = desktopStatus.activityMonitoringEnabled || window.confirm(
-                'Allow TeamsEver Desktop to report the foreground app name and active/AFK state while you are clocked in on this device? It will not capture keystrokes, text, mouse details, window titles, URLs, or screenshots. You can clock in even if you decline.'
-              );
-              await setDesktopActivityConsent(device.deviceId, consentGiven);
+              await setDesktopActivityConsent(device.deviceId, true);
             }
             return window.teamseverDesktop!.toggleClock({ workspaceId, status: newStatus, ...(locationFix ? { locationFix } : {}) });
           })()

@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { AppUpdateNotifier } from '@/components/layout/AppUpdateNotifier';
 import { DesktopUpdateNotifier } from '@/components/layout/DesktopUpdateNotifier';
+import { DesktopShiftSyncPrompt } from '@/components/layout/DesktopShiftSyncPrompt';
 
 // Dynamic imports so these heavy components are excluded from pages that don't need them
 const AppSidebar = dynamic(
@@ -137,6 +138,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <Toaster position="top-right" richColors />
       <AppUpdateNotifier />
       <DesktopUpdateNotifier />
+      <DesktopShiftSyncPrompt />
       {showShell && <GlobalTimer />}
 
       {showShell ? (
