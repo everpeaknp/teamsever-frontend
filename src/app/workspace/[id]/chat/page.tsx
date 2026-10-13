@@ -48,7 +48,7 @@ export default function GroupChatPage() {
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [dmUserId, setDmUserId] = useState<string | undefined>();
   const [chatTitle, setChatTitle] = useState('General');
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileChatView, setMobileChatView] = useState<'channels' | 'chat'>('channels');
   const [channelSidebarWidth, setChannelSidebarWidth] = useState(320);
   const [isResizingChannels, setIsResizingChannels] = useState(false);
   const isResizingRef = useRef(false);
@@ -109,7 +109,8 @@ export default function GroupChatPage() {
     type: 'workspace' | 'direct', 
     name: string,
     convId?: string, 
-    uId?: string
+    uId?: string,
+    autoSelected = false
   ) => {
     setActiveChannelId(channelId);
     if (workspaceId && typeof window !== 'undefined') {
@@ -121,6 +122,7 @@ export default function GroupChatPage() {
     setConversationId(convId);
     setDmUserId(uId);
     setChatTitle(name);
+    if (!autoSelected) setMobileChatView('chat');
   }, [workspaceId]);
 
   useEffect(() => {
@@ -232,18 +234,10 @@ export default function GroupChatPage() {
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans">
       <MessageModeNav workspaceId={workspaceId} />
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-      {/* Mobile Sidebar Overlay */}
-      {mobileSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
-          onClick={() => setMobileSidebarOpen(false)}
-        />
-      )}
-
       <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 md:w-[var(--channel-sidebar-width)] md:relative md:translate-x-0 md:z-20 md:shrink-0 transform transition-transform duration-300 ease-in-out",
-        !isResizingChannels && "md:transition-[width]",
-        mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        "absolute inset-0 z-10 w-full md:relative md:inset-auto md:z-20 md:w-[var(--channel-sidebar-width)] md:shrink-0",
+        mobileChatView === 'channels' ? 'flex' : 'hidden md:flex',
+        !isResizingChannels && "md:transition-[width]"
       )}
       style={{ ['--channel-sidebar-width' as any]: `${channelSidebarWidth}px` }}
       ref={channelSidebarRef}
@@ -261,13 +255,15 @@ export default function GroupChatPage() {
           activeChannel={activeChannelId}
           onChannelSelect={(...args) => {
             handleChannelSelect(...args);
-            setMobileSidebarOpen(false); // Close sidebar on select on mobile
           }}
           isAdmin={isAdmin}
         />
       </div>
 
-      <div className="flex-1 min-w-0 h-full relative z-0">
+      <div className={cn(
+        "flex-1 min-w-0 h-full relative z-0",
+        mobileChatView === 'chat' ? 'flex' : 'hidden md:flex'
+      )}>
         <ChatWindow
           workspaceId={workspaceId}
           channelId={chatType === 'workspace' ? activeChannelId : undefined}
@@ -276,7 +272,7 @@ export default function GroupChatPage() {
           type={chatType}
           title={chatType === 'workspace' ? `# ${chatTitle}` : chatTitle}
           isAdmin={isAdmin}
-          onMenuClick={() => setMobileSidebarOpen(true)}
+          onMenuClick={() => setMobileChatView('channels')}
         />
       </div>
       </div>

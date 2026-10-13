@@ -44,7 +44,7 @@ interface Conversation {
 interface ChatSidebarProps {
   workspaceId: string;
   activeChannel: string;
-  onChannelSelect: (channelId: string, type: 'workspace' | 'direct', name: string, conversationId?: string, userId?: string) => void;
+  onChannelSelect: (channelId: string, type: 'workspace' | 'direct', name: string, conversationId?: string, userId?: string, autoSelected?: boolean) => void;
   isAdmin?: boolean;
 }
 
@@ -78,7 +78,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
         if (!activeChannel || activeChannel === 'general') {
           const generalChannel = response.data.data.find((c: any) => c.name.toLowerCase() === 'general');
           if (generalChannel) {
-            onChannelSelect(generalChannel._id, 'workspace', generalChannel.name);
+            onChannelSelect(generalChannel._id, 'workspace', generalChannel.name, undefined, undefined, true);
           }
         }
       }
