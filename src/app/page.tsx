@@ -247,7 +247,12 @@ function PermissionsSection() {
           </ul>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+        <div
+          className="overflow-x-auto overscroll-x-contain rounded-2xl border border-neutral-200 bg-white"
+          role="region"
+          aria-label="Role permissions comparison"
+          tabIndex={0}
+        >
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="border-b border-neutral-100 bg-neutral-50">

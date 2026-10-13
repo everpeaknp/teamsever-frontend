@@ -19,7 +19,7 @@ import { getPlanFeatureLines } from '@/lib/planFeatures';
 
 
 // Plans Page Loading Skeleton
-function PlansSkeleton() {
+export function PlansSkeleton() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Skeleton */}
@@ -27,9 +27,9 @@ function PlansSkeleton() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center gap-4">
             <Skeleton className="h-10 w-10 rounded-lg" />
-            <div>
+            <div className="min-w-0 flex-1">
               <Skeleton className="h-9 w-64 mb-2" />
-              <Skeleton className="h-5 w-96" />
+              <Skeleton data-testid="plans-description-skeleton" className="h-5 w-full max-w-96" />
             </div>
           </div>
         </div>
