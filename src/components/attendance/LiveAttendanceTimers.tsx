@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { formatDistanceToNowStrict, format } from 'date-fns';
 import { Activity, Clock, RefreshCw, StopCircle, Building2, House } from 'lucide-react';
 import { api } from '@/lib/axios';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -31,6 +32,7 @@ export function LiveAttendanceTimers({ workspaceId }: { workspaceId: string }) {
   const [selectedTimer, setSelectedTimer] = useState<ActiveTimer | null>(null);
   const [stopping, setStopping] = useState(false);
   const [stopReason, setStopReason] = useState('');
+  const openProfile = useProfileModalStore((state) => state.openProfile);
 
   const refresh = useCallback(async (quiet = false) => {
     if (!quiet) setRefreshing(true);
@@ -117,12 +119,21 @@ export function LiveAttendanceTimers({ workspaceId }: { workspaceId: string }) {
           const startedAt = new Date(timer.startTime);
           return <div key={timer._id} className="flex flex-wrap items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
                 <div className="flex min-w-0 items-center gap-3">
-                  <Avatar className="h-10 w-10 shrink-0">
-                    {(timer.user?.avatar || timer.user?.profilePicture) && <AvatarImage src={timer.user.avatar || timer.user.profilePicture} alt="" />}
-                    <AvatarFallback>{name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    user={timer.user}
+                    className="h-10 w-10 shrink-0"
+                    disableProfileClick={!timer.user?._id}
+                  />
                   <div className="min-w-0">
-                    <p className="truncate font-medium">{name}</p>
+                    <button
+                      type="button"
+                      aria-label={`View ${name} profile`}
+                      disabled={!timer.user?._id}
+                      onClick={() => timer.user?._id && openProfile(timer.user._id)}
+                      className="block max-w-full truncate text-left font-medium hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default"
+                    >
+                      {name}
+                    </button>
                     {timer.user?.email && <p className="truncate text-xs text-muted-foreground">{timer.user.email}</p>}
                     <p className="mt-0.5 text-xs text-muted-foreground">Started {format(startedAt, 'MMM d, h:mm a')} · {formatDistanceToNowStrict(startedAt, { addSuffix: true })}</p>
                     <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground">

@@ -88,3 +88,4 @@ Thumbs.db
 .eslintcache
 
 !src/components/chat/RequestLeaveModal.spec.tsx
+!src/app/workspace/[[]id[]]/attendance/[[]section[]]/page.test.tsx

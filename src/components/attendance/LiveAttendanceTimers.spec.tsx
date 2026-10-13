@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { api } from '@/lib/axios';
+import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { LiveAttendanceTimers } from './LiveAttendanceTimers';
 
 vi.mock('@/lib/axios', () => ({ api: { get: vi.fn(), post: vi.fn() } }));
@@ -12,7 +13,10 @@ const payload = (overrides: Record<string, unknown> = {}) => ({ data: { data: {
 } } });
 
 describe('LiveAttendanceTimers', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useProfileModalStore.setState({ isOpen: false, userId: null });
+  });
 
   it('shows the live workspace roster from the shared clock-status API', async () => {
     vi.mocked(api.get).mockResolvedValue(payload() as any);
@@ -23,6 +27,15 @@ describe('LiveAttendanceTimers', () => {
     expect(vi.mocked(api.get)).toHaveBeenCalledWith('/time/workspace/workspace-1/clock-status');
   });
 
+
+  it('opens the member profile from their name in the live roster', async () => {
+    vi.mocked(api.get).mockResolvedValue(payload() as any);
+    render(<LiveAttendanceTimers workspaceId="workspace-1" />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'View Sam Worker profile' }));
+
+    expect(useProfileModalStore.getState().userId).toBe('user-1');
+  });
   it('shows only the signed-in member state when the API returns self scope', async () => {
     vi.mocked(api.get).mockResolvedValue(payload({
       scope: 'self', canManageTeam: false,
