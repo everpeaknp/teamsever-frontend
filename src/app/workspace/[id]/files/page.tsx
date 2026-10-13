@@ -835,13 +835,13 @@ export default function FilesPage() {
       {/* Preview Modal */}
       <Dialog open={previewModalOpen} onOpenChange={setPreviewModalOpen}>
         <DialogContent className={cn(
-          "max-w-4xl flex flex-col p-0 overflow-hidden border-none shadow-2xl transition-all duration-300",
+          "max-h-[calc(100dvh-1rem)] max-w-4xl flex flex-col p-0 overflow-hidden border-none shadow-2xl transition-all duration-300",
           (previewFile?.fileType.includes('pdf') || ['md', 'txt', 'sql', 'pptx', 'docx', 'xlsx', 'ppt', 'doc', 'xls'].includes(previewFile?.format?.toLowerCase() || ''))
             ? "h-[90vh] w-[95vw] max-w-[1200px]" 
             : "max-h-[90vh] w-auto"
         )}>
           <DialogHeader className="p-4 border-b bg-card">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <DialogTitle className="text-lg truncate">
                   {previewFile?.fileName}
@@ -854,7 +854,7 @@ export default function FilesPage() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="h-8"
+                  className="min-h-11"
                   onClick={() => previewFile && handleDownload(previewFile)}
                 >
                   <Download className="w-4 h-4 mr-2" />
@@ -863,7 +863,7 @@ export default function FilesPage() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  className="min-h-11 min-w-11"
                   onClick={() => setPreviewModalOpen(false)}
                 >
                   <X className="w-4 h-4" />

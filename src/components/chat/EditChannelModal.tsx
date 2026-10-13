@@ -136,7 +136,7 @@ export function EditChannelModal({ isOpen, onClose, workspaceId, channelId, onSu
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden bg-card border-border shadow-2xl rounded-2xl">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] sm:max-w-[500px] p-0 overflow-x-hidden overflow-y-auto overscroll-contain bg-card border-border shadow-2xl rounded-2xl">
         <div className="p-6 space-y-6">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
@@ -254,7 +254,7 @@ export function EditChannelModal({ isOpen, onClose, workspaceId, channelId, onSu
                 )}
               </div>
 
-              <DialogFooter className="pt-4 border-t border-border flex flex-row justify-between items-center bg-muted/30 -mx-6 -mb-6 p-6">
+              <DialogFooter className="pt-4 border-t border-border flex flex-wrap flex-row justify-between items-center gap-2 bg-muted/30 -mx-6 -mb-6 p-6">
                 <div>
                   {!isPermanentChannel && (
                     <Button
@@ -262,6 +262,7 @@ export function EditChannelModal({ isOpen, onClose, workspaceId, channelId, onSu
                       variant="destructive"
                       onClick={handleDeleteChannel}
                       disabled={loading}
+                      className="min-h-11"
                     >
                       Delete Channel
                     </Button>
@@ -272,7 +273,7 @@ export function EditChannelModal({ isOpen, onClose, workspaceId, channelId, onSu
                     type="button" 
                     variant="ghost" 
                     onClick={handleClose}
-                    className="text-muted-foreground hover:text-foreground"
+                    className="min-h-11 text-muted-foreground hover:text-foreground"
                     disabled={loading}
                   >
                     Cancel
@@ -280,7 +281,7 @@ export function EditChannelModal({ isOpen, onClose, workspaceId, channelId, onSu
                   <Button 
                     type="submit" 
                     disabled={loading || !name.trim()}
-                    className="px-8 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all font-semibold"
+                    className="min-h-11 px-4 shadow-lg shadow-primary/20 bg-primary hover:bg-primary/90 transition-all font-semibold sm:px-8"
                   >
                     {loading ? (
                       <>

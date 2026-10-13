@@ -623,7 +623,7 @@ export default function UserManagementNew() {
           <ScrollArea className="flex-1 p-6 pt-2">
             <div className="space-y-6 pb-4">
               {/* Plan Selection */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Subscription Plan</Label>
                   <Select value={selectedPlan} onValueChange={setSelectedPlan}>
@@ -671,7 +671,7 @@ export default function UserManagementNew() {
                   <GearIcon /> Custom Feature Limits
                 </h4>
                 
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
                   {/* Numeric Limits */}
                   {[
                     { key: 'maxWorkspaces', label: 'Workspaces' },
@@ -724,7 +724,7 @@ export default function UserManagementNew() {
                   })}
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 mt-8 border-t pt-4">
+                <div className="mt-8 grid grid-cols-1 gap-x-8 gap-y-4 border-t pt-4 sm:grid-cols-2">
                   {/* Boolean Toggles */}
                   {[
                     { key: 'canUseWebhooks', label: 'Webhooks' },

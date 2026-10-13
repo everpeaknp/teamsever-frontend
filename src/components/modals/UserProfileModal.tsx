@@ -120,7 +120,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[1100px] p-0 overflow-hidden border-none bg-white dark:bg-[#0a0a0a] shadow-2xl rounded-2xl ring-1 ring-slate-200 dark:ring-white/10">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[1100px] overflow-x-hidden overflow-y-auto border-none bg-white p-0 shadow-2xl dark:bg-[#0a0a0a] rounded-2xl ring-1 ring-slate-200 dark:ring-white/10">
         <DialogHeader className="sr-only">
           <DialogTitle>{user?.name || 'User Profile'}</DialogTitle>
           <DialogDescription>
@@ -137,7 +137,8 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
             {/* Close Button */}
             <button 
               onClick={onClose}
-              className="absolute top-4 right-4 z-50 p-2 rounded-full bg-slate-200/50 dark:bg-black/20 hover:bg-slate-300/50 dark:hover:bg-black/40 text-slate-700 dark:text-white/70 hover:text-slate-900 dark:hover:text-white transition-all backdrop-blur-md"
+              aria-label="Close profile"
+              className="absolute top-2 right-2 z-50 flex h-11 w-11 items-center justify-center rounded-full bg-slate-200/70 text-slate-700 transition-all backdrop-blur-md hover:bg-slate-300/70 hover:text-slate-900 dark:bg-black/40 dark:text-white/70 dark:hover:bg-black/60 dark:hover:text-white sm:right-4 sm:top-4"
             >
               <X className="w-4 h-4" />
             </button>
@@ -157,7 +158,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
             </div>
             
-            <div className="px-8 pb-8 -mt-16 relative z-10">
+            <div className="relative z-10 -mt-16 px-4 pb-6 sm:px-8 sm:pb-8">
               <div className="flex flex-col md:flex-row items-end gap-5 mb-3">
                 <div className="p-1.5 bg-white dark:bg-[#0a0a0a] rounded-[2.5rem] ring-1 ring-slate-200 dark:ring-white/10 shadow-2xl">
                   <UserAvatar 
@@ -167,7 +168,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                 </div>
                 <div className="flex-1 pb-2">
                   <div className="flex items-center gap-3 mb-1 flex-wrap">
-                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{user.name}</h2>
+                    <h2 className="break-words text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">{user.name}</h2>
                     {workspaceData?.customRole ? (
                       <Badge 
                         variant="outline" 

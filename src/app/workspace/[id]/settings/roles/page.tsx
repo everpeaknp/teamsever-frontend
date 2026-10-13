@@ -1527,7 +1527,7 @@ export default function RolesPage() {
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   {roleForm.description || 'Add a short description so people understand the difference between this role and a workspace override.'}
                 </p>
-                <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="mt-5 grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
                   <div className="rounded-2xl border border-border bg-muted/30 p-3">
                     <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Selected</div>
                     <div className="mt-2 text-2xl font-semibold text-foreground">{roleForm.permissions.length}</div>
@@ -1753,7 +1753,7 @@ export default function RolesPage() {
                         <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Currently inherited</div>
                         <div className="mt-2 text-2xl font-semibold text-foreground">{selectedMemberBasePermissions.size}</div>
                       </div>
-                      <div className="mt-3 grid grid-cols-2 gap-3">
+                      <div className="mt-3 grid grid-cols-1 gap-3 min-[380px]:grid-cols-2">
                         <div className="rounded-2xl bg-background p-4">
                           <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Added here</div>
                           <div className="mt-2 text-2xl font-semibold text-foreground">{memberAdditionalPermissions.length}</div>

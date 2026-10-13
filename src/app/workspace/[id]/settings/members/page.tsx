@@ -822,7 +822,8 @@ export default function MembersPage() {
             <div className="flex items-center gap-4 w-full sm:w-auto">
               <button
                 onClick={() => router.back()}
-                className="p-2 hover:bg-accent rounded-lg transition-colors"
+                aria-label="Back to workspace"
+                className="min-h-11 min-w-11 shrink-0 rounded-lg p-2 hover:bg-accent transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 text-muted-foreground" strokeWidth={1.5} />
               </button>

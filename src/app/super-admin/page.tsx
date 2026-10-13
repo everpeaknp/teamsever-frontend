@@ -105,7 +105,7 @@ export default function SuperAdminDashboard() {
                     }
                   }}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg text-sm font-medium transition-colors",
+                  "min-h-11 w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-sm font-medium transition-colors",
                     isActive
                       ? "bg-purple-600 text-white"
                       : "text-gray-400 hover:text-white hover:bg-gray-800",
@@ -169,7 +169,7 @@ export default function SuperAdminDashboard() {
                 setSidebarCollapsed(!sidebarCollapsed);
               }
             }}
-            className="hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
+            className="min-h-11 min-w-11 hover:bg-gray-100 dark:hover:bg-gray-800 flex-shrink-0"
           >
             <HamburgerMenuIcon className="w-5 h-5" />
           </Button>

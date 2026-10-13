@@ -165,7 +165,7 @@ export default function PlanBuilderNew() {
                       size="icon"
                       onClick={() => router.push(`/super-admin/plans/edit/${plan._id}`)}
                       title="Edit plan"
-                      className="h-8 w-8"
+                      className="min-h-11 min-w-11"
                     >
                       <Pencil1Icon className="w-4 h-4" />
                     </Button>
@@ -175,7 +175,7 @@ export default function PlanBuilderNew() {
                         size="icon"
                         onClick={() => deletePlan(plan._id, plan.name)}
                         title="Delete plan"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        className="min-h-11 min-w-11 text-destructive hover:text-destructive"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </Button>

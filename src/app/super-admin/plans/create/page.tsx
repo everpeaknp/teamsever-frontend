@@ -706,7 +706,7 @@ export default function CreatePlanPage() {
                   <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Plan Highlights
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
                     <div className="p-2 rounded bg-muted/50 border text-[10px]">
                       <div className="text-muted-foreground mb-0.5">Annual Discount</div>
                       <div className="font-bold">
