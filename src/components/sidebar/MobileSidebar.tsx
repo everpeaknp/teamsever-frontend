@@ -48,7 +48,17 @@ export function MobileSidebar({
           {isBottomTab ? <span>More</span> : <span className="sr-only">Toggle menu</span>}
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="h-[100dvh] !w-screen !max-w-none p-0 sm:!w-[300px] sm:!max-w-sm" hideCloseButton>
+      <SheetContent
+        side="left"
+        className="h-[100dvh] !w-screen !max-w-none p-0 sm:!w-[300px] sm:!max-w-sm"
+        hideCloseButton
+        onClickCapture={(event) => {
+          const target = event.target;
+          if (target instanceof Element && target.closest('a[href], [data-mobile-sidebar-navigation]')) {
+            setOpen(false);
+          }
+        }}
+      >
         <VisuallyHidden>
           <SheetTitle>Navigation Menu</SheetTitle>
           <SheetDescription>Main navigation and workspace switcher sidebar for mobile devices</SheetDescription>

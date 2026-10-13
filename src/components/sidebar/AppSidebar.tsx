@@ -1172,6 +1172,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
 
           <div className="p-2 border-t border-slate-200 dark:border-slate-800">
             <button 
+              data-mobile-sidebar-navigation
               onClick={() => router.push('/account')}
               className="flex items-center gap-2 w-full px-2 py-1.5 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md transition-colors"
             >

@@ -13,10 +13,13 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('./AppSidebar', () => ({
   AppSidebar: () => (
-    <a href="/workspace/ws1/quality" onClick={event => {
-      event.preventDefault();
-      navigation.navigate?.();
-    }}>Quality</a>
+    <>
+      <a href="/workspace/ws1/quality" onClick={event => {
+        event.preventDefault();
+        navigation.navigate?.();
+      }}>Quality</a>
+      <a href="/workspace/ws1/analytics" onClick={event => event.preventDefault()}>Dashboard</a>
+    </>
   ),
 }));
 
@@ -37,6 +40,17 @@ describe('MobileSidebar', () => {
     expect(screen.getByRole('dialog', { name: 'Navigation Menu' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('link', { name: 'Quality' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Navigation Menu' })).not.toBeInTheDocument();
+  });
+
+  it('closes when selecting the destination for the current route', () => {
+    render(<MobileSidebar variant="bottom" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'More' }));
+    expect(screen.getByRole('dialog', { name: 'Navigation Menu' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Dashboard' }));
 
     expect(screen.queryByRole('dialog', { name: 'Navigation Menu' })).not.toBeInTheDocument();
   });

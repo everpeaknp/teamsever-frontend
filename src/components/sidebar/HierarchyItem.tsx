@@ -254,6 +254,7 @@ const getRoute = () => {
           "flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-all duration-200 glass-hover",
           isActive ? "bg-primary/10 dark:bg-primary/20" : ""
         )}
+          data-mobile-sidebar-navigation
           onClick={handleRowClick}
           role="button"
           tabIndex={0}
