@@ -237,7 +237,11 @@ export function NotificationBell() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 flex max-h-[calc(100dvh-5rem)] w-96 max-w-[calc(100vw-1rem)] flex-col rounded-lg border border-border bg-card shadow-2xl z-50">
+        <div
+          role="region"
+          aria-label="Notification panel"
+          className="fixed inset-x-2 top-[calc(env(safe-area-inset-top)+3.5rem)] bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-50 flex w-auto flex-col rounded-lg border border-border bg-card shadow-2xl sm:absolute sm:inset-x-auto sm:top-auto sm:bottom-auto sm:right-0 sm:mt-2 sm:max-h-[calc(100dvh-5rem)] sm:w-96 sm:max-w-[calc(100vw-1rem)]"
+        >
           {/* Header */}
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="font-semibold text-foreground">Notifications</h3>
@@ -266,7 +270,7 @@ export function NotificationBell() {
           </div>
 
           {/* Notifications List */}
-          <div className="overflow-y-auto flex-1">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {isLoading && bellNotifications.length === 0 ? (
               <div className="flex justify-center p-8" role="status" aria-label="Loading notifications">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -288,7 +292,7 @@ export function NotificationBell() {
                       setIsOpen(false);
                       router.push(`/workspace/${notification.data.workspaceId}/quality/runs/${runId}`);
                     }}
-                    className={`p-4 hover:bg-accent transition-colors ${
+                    className={`p-3 transition-colors hover:bg-accent sm:p-4 ${
                       !notification.read ? 'bg-primary/5' : ''
                     }`}
                   >
@@ -308,7 +312,7 @@ export function NotificationBell() {
                             <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1" />
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">
+                        <p className="mb-2 text-sm text-muted-foreground line-clamp-4 sm:line-clamp-none">
                           {notification.body}
                         </p>
                         <p className="text-xs text-muted-foreground mb-2">

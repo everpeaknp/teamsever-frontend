@@ -54,4 +54,16 @@ describe('NotificationBell', () => {
     fireEvent.click(screen.getByTitle('Notifications'));
     expect(await screen.findByText('A task was assigned to you')).toBeInTheDocument();
   });
+
+  it('keeps the mobile notification panel between the app header and bottom navigation', async () => {
+    localStorage.setItem('authToken', 'valid-token');
+    render(<NotificationBell />);
+    await waitFor(() => expect(useNotificationStore.getState().bellNotifications).toHaveLength(1));
+
+    fireEvent.click(screen.getByTitle('Notifications'));
+
+    const panel = screen.getByRole('region', { name: 'Notification panel' });
+    expect(panel).toHaveClass('fixed', 'inset-x-2', 'sm:absolute');
+    expect(panel.className).toContain('bottom-[calc(env(safe-area-inset-bottom)+5rem)]');
+  });
 });
