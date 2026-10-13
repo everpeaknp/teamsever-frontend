@@ -14,13 +14,10 @@ const tabs = [
 
 export function MobileWorkspaceTabBar({
   workspaceId,
-  spaces,
 }: {
   workspaceId: string;
-  spaces: Array<{ _id?: string }>;
 }) {
   const pathname = usePathname();
-  const firstSpaceId = spaces.find((space) => space?._id)?._id;
 
   return (
     <nav
@@ -29,24 +26,8 @@ export function MobileWorkspaceTabBar({
     >
       <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
         {tabs.map(({ label, path, Icon }) => {
-          const href = path === 'spaces'
-            ? firstSpaceId ? `/workspace/${workspaceId}/spaces/${firstSpaceId}` : null
-            : `/workspace/${workspaceId}/${path}`;
+          const href = `/workspace/${workspaceId}/${path}`;
           const isActive = pathname === href || pathname.startsWith(`${href}/`);
-
-          if (!href) {
-            return (
-              <span
-                key={path}
-                aria-disabled="true"
-                title="No spaces available"
-                className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-medium text-muted-foreground/50"
-              >
-                <Icon className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />
-                <span>{label}</span>
-              </span>
-            );
-          }
 
           return (
             <Link
