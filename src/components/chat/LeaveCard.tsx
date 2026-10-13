@@ -178,7 +178,7 @@ export function LeaveCard({
             </div>
             <p className="mt-1 text-[10px] text-muted-foreground">{remoteLocation.latitude!.toFixed(5)}, {remoteLocation.longitude!.toFixed(5)} · shared in this DM only</p>
             <Dialog open={isMapExpanded} onOpenChange={setIsMapExpanded}>
-              <DialogContent aria-label={`${remoteLocation.name || 'Requested remote location'} map`} className="w-[calc(100vw-1rem)] max-w-6xl p-3 sm:p-5">
+              <DialogContent aria-label={`${remoteLocation.name || 'Requested remote location'} map`} className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl overflow-y-auto p-3 sm:p-5">
                 <DialogHeader>
                   <DialogTitle>{remoteLocation.name || 'Requested remote location'}</DialogTitle>
                   <DialogDescription>Map of the location shared in this remote work request.</DialogDescription>

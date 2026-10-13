@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LeaveCard } from './LeaveCard';
@@ -30,7 +30,7 @@ function renderCard({ currentUserId, canManageLeaves, isWorkspaceOwner = false }
 }
 
 describe('LeaveCard decision actions', () => {
-  it('shows a received remote location map and lets the approver expand it without embed-provider clutter', () => {
+  it('shows a received remote location map and lets the approver expand it without embed-provider clutter', async () => {
     const remoteMessage = {
       ...message,
       metadata: {
@@ -46,8 +46,11 @@ describe('LeaveCard decision actions', () => {
     expect(screen.queryByText(/Report a problem|Make a Donation/i)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Expand map' }));
 
-    expect(screen.getByRole('dialog', { name: 'Temporary apartment' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Temporary apartment' })).toHaveClass('max-h-[calc(100dvh-1rem)]', 'overflow-y-auto');
     expect(screen.getAllByTestId('remote-location-map')).toHaveLength(2);
+    fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Temporary apartment' })).not.toBeInTheDocument());
+    expect(screen.getAllByTestId('remote-location-map')).toHaveLength(1);
   });
 
   it('renders as a compact message-sized card rather than filling the conversation width', () => {

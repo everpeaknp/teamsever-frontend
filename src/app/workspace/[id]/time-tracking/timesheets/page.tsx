@@ -190,28 +190,29 @@ export default function TimesheetsPage() {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="w-full px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
               <button
                 onClick={() => router.push(`/workspace/${workspaceId}/time-tracking`)}
-                className="p-2 hover:bg-accent rounded-lg transition-colors"
+                aria-label="Back to time tracking"
+                className="min-h-11 min-w-11 shrink-0 rounded-lg p-2 hover:bg-accent transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold">Team Timesheets</h1>
+                <h1 className="break-words text-xl font-bold sm:text-2xl">Team Timesheets</h1>
                 <p className="text-sm text-muted-foreground">
                   View detailed time tracking reports
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={fetchTimesheets}
-                className="gap-2"
+                className="min-h-11 gap-2"
                 disabled={loading}
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -223,7 +224,7 @@ export default function TimesheetsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="w-full px-4 sm:px-6 py-8">
+      <main className="w-full px-3 py-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 sm:pb-8">
         {/* Filters */}
         <Card className="mb-6">
           <CardHeader>
@@ -237,12 +238,12 @@ export default function TimesheetsPage() {
               {/* Date Range Presets */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Quick Select</label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleDateRangePreset(7)}
-                    className="flex-1"
+                    className="min-h-11"
                   >
                     Last 7 Days
                   </Button>
@@ -250,7 +251,7 @@ export default function TimesheetsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleDateRangePreset(30)}
-                    className="flex-1"
+                    className="min-h-11"
                   >
                     Last 30 Days
                   </Button>
@@ -288,7 +289,7 @@ export default function TimesheetsPage() {
                     setSelectedProjectId('');
                     handleDateRangePreset(7);
                   }}
-                  className="w-full"
+                  className="min-h-11 w-full"
                 >
                   Clear Filters
                 </Button>
@@ -363,6 +364,25 @@ export default function TimesheetsPage() {
               <CardTitle>Time by Team Member</CardTitle>
             </CardHeader>
             <CardContent>
+              <div data-testid="timesheet-user-cards" className="space-y-3 lg:hidden">
+                {data.byUser.map((userSummary) => (
+                  <article key={userSummary.user._id} className="min-w-0 rounded-xl border p-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Avatar className="h-10 w-10 shrink-0">
+                        {userSummary.user.avatar && <AvatarImage src={userSummary.user.avatar} />}
+                        <AvatarFallback className="bg-blue-600 text-xs text-white">{getInitials(userSummary.user.name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0"><p className="break-words font-medium">{userSummary.user.name}</p><p className="break-all text-xs text-muted-foreground">{userSummary.user.email}</p></div>
+                    </div>
+                    <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                      <div><dt className="text-xs text-muted-foreground">Total time</dt><dd className="font-mono font-medium">{userSummary.totalDurationFormatted}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">Entries</dt><dd>{userSummary.entryCount}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">Projects</dt><dd>{userSummary.projectCount}</dd></div>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+              <div className="hidden lg:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -398,6 +418,7 @@ export default function TimesheetsPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -409,6 +430,19 @@ export default function TimesheetsPage() {
               <CardTitle>Time by Project</CardTitle>
             </CardHeader>
             <CardContent>
+              <div data-testid="timesheet-project-cards" className="space-y-3 lg:hidden">
+                {data.byProject.map((projectSummary) => (
+                  <article key={projectSummary.project?._id ?? 'unassigned-project'} className="min-w-0 rounded-xl border p-3">
+                    <p className="break-words font-medium">{projectSummary.project?.name ?? 'No project'}</p>
+                    <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                      <div><dt className="text-xs text-muted-foreground">Total time</dt><dd className="font-mono font-medium">{projectSummary.totalDurationFormatted}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">Entries</dt><dd>{projectSummary.entryCount}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">Contributors</dt><dd>{projectSummary.userCount}</dd></div>
+                    </dl>
+                  </article>
+                ))}
+              </div>
+              <div className="hidden lg:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -440,6 +474,7 @@ export default function TimesheetsPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         )}

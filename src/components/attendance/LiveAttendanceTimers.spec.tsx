@@ -36,6 +36,14 @@ describe('LiveAttendanceTimers', () => {
 
     expect(useProfileModalStore.getState().userId).toBe('user-1');
   });
+  it('wraps the live roster content and keeps clock-out reachable on narrow screens', async () => {
+    vi.mocked(api.get).mockResolvedValue(payload() as any);
+    render(<LiveAttendanceTimers workspaceId="workspace-1" />);
+    await screen.findByText('Sam Worker');
+    const section = screen.getByRole('region', { name: 'Current attendance' });
+    expect(section.className).toContain('px-3');
+    expect(screen.getByRole('button', { name: 'Clock out Sam Worker' }).className).toContain('min-h-11');
+  });
   it('shows only the signed-in member state when the API returns self scope', async () => {
     vi.mocked(api.get).mockResolvedValue(payload({
       scope: 'self', canManageTeam: false,

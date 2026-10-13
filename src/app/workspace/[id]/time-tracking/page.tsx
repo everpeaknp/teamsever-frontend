@@ -263,28 +263,29 @@ export default function TimeTrackingPage() {
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="w-full px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3 sm:gap-4">
               <button
                 onClick={() => router.push(`/workspace/${workspaceId}/analytics`)}
-                className="p-2 hover:bg-accent rounded-lg transition-colors"
+                aria-label="Back to analytics"
+                className="min-h-11 min-w-11 shrink-0 rounded-lg p-2 hover:bg-accent transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold">Time Tracking Dashboard</h1>
+                <h1 className="break-words text-xl font-bold sm:text-2xl">Time Tracking Dashboard</h1>
                 <p className="text-sm text-muted-foreground">
                   Monitor team productivity and time logs
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={fetchData}
-                className="gap-2"
+                className="min-h-11 gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
                 Refresh
@@ -294,7 +295,7 @@ export default function TimeTrackingPage() {
                 size="sm"
                 onClick={() => setShowCleanupDialog(true)}
                 disabled={cleaningUp}
-                className="gap-2 text-orange-600 hover:text-orange-700"
+                className="min-h-11 gap-2 text-orange-600 hover:text-orange-700"
               >
                 {cleaningUp ? (
                   <>
@@ -312,7 +313,7 @@ export default function TimeTrackingPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => router.push(`/workspace/${workspaceId}/time-tracking/timesheets`)}
-                className="gap-2"
+                className="min-h-11 gap-2"
               >
                 <Calendar className="w-4 h-4" />
                 View Timesheets
@@ -323,7 +324,7 @@ export default function TimeTrackingPage() {
       </header>
 
       {/* Main Content */}
-      <main className="w-full px-4 sm:px-6 py-8">
+      <main className="w-full px-3 py-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-8 sm:pb-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card>
@@ -405,6 +406,37 @@ export default function TimeTrackingPage() {
                 </p>
               </div>
             ) : (
+              <>
+              <div data-testid="active-timer-cards" className="space-y-3 lg:hidden">
+                {activeTimers.map((timer) => (
+                  <article key={timer._id} className="min-w-0 rounded-xl border p-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <Avatar className="h-10 w-10 shrink-0">
+                        {timer.user.avatar && <AvatarImage src={timer.user.avatar} />}
+                        <AvatarFallback className="bg-blue-600 text-xs text-white">{getInitials(timer.user.name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words font-medium">{timer.user.name}</p>
+                        <p className="break-all text-xs text-muted-foreground">{timer.user.email}</p>
+                      </div>
+                    </div>
+                    <dl className="mt-3 grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 text-sm">
+                      <div className="col-span-2 min-w-0"><dt className="text-xs text-muted-foreground">Task</dt><dd className="break-words">{timer.task?.title || 'No task'}</dd></div>
+                      <div className="min-w-0"><dt className="text-xs text-muted-foreground">Project</dt><dd className="break-words">{timer.project?.name || 'None'}</dd></div>
+                      <div><dt className="text-xs text-muted-foreground">Duration</dt><dd className="font-mono tabular-nums">{formatDuration(localDurations[timer._id] || timer.currentDuration)}</dd></div>
+                      <div className="col-span-2"><dt className="text-xs text-muted-foreground">Started</dt><dd>{new Date(timer.startTime).toLocaleTimeString()}</dd></div>
+                    </dl>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <Button variant="outline" className="min-h-11 px-2 text-xs text-orange-600" onClick={() => { setSelectedUser({ id: timer.user._id, name: timer.user.name }); setShowStopAllDialog(true); }} disabled={stoppingAllUserTimers === timer.user._id}>
+                        {stoppingAllUserTimers === timer.user._id ? <RefreshCw className="mr-1 h-4 w-4 animate-spin" /> : <StopCircle className="mr-1 h-4 w-4" />}Stop All
+                      </Button>
+                      <Button variant="outline" className="min-h-11 px-2 text-xs text-red-600" onClick={() => { setSelectedTimer(timer); setShowStopDialog(true); }}><StopCircle className="mr-1 h-4 w-4" />Stop
+                      </Button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div className="hidden lg:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -506,6 +538,8 @@ export default function TimeTrackingPage() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
+              </>
             )}
           </CardContent>
         </Card>
