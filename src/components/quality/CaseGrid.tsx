@@ -50,7 +50,26 @@ export function CaseGrid({ cases, page, limit, total, onPageChange, onOpen, onQu
   };
 
   return <div className="overflow-hidden rounded-xl border bg-card">
-    <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-sm">
+    <div data-testid="case-mobile-list" className="space-y-3 p-3 lg:hidden">
+      {cases.map(testCase => {
+        const active = editing?._id === testCase._id && draft;
+        return <article key={testCase._id} className="min-w-0 rounded-lg border p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <span className="font-mono text-xs text-muted-foreground">{testCase.key} · v{testCase.currentRevision}</span>
+            <Badge variant="outline" className="capitalize">{caseStatuses.find(status => status.key === testCase.state)?.label || testCase.state}</Badge>
+          </div>
+          {active ? <Input aria-label="Case title" value={draft.title} onChange={event => setDraft({ ...draft, title: event.target.value })} maxLength={240} className="mt-2 min-h-11" /> : <button type="button" className="mt-2 block min-h-11 max-w-full break-words text-left font-medium hover:underline" onClick={() => onOpen(testCase)}>{testCase.title}</button>}
+          {Object.entries(testCase.customFields || {}).filter(([, value]) => value !== undefined && value !== null && value !== '').slice(0, 3).map(([key, value]) => <p key={key} className="break-words text-xs text-muted-foreground">{caseFields.find(field => field.key === key)?.label || key}: {Array.isArray(value) ? value.join(', ') : String(value)}</p>)}
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <label className="min-w-0 space-y-1 text-xs text-muted-foreground">Priority{active ? <select aria-label="Case priority" className="h-11 w-full rounded-md border bg-background px-2 text-sm text-foreground" value={draft.priority} onChange={event => setDraft({ ...draft, priority: event.target.value as QuickChange['priority'] })}>{['low', 'medium', 'high', 'urgent'].map(value => <option key={value} value={value}>{value}</option>)}</select> : <span className="block truncate text-sm capitalize text-foreground">{testCase.priority}</span>}</label>
+            <label className="min-w-0 space-y-1 text-xs text-muted-foreground">State{active ? <select aria-label="Case state" className="h-11 w-full rounded-md border bg-background px-2 text-sm text-foreground" value={draft.state} onChange={event => setDraft({ ...draft, state: event.target.value })}>{caseStatuses.filter(status => status.key === testCase.state || (caseTransitions[testCase.state] || []).includes(status.key)).map(status => <option key={status.key} value={status.key}>{status.label}</option>)}</select> : <span className="block truncate text-sm text-foreground">{caseStatuses.find(status => status.key === testCase.state)?.label || testCase.state}</span>}</label>
+          </div>
+          {active && <div className="mt-3 flex gap-2"><Button type="button" className="min-h-11 flex-1" disabled={saving} onClick={() => void save()}>{saving ? 'Saving…' : 'Save'}</Button><Button type="button" className="min-h-11" variant="outline" onClick={cancelEdit}>Cancel</Button></div>}
+          {!active && onQuickSave && <Button type="button" className="mt-3 min-h-11 w-full" variant="outline" onClick={() => beginEdit(testCase)}>Edit row</Button>}
+        </article>;
+      })}
+    </div>
+    <div className="hidden overflow-x-auto lg:block"><table className="w-full min-w-[700px] text-left text-sm">
       <thead className="border-b bg-muted/40 text-xs font-medium text-muted-foreground"><tr><th className="px-4 py-3">ID</th><th className="px-4 py-3">Case</th><th className="px-4 py-3">Priority</th><th className="px-4 py-3">State</th><th className="px-4 py-3">Revision</th><th className="px-4 py-3">Actions</th></tr></thead>
       <tbody>{cases.map(testCase => {
         const active = editing?._id === testCase._id && draft;
@@ -66,6 +85,6 @@ export function CaseGrid({ cases, page, limit, total, onPageChange, onOpen, onQu
     </table></div>
     {error && <div role="alert" className="border-t px-4 py-3 text-sm text-destructive">{error}</div>}
     {!cases.length && <div className="px-5 py-12 text-center text-sm text-muted-foreground">{emptyMessage}</div>}
-    <div className="flex items-center justify-between gap-3 border-t px-4 py-3 text-xs text-muted-foreground"><span>{start}–{end} of {total}</span><div className="flex gap-2"><Button type="button" size="sm" variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)} aria-label="Previous page">Previous</Button><Button type="button" size="sm" variant="outline" disabled={page * limit >= total} onClick={() => onPageChange(page + 1)} aria-label="Next page">Next</Button></div></div>
+    <div className="flex flex-col items-start justify-between gap-3 border-t px-3 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-4"><span>{start}–{end} of {total}</span><div className="grid w-full grid-cols-2 gap-2 sm:w-auto"><Button type="button" className="min-h-11" size="sm" variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)} aria-label="Previous page">Previous</Button><Button type="button" className="min-h-11" size="sm" variant="outline" disabled={page * limit >= total} onClick={() => onPageChange(page + 1)} aria-label="Next page">Next</Button></div></div>
   </div>;
 }

@@ -9,7 +9,7 @@ function CaseReport({ testCase }: { testCase: QualityReportCase }) {
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="font-mono text-xs text-muted-foreground">{testCase.key} · Revision {testCase.revision ?? '—'}</p>
-        <h3 className="mt-1 text-base font-semibold">{testCase.title}</h3>
+        <h3 className="mt-1 break-words text-base font-semibold">{testCase.title}</h3>
       </div>
       <span className="rounded-md border px-2.5 py-1 text-xs font-medium">{resultLabel[testCase.result] || testCase.result}</span>
     </div>
