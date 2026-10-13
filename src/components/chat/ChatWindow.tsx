@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
 import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
+import { reconcileChatMessages } from '@/lib/chat/reconcileMessages';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { useWorkspaceStore } from '@/store/useWorkspaceStore';
@@ -368,17 +369,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
   // Merge fetched messages with optimistic messages
   useEffect(() => {
-    // Combine fetched messages with optimistic messages that haven't been confirmed yet
-    const fetchedIds = new Set(fetchedMessages.map(m => m._id));
-    
-    // Keep only optimistic messages that haven't been replaced by real messages
-    const pendingOptimistic = optimisticMessages.filter(m => 
-      m.tempId && !fetchedIds.has(m.tempId) && (m.sending || m.failed)
-    );
-    
-    // Merge and sort ASCENDING (oldest at top)
-    const merged = [...fetchedMessages, ...pendingOptimistic];
-    merged.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const merged = reconcileChatMessages(fetchedMessages, optimisticMessages);
     
     // Apply filters
     const filtered = merged.filter(m => {
@@ -485,7 +476,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       mentions,
       sending: true,  // Mark as sending
       failed: false,
-      ...(type === 'workspace' ? { workspace: workspaceId } : { conversation: conversationId }),
+      ...(type === 'workspace' ? { workspace: workspaceId, channel: channelId } : { conversation: conversationId }),
     };
 
     console.log('[ChatWindow] Adding optimistic message:', tempId);
@@ -712,15 +703,15 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   };
 
   // Group messages by sender
+  const isSameMessageGroup = (message: ChatMessage, other?: ChatMessage) => {
+    if (!other || message.type === 'system' || other.type === 'system') return false;
+    if (message.type === 'github_commit' || other.type === 'github_commit') return false;
+    if (message.sender._id !== other.sender._id) return false;
+    return Math.abs(new Date(message.createdAt).getTime() - new Date(other.createdAt).getTime()) <= 5 * 60 * 1000;
+  };
+
   const shouldShowAvatar = (message: ChatMessage, index: number) => {
-    if (index === 0) return true;
-    
-    const prevMessage = localMessages[index - 1];
-    if (!prevMessage) return true;
-    
-    // Show avatar if different sender or more than 5 minutes apart
-    const timeDiff = new Date(message.createdAt).getTime() - new Date(prevMessage.createdAt).getTime();
-    return prevMessage.sender._id !== message.sender._id || timeDiff > 5 * 60 * 1000;
+    return !isSameMessageGroup(message, localMessages[index - 1]);
   };
 
   // Get user initials
@@ -1017,7 +1008,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto overflow-x-hidden p-6 space-y-4 chat-scrollbar"
+        className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-1 chat-scrollbar sm:p-6"
         style={{
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(148, 163, 184, 0.45) transparent'
@@ -1051,6 +1042,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         ) : (
           localMessages.map((message, index) => {
             const showAvatar = shouldShowAvatar(message, index);
+            const groupedWithPrevious = isSameMessageGroup(message, localMessages[index - 1]);
+            const groupedWithNext = isSameMessageGroup(message, localMessages[index + 1]);
             const isSystemMessage = message.type === 'system';
             const isOwnMessage = message.sender._id === currentUserId;
 
@@ -1195,11 +1188,11 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                 <div
                   key={message._id}
                   className={cn(
-                    'flex gap-2 justify-end items-end group/msg relative',
-                    !showAvatar && 'mr-11'
+                    'flex w-full justify-end group/msg relative',
+                    showAvatar && index > 0 && '!mt-4'
                   )}
                 >
-                  <div className="flex flex-col items-end max-w-[85%]">
+                  <div className="flex max-w-[82%] flex-col items-end">
                     {showAvatar && (
                       <div className="flex items-center gap-2 mb-1.5 opacity-90">
                         <span className="text-[10px] text-muted-foreground font-medium">
@@ -1211,7 +1204,9 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                       </div>
                     )}
                     <div className={cn(
-                      "px-4 py-2 rounded-lg text-sm whitespace-pre-wrap break-words w-fit min-w-[40px] max-w-full",
+                      "w-fit min-w-[40px] max-w-full whitespace-pre-wrap break-words rounded-[18px] px-4 py-2 text-sm",
+                      groupedWithPrevious && 'rounded-tr-md',
+                      groupedWithNext && 'rounded-br-md',
                       message.failed 
                         ? "bg-destructive/20 text-destructive border border-destructive" 
                         : "bg-primary text-primary-foreground"
@@ -1258,15 +1253,6 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                     )}
                   </div>
 
-                  {showAvatar ? (
-                    <UserAvatar 
-                      user={message.sender} 
-                      className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity" 
-                      onClick={() => openProfile(message.sender._id)}
-                    />
-                  ) : (
-                    <div className="w-8 flex-shrink-0" />
-                  )}
                 </div>
               );
             }
@@ -1276,8 +1262,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
               <div
                 key={message._id}
                 className={cn(
-                  'flex gap-2 items-end group/msg relative',
-                  !showAvatar && 'ml-11'
+                  'flex w-full items-end gap-2 group/msg relative',
+                  showAvatar && index > 0 && '!mt-4'
                 )}
               >
                 {showAvatar && (
@@ -1287,8 +1273,9 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                     onClick={() => openProfile(message.sender._id)}
                   />
                 )}
+                {!showAvatar && <div className="h-8 w-8 flex-shrink-0" aria-hidden="true" />}
 
-                <div className="flex flex-col max-w-[85%]">
+                <div className="flex max-w-[82%] flex-col">
                   {showAvatar && (
                     <div className="flex items-center gap-2 mb-1.5 opacity-90">
                       <span 
@@ -1302,7 +1289,11 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                       </span>
                     </div>
                   )}
-                  <div className="bg-muted px-4 py-2 rounded-lg text-sm text-foreground whitespace-pre-wrap break-words w-fit min-w-[40px] max-w-full">
+                  <div className={cn(
+                    'w-fit min-w-[40px] max-w-full whitespace-pre-wrap break-words rounded-[18px] bg-muted px-4 py-2 text-sm text-foreground',
+                    groupedWithPrevious && 'rounded-tl-md',
+                    groupedWithNext && 'rounded-bl-md'
+                  )}>
                     {renderMessageContent(message)}
                   </div>
 
