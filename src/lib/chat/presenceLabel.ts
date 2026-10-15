@@ -7,7 +7,9 @@ export function getPresenceLabel(presence: PresenceSummary | undefined, now = ne
   if (!presence) return 'Status unavailable';
   if (presence.status === 'online') return 'Active now';
 
-  if (!presence.lastSeen) return 'Status unavailable';
+  // An offline state is still useful even when this account predates persisted
+  // last-seen tracking. Never fabricate an elapsed time for that case.
+  if (!presence.lastSeen) return 'Offline';
 
   const lastSeen = presence.lastSeen instanceof Date ? presence.lastSeen : new Date(presence.lastSeen);
   const elapsedMs = now.getTime() - lastSeen.getTime();
