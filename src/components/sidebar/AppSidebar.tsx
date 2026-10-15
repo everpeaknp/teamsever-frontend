@@ -644,13 +644,21 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   const isSettingsPage =
     pathname.startsWith(`/workspace/${workspaceId}/settings`) && !isMembersPage;
   const getPrimaryLinkClassName = (isActive: boolean) => isActive
-    ? 'text-primary bg-primary/15 ring-1 ring-inset ring-primary/25 shadow-sm'
+    ? isMobile
+      ? 'text-primary bg-primary/15 ring-1 ring-inset ring-primary/25 shadow-sm'
+      : themeMode === 'dark' ? 'text-white' : 'text-slate-900'
     : themeMode === 'dark'
       ? 'text-white/50 hover:text-white/90 hover:bg-white/5'
       : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5';
-  const getQuickLinkClassName = (href: string) => matchesSidebarRoute(pathname || '', href)
-    ? 'bg-primary/15 text-primary ring-1 ring-inset ring-primary/30 font-semibold shadow-sm'
-    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800';
+  const getQuickLinkClassName = (href: string) => {
+    if (!matchesSidebarRoute(pathname || '', href)) {
+      return 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800';
+    }
+
+    return isMobile
+      ? 'bg-primary/15 text-primary ring-1 ring-inset ring-primary/30 font-semibold shadow-sm'
+      : 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium';
+  };
 
   return (
     <>
