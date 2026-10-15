@@ -426,6 +426,7 @@ export default function InboxPage() {
               userId={selectedMember._id}
               type="direct"
               title={selectedMember.name}
+              profileUser={selectedMember}
               presence={userPresence.get(selectedMember._id)}
               onMenuClick={() => setShowMembersList(true)}
             />

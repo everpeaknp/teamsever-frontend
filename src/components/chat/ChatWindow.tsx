@@ -21,7 +21,7 @@ import { format, isToday, isYesterday, isWithinInterval, startOfDay, endOfDay, s
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as UICalendar } from '@/components/ui/calendar';
 import type { UserPresence } from '@/hooks/usePresence';
-import { getPresenceLabel } from '@/lib/chat/presenceLabel';
+import { ChatConversationIdentity } from './ChatConversationIdentity';
 
 interface ChatWindowProps {
   workspaceId?: string;
@@ -30,6 +30,7 @@ interface ChatWindowProps {
   userId?: string; // For DM - the other user's ID
   type: 'workspace' | 'direct';
   title: string;
+  profileUser?: { _id?: string; id?: string; name?: string; email?: string; avatar?: string; profilePicture?: string };
   presence?: UserPresence;
   isAdmin?: boolean;
   onMenuClick?: () => void;
@@ -40,7 +41,7 @@ import { LeaveCard } from './LeaveCard';
 import { RequestLeaveModal } from './RequestLeaveModal';
 import { MessageReactionsBar, InputEmojiPicker } from './MessageReactionsBar';
 
-export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, presence, isAdmin, onMenuClick }: ChatWindowProps) => {
+export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, profileUser, presence, isAdmin, onMenuClick }: ChatWindowProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | 'week' | 'custom'>('all');
@@ -793,15 +794,13 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           >
             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </button>
-          <div className="min-w-0 flex-1">
-            <h2 className="text-base md:text-lg font-bold text-foreground truncate">{title}</h2>
-            {type === 'direct' && (
-              <p className="flex items-center gap-1.5 text-xs leading-4 text-muted-foreground" aria-live="polite">
-                <span className={cn('h-2 w-2 shrink-0 rounded-full', presence?.status === 'online' ? 'bg-emerald-500' : 'bg-muted-foreground/50')} aria-hidden="true" />
-                <span className="truncate">{getPresenceLabel(presence, presenceNow)}</span>
-              </p>
-            )}
-          </div>
+          <ChatConversationIdentity
+            type={type}
+            title={title}
+            profileUser={profileUser}
+            presence={presence}
+            now={presenceNow}
+          />
           {type === 'direct' && (
             <div className="flex shrink-0 items-center gap-1">
               <button
