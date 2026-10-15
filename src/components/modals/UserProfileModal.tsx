@@ -120,7 +120,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[1100px] overflow-x-hidden overflow-y-auto border-none bg-white p-0 shadow-2xl dark:bg-[#0a0a0a] rounded-2xl ring-1 ring-slate-200 dark:ring-white/10">
+      <DialogContent className="w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] max-w-[1100px] overflow-x-hidden overflow-y-auto overscroll-contain border-none bg-white p-0 shadow-2xl dark:bg-[#0a0a0a] rounded-xl ring-1 ring-slate-200 dark:ring-white/10 sm:w-[calc(100vw-2rem)] sm:rounded-2xl">
         <DialogHeader className="sr-only">
           <DialogTitle>{user?.name || 'User Profile'}</DialogTitle>
           <DialogDescription>
@@ -144,7 +144,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
             </button>
 
             {/* Cover Area - Premium Mesh Gradient or Image */}
-            <div className="relative h-44 overflow-hidden">
+            <div className="relative h-32 overflow-hidden sm:h-44">
               {user.coverPhoto ? (
                 <img 
                   src={user.coverPhoto} 
@@ -158,17 +158,17 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
             </div>
             
-            <div className="relative z-10 -mt-16 px-4 pb-6 sm:px-8 sm:pb-8">
-              <div className="flex flex-col md:flex-row items-end gap-5 mb-3">
-                <div className="p-1.5 bg-white dark:bg-[#0a0a0a] rounded-[2.5rem] ring-1 ring-slate-200 dark:ring-white/10 shadow-2xl">
+            <div className="relative z-10 -mt-12 px-3 pb-4 sm:-mt-16 sm:px-8 sm:pb-8">
+              <div className="mb-3 flex flex-col items-stretch gap-3 md:flex-row md:items-end md:gap-5">
+                <div className="self-start rounded-[2rem] bg-white p-1.5 shadow-2xl ring-1 ring-slate-200 dark:bg-[#0a0a0a] dark:ring-white/10 sm:rounded-[2.5rem]">
                   <UserAvatar 
                     user={user} 
-                    className="w-32 h-32 rounded-[2rem] border-none text-4xl font-bold shadow-inner" 
+                    className="h-24 w-24 rounded-[1.5rem] border-none text-3xl font-bold shadow-inner sm:h-32 sm:w-32 sm:rounded-[2rem] sm:text-4xl"
                   />
                 </div>
-                <div className="flex-1 pb-2">
-                  <div className="flex items-center gap-3 mb-1 flex-wrap">
-                    <h2 className="break-words text-2xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">{user.name}</h2>
+                <div className="min-w-0 flex-1 pb-0 md:pb-2">
+                  <div className="mb-1 flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+                    <h2 className="min-w-0 break-words text-xl font-black tracking-tight text-slate-900 dark:text-white sm:text-3xl">{user.name}</h2>
                     {workspaceData?.customRole ? (
                       <Badge 
                         variant="outline" 
@@ -193,10 +193,10 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400 font-semibold text-sm">
-                    <span className="flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold text-slate-600 dark:text-slate-400">
+                    <span className="flex min-w-0 items-center gap-1.5">
                       <Briefcase className="w-3.5 h-3.5" />
-                      {user.jobTitle || 'Team Member'}
+                      <span>{user.jobTitle || 'Team Member'}</span>
                       {workspaceData?.role && (
                         <span className="text-slate-400 dark:text-white/20 capitalize">({workspaceData.role})</span>
                       )}
@@ -209,7 +209,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                     )}
                   </div>
                 </div>
-                <div className="flex gap-3 pb-2">
+                <div className="flex gap-3 pb-0 md:ml-auto md:pb-2">
                   {userId !== currentUserId && (
                     <Button 
                       onClick={handleMessage}
@@ -228,10 +228,10 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                 <PublicClockPresence workspaceId={workspaceId} userId={user._id} />
               )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="grid min-w-0 grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-12">
                 {/* Left Column: Info Card */}
                 <div className="lg:col-span-4 space-y-6">
-                  <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-5 border border-slate-200 dark:border-white/[0.05] space-y-5">
+                  <div className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 backdrop-blur-xl dark:border-white/[0.05] dark:bg-white/[0.03] sm:p-5">
                     <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Contact & Info</h4>
                     <div className="space-y-4">
                       <div className="flex items-center gap-3 text-sm text-slate-300">
@@ -280,8 +280,8 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                 {/* Right Column: Stats Only */}
                 <div className="lg:col-span-8 space-y-6">
                   {/* Performance Stats Cards */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-slate-200 dark:border-white/[0.05] flex flex-col gap-1">
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4 sm:gap-4">
+                    <div className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 backdrop-blur-xl dark:border-white/[0.05] dark:bg-white/[0.03] sm:p-4">
                       <div className="flex items-center gap-2 text-emerald-400/80 mb-1">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span className="text-[10px] font-black uppercase tracking-wider">Tasks Done</span>
@@ -289,7 +289,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                       <span className="text-2xl font-black text-slate-900 dark:text-white">{stats?.tasksDone || 0}</span>
                     </div>
                     
-                    <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-slate-200 dark:border-white/[0.05] flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 backdrop-blur-xl dark:border-white/[0.05] dark:bg-white/[0.03] sm:p-4">
                       <div className="flex items-center gap-2 text-blue-400/80 mb-1">
                         <Timer className="w-3.5 h-3.5" />
                         <span className="text-[10px] font-black uppercase tracking-wider">Completion</span>
@@ -301,7 +301,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                       </span>
                     </div>
 
-                    <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-slate-200 dark:border-white/[0.05] flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 backdrop-blur-xl dark:border-white/[0.05] dark:bg-white/[0.03] sm:p-4">
                       <div className="flex items-center gap-2 text-orange-400/80 mb-1">
                         <TrendingUp className="w-3.5 h-3.5" />
                         <span className="text-[10px] font-black uppercase tracking-wider">High Prio</span>
@@ -309,7 +309,7 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
                       <span className="text-2xl font-black text-slate-900 dark:text-white">{stats?.priorityDistribution.high || 0}</span>
                     </div>
 
-                    <div className="bg-slate-50 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl p-4 border border-slate-200 dark:border-white/[0.05] flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 backdrop-blur-xl dark:border-white/[0.05] dark:bg-white/[0.03] sm:p-4">
                       <div className="flex items-center gap-2 text-red-400/80 mb-1">
                         <BarChart3 className="w-3.5 h-3.5" />
                         <span className="text-[10px] font-black uppercase tracking-wider">Urgent</span>

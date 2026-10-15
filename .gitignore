@@ -98,6 +98,7 @@ Thumbs.db
 
 !src/components/chat/RequestLeaveModal.spec.tsx
 !src/components/chat/ChatConversationIdentity.spec.tsx
+!src/components/analytics/ContributionHeatmap.mobile.test.tsx
 !src/lib/chat/presenceLabel.spec.ts
 !src/lib/chat/normalizeWorkspacePresence.spec.ts
 !src/app/workspace/[[]id[]]/attendance/[[]section[]]/page.test.tsx

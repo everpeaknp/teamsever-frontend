@@ -95,10 +95,10 @@ export function ContributionHeatmap({ userId, workspaceId }: ContributionHeatmap
 
   return (
     <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-white dark:bg-[#1a1a1a]">
-      <CardHeader className="pb-2 border-b border-slate-100 dark:border-[#262626]">
-        <div className="flex items-center justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
+      <CardHeader className="flex min-w-0 flex-col gap-3 border-b border-slate-100 p-3 pb-3 dark:border-[#262626] sm:p-6 sm:pb-3">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <CardTitle className="flex basis-full items-center gap-2 text-sm font-bold sm:basis-auto sm:text-base">
               <Trophy className="w-4 h-4 text-amber-500" />
               Contribution Activity
             </CardTitle>
@@ -118,11 +118,11 @@ export function ContributionHeatmap({ userId, workspaceId }: ContributionHeatmap
             </select>
 
             {/* Filter Controls */}
-            <div className="flex items-center p-1 bg-slate-100 dark:bg-[#0a0a0a] rounded-lg border border-slate-200 dark:border-white/5">
+            <div className="flex max-w-full flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-white/5 dark:bg-[#0a0a0a]">
               <button
                 onClick={() => setFilter('all')}
                 className={cn(
-                  "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                  "min-h-8 whitespace-nowrap rounded-md px-2.5 py-1 text-[10px] font-bold transition-all sm:px-3",
                   filter === 'all' 
                     ? "bg-white dark:bg-[#262626] text-primary shadow-sm ring-1 ring-black/5" 
                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -133,7 +133,7 @@ export function ContributionHeatmap({ userId, workspaceId }: ContributionHeatmap
               <button
                 onClick={() => setFilter('github')}
                 className={cn(
-                  "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                  "min-h-8 whitespace-nowrap rounded-md px-2.5 py-1 text-[10px] font-bold transition-all sm:px-3",
                   filter === 'github' 
                     ? "bg-white dark:bg-[#262626] text-primary shadow-sm ring-1 ring-black/5" 
                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -144,7 +144,7 @@ export function ContributionHeatmap({ userId, workspaceId }: ContributionHeatmap
               <button
                 onClick={() => setFilter('tasks')}
                 className={cn(
-                  "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                  "min-h-8 whitespace-nowrap rounded-md px-2.5 py-1 text-[10px] font-bold transition-all sm:px-3",
                   filter === 'tasks' 
                     ? "bg-white dark:bg-[#262626] text-primary shadow-sm ring-1 ring-black/5" 
                     : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
@@ -155,21 +155,21 @@ export function ContributionHeatmap({ userId, workspaceId }: ContributionHeatmap
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-orange-50 dark:bg-orange-950/20 rounded-full border border-orange-100 dark:border-orange-900/30">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">
+            <div className="flex max-w-full items-center gap-1.5 rounded-full border border-orange-100 bg-orange-50 px-3 py-1 dark:border-orange-900/30 dark:bg-orange-950/20">
               <Flame className="w-3.5 h-3.5 text-orange-500" />
               <span className="text-xs font-bold text-orange-700 dark:text-orange-400">
                 {data.currentStreak} Day Streak
               </span>
             </div>
-            <Badge variant="outline" className="text-[10px] font-medium border-slate-200 dark:border-slate-700">
+            <Badge variant="outline" className="whitespace-nowrap border-slate-200 text-[10px] font-medium dark:border-slate-700">
               Max: {data.longestStreak}
             </Badge>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-6">
-        <div className="relative overflow-x-auto pb-4">
+      <CardContent className="max-w-full p-3 sm:p-6">
+        <div className="relative max-w-full overscroll-x-contain overflow-x-auto pb-4">
           <div className="flex gap-1 min-w-max">
             {/* Day Labels */}
             <div className="flex flex-col gap-1 pr-2 text-[10px] text-slate-400 font-medium justify-between py-1 mt-6">
