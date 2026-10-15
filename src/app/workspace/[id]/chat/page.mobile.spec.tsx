@@ -66,8 +66,10 @@ describe('GroupChatPage mobile navigation', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Engineering' }));
     await waitFor(() => expect(screen.getByLabelText('Chat conversation').parentElement).toHaveClass('flex'));
     expect(screen.getByRole('heading', { name: '# Engineering' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Message views' }).parentElement).toHaveClass('hidden', 'md:block');
 
     fireEvent.click(screen.getByRole('button', { name: 'Back to channels' }));
     expect(screen.getByRole('navigation', { name: 'Group chat channels' }).parentElement).toHaveClass('flex');
+    expect(screen.getByRole('navigation', { name: 'Message views' }).parentElement).not.toHaveClass('hidden');
   });
 });

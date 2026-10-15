@@ -14,6 +14,10 @@ import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { AppUpdateNotifier } from '@/components/layout/AppUpdateNotifier';
 import { DesktopUpdateNotifier } from '@/components/layout/DesktopUpdateNotifier';
 import { MobileWorkspaceNavigation } from '@/components/layout/MobileWorkspaceNavigation';
+import {
+  MobileConversationProvider,
+  useIsMobileConversationOpen,
+} from '@/components/layout/MobileConversationContext';
 
 // Dynamic imports so these heavy components are excluded from pages that don't need them
 const AppSidebar = dynamic(
@@ -47,6 +51,25 @@ const UserProfileModal = dynamic(
   () => import('@/components/modals/UserProfileModal').then(mod => mod.UserProfileModal),
   { ssr: false }
 );
+
+function MobileAwareHeader() {
+  const isConversationOpen = useIsMobileConversationOpen();
+  return <div data-testid="mobile-app-header" className={isConversationOpen ? 'hidden lg:block' : ''}><Header /></div>;
+}
+
+function MobileAwareMain({ children }: { children: React.ReactNode }) {
+  const isConversationOpen = useIsMobileConversationOpen();
+  return (
+    <main className={`min-h-0 min-w-0 flex-1 overflow-auto bg-background ${isConversationOpen ? 'pb-0' : 'pb-[calc(5rem+env(safe-area-inset-bottom))]'} lg:pb-0`}>
+      {children}
+    </main>
+  );
+}
+
+function MobileAwareNavigation() {
+  const isConversationOpen = useIsMobileConversationOpen();
+  return isConversationOpen ? null : <MobileWorkspaceNavigation />;
+}
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const { isOpen, userId, closeProfile } = useProfileModalStore();
@@ -129,33 +152,33 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   }, []); // Empty deps = run ONCE on mount only. DO NOT add initializeFCM/syncPermission here.
 
   return (
-    <SearchProvider>
-      <NavigationLoader />
-      <PageLoadingIndicator />
-      <TaskDetailSidebar />
-      <GitHubWebhookModal />
-      <UserProfileModal isOpen={isOpen} userId={userId} onClose={closeProfile} />
-      <Toaster position="top-right" richColors />
-      <AppUpdateNotifier />
-      <DesktopUpdateNotifier />
-      {showShell && <GlobalTimer />}
+    <MobileConversationProvider>
+      <SearchProvider>
+        <NavigationLoader />
+        <PageLoadingIndicator />
+        <TaskDetailSidebar />
+        <GitHubWebhookModal />
+        <UserProfileModal isOpen={isOpen} userId={userId} onClose={closeProfile} />
+        <Toaster position="top-right" richColors />
+        <AppUpdateNotifier />
+        <DesktopUpdateNotifier />
+        {showShell && <GlobalTimer />}
 
-      {showShell ? (
-        <div className="flex h-[100dvh] overflow-hidden bg-background lg:h-screen">
-          <div className="hidden lg:flex">
-            <AppSidebar />
+        {showShell ? (
+          <div className="flex h-[100dvh] overflow-hidden bg-background lg:h-screen">
+            <div className="hidden lg:flex">
+              <AppSidebar />
+            </div>
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <MobileAwareHeader />
+              <MobileAwareMain>{children}</MobileAwareMain>
+            </div>
+            <MobileAwareNavigation />
           </div>
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Header />
-            <main className="min-h-0 min-w-0 flex-1 overflow-auto bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
-              {children}
-            </main>
-          </div>
-          <MobileWorkspaceNavigation />
-        </div>
-      ) : (
-        <main className="min-h-screen">{children}</main>
-      )}
-    </SearchProvider>
+        ) : (
+          <main className="min-h-screen">{children}</main>
+        )}
+      </SearchProvider>
+    </MobileConversationProvider>
   );
 }

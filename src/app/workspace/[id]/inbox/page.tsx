@@ -16,6 +16,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { useMemo } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
+import { useMobileConversationScreen } from '@/components/layout/MobileConversationContext';
 
 interface WorkspaceMember {
   _id: string;
@@ -38,6 +39,8 @@ export default function InboxPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showMembersList, setShowMembersList] = useState(true); // For mobile toggle
+  const hasActiveConversation = !showMembersList && Boolean(selectedMember && conversationId);
+  useMobileConversationScreen(hasActiveConversation);
   const [dmSidebarWidth, setDmSidebarWidth] = useState(380);
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const isResizingRef = useRef(false);
@@ -48,7 +51,7 @@ export default function InboxPage() {
   const DEFAULT_DM_SIDEBAR_WIDTH = 380;
 
   const { setActiveRoom, getRoom } = useChatStore();
-  const { isUserOnline } = usePresence(workspaceId);
+  const { isUserOnline, userPresence } = usePresence(workspaceId);
   const { socket } = useSocket();
   const { user, setUser } = useAuthStore();
 
@@ -285,7 +288,9 @@ export default function InboxPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background overflow-hidden">
-      <MessageModeNav workspaceId={workspaceId} />
+      <div className={hasActiveConversation ? 'hidden md:block' : ''}>
+        <MessageModeNav workspaceId={workspaceId} />
+      </div>
       <div className="flex min-h-0 flex-1 overflow-hidden">
       {/* Members List Sidebar - Responsive */}
       <div className={cn(
@@ -421,6 +426,7 @@ export default function InboxPage() {
               userId={selectedMember._id}
               type="direct"
               title={selectedMember.name}
+              presence={userPresence.get(selectedMember._id)}
               onMenuClick={() => setShowMembersList(true)}
             />
           </div>

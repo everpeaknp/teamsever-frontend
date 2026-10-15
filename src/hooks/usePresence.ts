@@ -1,13 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getSocket } from '@/lib/socket';
 import { api } from '@/lib/axios';
+import { normalizeWorkspacePresence, type UserPresence } from '@/lib/chat/normalizeWorkspacePresence';
 
-export interface UserPresence {
-  userId: string;
-  userName: string;
-  status: 'online' | 'offline';
-  lastSeen?: Date;
-}
+export type { UserPresence } from '@/lib/chat/normalizeWorkspacePresence';
 
 export const usePresence = (workspaceId: string) => {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
@@ -25,14 +21,12 @@ export const usePresence = (workspaceId: string) => {
         return;
       }
 
-      const response = await api.get(`/presence/${workspaceId}/online`);
+      const response = await api.get(`/presence/${workspaceId}`);
 
       if (response.data.success) {
-        const users = response.data.data?.onlineUsers || [];
-        if (Array.isArray(users)) {
-          const onlineSet = new Set<string>(users.map((u: any) => u._id as string));
-          setOnlineUsers(onlineSet);
-        }
+        const presence = normalizeWorkspacePresence(response.data.data ?? {});
+        setOnlineUsers(new Set(presence.onlineUsers));
+        setUserPresence(presence.userPresence);
       }
     } catch (err: any) {
       if (err?.response?.status !== 401) {
@@ -45,19 +39,21 @@ export const usePresence = (workspaceId: string) => {
   useEffect(() => {
     if (!socket || !workspaceId) return;
 
-    const handleUserOnline = (data: { userId: string; userName: string; workspaceId: string }) => {
+    const handleUserOnline = (data: { userId?: string; userName?: string; user?: { _id?: string; name?: string }; workspaceId: string }) => {
       if (data.workspaceId === workspaceId) {
+        const userId = data.userId || data.user?._id;
+        if (!userId) return;
         setOnlineUsers(prev => {
-          if (prev.has(data.userId)) return prev;
+          if (prev.has(userId)) return prev;
           const next = new Set(prev);
-          next.add(data.userId);
+          next.add(userId);
           return next;
         });
         setUserPresence(prev => {
           const newMap = new Map(prev);
-          newMap.set(data.userId, {
-            userId: data.userId,
-            userName: data.userName,
+          newMap.set(userId, {
+            userId,
+            userName: data.userName || data.user?.name || '',
             status: 'online'
           });
           return newMap;
@@ -65,21 +61,24 @@ export const usePresence = (workspaceId: string) => {
       }
     };
 
-    const handleUserOffline = (data: { userId: string; userName: string; workspaceId: string }) => {
+    const handleUserOffline = (data: { userId?: string; userName?: string; user?: { _id?: string; name?: string }; workspaceId: string; lastSeen?: Date | string | null }) => {
       if (data.workspaceId === workspaceId) {
+        const userId = data.userId || data.user?._id;
+        if (!userId) return;
         setOnlineUsers(prev => {
-          if (!prev.has(data.userId)) return prev;
+          if (!prev.has(userId)) return prev;
           const next = new Set(prev);
-          next.delete(data.userId);
+          next.delete(userId);
           return next;
         });
         setUserPresence(prev => {
           const newMap = new Map(prev);
-          newMap.set(data.userId, {
-            userId: data.userId,
-            userName: data.userName,
+          const lastSeen = data.lastSeen ? new Date(data.lastSeen) : null;
+          newMap.set(userId, {
+            userId,
+            userName: data.userName || data.user?.name || newMap.get(userId)?.userName || '',
             status: 'offline',
-            lastSeen: new Date()
+            lastSeen: lastSeen && Number.isFinite(lastSeen.getTime()) ? lastSeen : null,
           });
           return newMap;
         });

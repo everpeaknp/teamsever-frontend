@@ -47,6 +47,8 @@ coverage
 !src/components/chat/LeaveCard.test.tsx
 !src/components/chat/ChatSidebar.mobile.spec.tsx
 !src/components/chat/CreateChannelModal.mobile.test.tsx
+!src/lib/chat/isMessageForChatRoom.spec.ts
+!src/lib/chat/mentions.spec.ts
 !src/components/layout/DesktopDownloadButton.spec.tsx
 !src/components/layout/AppUpdateNotifier.spec.tsx
 !src/components/layout/MobileWorkspaceTabBar.spec.tsx
@@ -95,4 +97,6 @@ Thumbs.db
 .eslintcache
 
 !src/components/chat/RequestLeaveModal.spec.tsx
+!src/lib/chat/presenceLabel.spec.ts
+!src/lib/chat/normalizeWorkspacePresence.spec.ts
 !src/app/workspace/[[]id[]]/attendance/[[]section[]]/page.test.tsx

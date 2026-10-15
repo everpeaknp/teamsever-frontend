@@ -3,6 +3,7 @@ import { joinDM, leaveDM } from '@/lib/socket';
 import { useSocket } from '@/contexts/SocketContext';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { api } from '@/lib/axios';
+import { isMessageForChatRoom } from '@/lib/chat/isMessageForChatRoom';
 
 export interface ChatMessage {
   _id: string;
@@ -208,7 +209,7 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
 
     const handleNewMessage = (data: { message: ChatMessage }) => {
       const msg = data.message;
-      const isTargetChannel = type === 'workspace' && channelId && msg.channel === channelId;
+      const isTargetChannel = type === 'workspace' && isMessageForChatRoom(channelId, msg);
       const isTargetDM = type === 'direct' && conversationId && msg.conversation === conversationId;
 
       if (isTargetChannel || isTargetDM) {

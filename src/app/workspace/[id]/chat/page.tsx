@@ -6,6 +6,7 @@ import { ChatWindow, ChatSidebar } from '@/components/chat';
 import { MessageModeNav } from '@/components/chat/MessageModeNav';
 import { cn } from '@/lib/utils';
 import { useChatStore } from '@/store/useChatStore';
+import { useMobileConversationScreen } from '@/components/layout/MobileConversationContext';
 import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { Loader2, Hash, Lock, Crown, Sparkles, User, Send } from 'lucide-react';
 import { api } from '@/lib/axios';
@@ -49,6 +50,7 @@ export default function GroupChatPage() {
   const [dmUserId, setDmUserId] = useState<string | undefined>();
   const [chatTitle, setChatTitle] = useState('General');
   const [mobileChatView, setMobileChatView] = useState<'channels' | 'chat'>('channels');
+  useMobileConversationScreen(mobileChatView === 'chat');
   const [channelSidebarWidth, setChannelSidebarWidth] = useState(320);
   const [isResizingChannels, setIsResizingChannels] = useState(false);
   const isResizingRef = useRef(false);
@@ -232,7 +234,9 @@ export default function GroupChatPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background font-sans">
-      <MessageModeNav workspaceId={workspaceId} />
+      <div className={mobileChatView === 'chat' ? 'hidden md:block' : ''}>
+        <MessageModeNav workspaceId={workspaceId} />
+      </div>
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
       <div className={cn(
         "absolute inset-0 z-10 w-full md:relative md:inset-auto md:z-20 md:w-[var(--channel-sidebar-width)] md:shrink-0",

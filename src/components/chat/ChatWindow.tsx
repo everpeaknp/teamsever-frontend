@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays } from 'lucide-react';
+import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays, Phone, Video } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { reconcileChatMessages } from '@/lib/chat/reconcileMessages';
+import { getMentionKeyAction, getMentionSuggestions, MentionSuggestion } from '@/lib/chat/mentions';
 import { useChatStore, generateDMRoomId } from '@/store/useChatStore';
 import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { useWorkspaceStore } from '@/store/useWorkspaceStore';
@@ -19,6 +20,8 @@ import { Badge } from '@/components/ui/badge';
 import { format, isToday, isYesterday, isWithinInterval, startOfDay, endOfDay, subDays, startOfWeek } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as UICalendar } from '@/components/ui/calendar';
+import type { UserPresence } from '@/hooks/usePresence';
+import { getPresenceLabel } from '@/lib/chat/presenceLabel';
 
 interface ChatWindowProps {
   workspaceId?: string;
@@ -27,6 +30,7 @@ interface ChatWindowProps {
   userId?: string; // For DM - the other user's ID
   type: 'workspace' | 'direct';
   title: string;
+  presence?: UserPresence;
   isAdmin?: boolean;
   onMenuClick?: () => void;
 }
@@ -36,11 +40,12 @@ import { LeaveCard } from './LeaveCard';
 import { RequestLeaveModal } from './RequestLeaveModal';
 import { MessageReactionsBar, InputEmojiPicker } from './MessageReactionsBar';
 
-export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, isAdmin, onMenuClick }: ChatWindowProps) => {
+export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, presence, isAdmin, onMenuClick }: ChatWindowProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | '7days' | 'week' | 'custom'>('all');
   const [customDate, setCustomDate] = useState<Date | undefined>(new Date());
+  const [presenceNow, setPresenceNow] = useState(() => new Date());
   const [filterUserId, setFilterUserId] = useState<string>('all');
   const [filterFolderId, setFilterFolderId] = useState<string>('all');
   const [filterSpaceName, setFilterSpaceName] = useState<string>('all');
@@ -48,6 +53,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const [memberLookupError, setMemberLookupError] = useState<string | null>(null);
   const [membersLoading, setMembersLoading] = useState(false);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0);
   const [selectedMentionIds, setSelectedMentionIds] = useState<string[]>([]);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -65,6 +71,16 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const currentUserName = currentUser?.name || (typeof window !== 'undefined' ? localStorage.getItem('userName') : null);
   const currentUserEmail = currentUser?.email || (typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null);
   const isCommitLog = title.includes('Commit Log');
+  const mentionSuggestions = mentionQuery === null
+    ? []
+    : getMentionSuggestions(workspaceMembers, mentionQuery).slice(0, 12);
+
+  useEffect(() => {
+    if (type !== 'direct' || presence?.status !== 'offline') return;
+
+    const interval = window.setInterval(() => setPresenceNow(new Date()), 30_000);
+    return () => window.clearInterval(interval);
+  }, [type, presence?.status, presence?.lastSeen]);
 
   // Generate room ID - prefer conversationId for DMs to match socket events
   const roomId = type === 'workspace' 
@@ -452,9 +468,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
     const messageContent = inputValue.trim();
     const mentions = selectedMentionIds.filter((id) => {
-      const member = workspaceMembers.find((candidate) => (candidate._id || candidate.id) === id);
-      const name = member?.name;
-      return !!name && messageContent.includes(`@${name}`);
+      const member = getMentionSuggestions(workspaceMembers, '').find((candidate) => candidate.id === id);
+      return !!member && messageContent.toLocaleLowerCase().includes(`@${member.name}`.toLocaleLowerCase());
     });
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     
@@ -635,6 +650,20 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       setMentionQuery(null);
       return;
     }
+    const mentionKeyAction = getMentionKeyAction(e.key, e.shiftKey, mentionSuggestions.length);
+    if (mentionKeyAction === 'next' || mentionKeyAction === 'previous') {
+      e.preventDefault();
+      setActiveMentionIndex((index) => mentionKeyAction === 'next'
+        ? (index + 1) % mentionSuggestions.length
+        : (index - 1 + mentionSuggestions.length) % mentionSuggestions.length
+      );
+      return;
+    }
+    if (mentionKeyAction === 'select') {
+      e.preventDefault();
+      insertMention(mentionSuggestions[activeMentionIndex] || mentionSuggestions[0]);
+      return;
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -646,6 +675,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     setInputValue(value);
     const activeMention = value.match(/(?:^|\s)@([^\s@]*)$/);
     setMentionQuery(activeMention ? activeMention[1] : null);
+    setActiveMentionIndex(0);
     
     if (value.trim() && type === 'workspace') {
       sendTypingIndicator();
@@ -658,10 +688,9 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     }
   };
 
-  const insertMention = (member: any) => {
-    const user = member.user || member;
-    const memberId = user._id || user.id;
-    const name = user.name || 'Member';
+  const insertMention = (member: MentionSuggestion) => {
+    const memberId = member.id;
+    const name = member.name;
     const atIndex = inputValue.lastIndexOf('@');
     const next = `${inputValue.slice(0, atIndex)}@${name} `;
     setInputValue(next);
@@ -672,19 +701,22 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     requestAnimationFrame(() => textareaRef.current?.focus());
   };
 
-  const renderMessageContent = (message: ChatMessage) => {
-    const mentionedIds = new Set((message.mentions || []).map((mention: any) => typeof mention === 'string' ? mention : mention?._id || mention?.id));
-    const names = workspaceMembers
-      .filter((member) => mentionedIds.has(member._id || member.id))
-      .map((member) => member.name as string)
+  const renderMessageContent = (message: ChatMessage, isOwnMessage = false) => {
+    const mentionedIds = new Set((message.mentions || []).map((mention: any) => {
+      const user = mention?.user && typeof mention.user === 'object' ? mention.user : mention;
+      return typeof mention === 'string' ? mention : user?._id || user?.id || (typeof mention?.user === 'string' ? mention.user : null);
+    }));
+    const names = getMentionSuggestions(workspaceMembers, '')
+      .filter((member) => mentionedIds.has(member.id))
+      .map((member) => member.name)
       .filter(Boolean)
       .sort((a, b) => b.length - a.length);
     if (!names.length) return message.content;
     const escaped = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const matcher = new RegExp(`(@(?:${escaped.join('|')}))`, 'g');
+    const matcher = new RegExp(`(@(?:${escaped.join('|')}))`, 'gi');
     return message.content.split(matcher).map((part, index) =>
-      part.startsWith('@') && names.some((name) => part === `@${name}`)
-        ? <span key={`${message._id}-mention-${index}`} className="rounded bg-primary/15 px-1 font-semibold text-primary">{part}</span>
+      part.startsWith('@') && names.some((name) => part.toLocaleLowerCase() === `@${name}`.toLocaleLowerCase())
+        ? <span key={`${message._id}-mention-${index}`} className={cn('rounded px-1 font-semibold', isOwnMessage ? 'bg-white/15 text-white' : 'bg-primary/15 text-primary')}>{part}</span>
         : part
     );
   };
@@ -761,7 +793,37 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           >
             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </button>
-          <h2 className="text-base md:text-lg font-bold text-foreground truncate">{title}</h2>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base md:text-lg font-bold text-foreground truncate">{title}</h2>
+            {type === 'direct' && (
+              <p className="flex items-center gap-1.5 text-xs leading-4 text-muted-foreground" aria-live="polite">
+                <span className={cn('h-2 w-2 shrink-0 rounded-full', presence?.status === 'online' ? 'bg-emerald-500' : 'bg-muted-foreground/50')} aria-hidden="true" />
+                <span className="truncate">{getPresenceLabel(presence, presenceNow)}</span>
+              </p>
+            )}
+          </div>
+          {type === 'direct' && (
+            <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                onClick={() => toast.info('Audio calls are not available yet.')}
+                className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Start audio call"
+                title="Audio call"
+              >
+                <Phone className="h-5 w-5" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => toast.info('Video calls are not available yet.')}
+                className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Start video call"
+                title="Video call"
+              >
+                <Video className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
+          )}
           
           {isCommitLog && (
             <div className="ml-2 flex min-w-0 max-w-full items-center gap-1 rounded-lg border border-border/30 bg-muted/20 p-1 overflow-x-auto no-scrollbar sm:ml-4">
@@ -1211,7 +1273,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                         ? "bg-destructive/20 text-destructive border border-destructive" 
                         : "bg-primary text-primary-foreground"
                     )}>
-                      {renderMessageContent(message)}
+                      {renderMessageContent(message, true)}
                       
                       {/* Status indicators */}
                       <div className="flex items-center gap-1 mt-1 justify-end text-xs opacity-70">
@@ -1327,17 +1389,15 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           <div className="mx-auto flex min-w-0 max-w-4xl items-end gap-2">
             <div className="relative min-w-0 flex-1">
               {mentionQuery !== null && type === 'workspace' && !isCommitLog && (
-                <div role="listbox" aria-label="Mention a channel member" className="absolute bottom-full left-0 z-30 mb-2 max-h-56 w-72 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-xl">
-                  {workspaceMembers
-                    .filter((member) => (member.name || '').toLowerCase().includes(mentionQuery.toLowerCase()))
-                    .slice(0, 12)
-                    .map((member) => (
-                      <button key={member._id || member.id} type="button" role="option" aria-selected="false" onClick={() => insertMention(member)} className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm hover:bg-accent">
-                        <span className="truncate font-medium">{member.name}</span>
-                        <span className="ml-auto pl-3 text-xs text-muted-foreground">@{member.name}</span>
+                <div role="listbox" aria-label="Mention a channel member" className="absolute bottom-full left-0 z-30 mb-2 max-h-56 w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-xl">
+                  {mentionSuggestions
+                    .map((member, index) => (
+                      <button key={member.id} type="button" role="option" aria-selected={activeMentionIndex === index} onMouseEnter={() => setActiveMentionIndex(index)} onClick={() => insertMention(member)} className={cn('flex w-full flex-col items-start rounded-lg px-3 py-2 text-left text-sm', activeMentionIndex === index ? 'bg-accent' : 'hover:bg-accent')}>
+                        <span className="w-full truncate font-medium">{member.name}</span>
+                        {member.email && <span className="w-full truncate text-xs text-muted-foreground">{member.email}</span>}
                       </button>
                     ))}
-                  {workspaceMembers.filter((member) => (member.name || '').toLowerCase().includes(mentionQuery.toLowerCase())).length === 0 && (
+                  {mentionSuggestions.length === 0 && (
                     memberLookupError
                       ? <button type="button" onClick={() => void fetchChannelMembers()} className="w-full px-3 py-2 text-left text-sm text-destructive">{memberLookupError}</button>
                       : <p className="px-3 py-2 text-sm text-muted-foreground">{membersLoading ? 'Loading members…' : 'No channel members found'}</p>
