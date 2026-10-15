@@ -130,10 +130,10 @@ export function MessageReactionTrigger({
           <button
             type="button"
             onClick={() => setShowExtended(!showExtended)}
-            className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs"
+            className="h-11 w-11 flex items-center justify-center rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs sm:h-7 sm:w-7"
             title={showExtended ? 'Show less' : 'More emojis'}
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-5 w-5 sm:h-3.5 sm:w-3.5" />
           </button>
         </div>
 

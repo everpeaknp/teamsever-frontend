@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { BarChart3, CalendarCheck2, Layers3, MessageCircle } from 'lucide-react';
 import { MobileSidebar } from '@/components/sidebar/MobileSidebar';
+import { matchesSidebarRoute } from '@/components/sidebar/sidebarRouteMatch';
 
 const tabs = [
   { label: 'Dashboard', path: 'analytics', Icon: BarChart3 },
@@ -19,8 +20,15 @@ export function MobileWorkspaceTabBar({
 }) {
   const pathname = usePathname();
   const isMessageRoute =
-    pathname.startsWith(`/workspace/${workspaceId}/inbox`) ||
-    pathname.startsWith(`/workspace/${workspaceId}/chat`);
+    matchesSidebarRoute(pathname, `/workspace/${workspaceId}/inbox`) ||
+    matchesSidebarRoute(pathname, `/workspace/${workspaceId}/chat`);
+  const isMoreRoute = ![
+    'analytics',
+    'spaces',
+    'inbox',
+    'chat',
+    'attendance',
+  ].some(path => matchesSidebarRoute(pathname, `/workspace/${workspaceId}/${path}`));
 
   return (
     <nav
@@ -32,7 +40,7 @@ export function MobileWorkspaceTabBar({
           const href = `/workspace/${workspaceId}/${path}`;
           const isActive = path === 'inbox'
             ? isMessageRoute
-            : pathname === href || pathname.startsWith(`${href}/`);
+            : matchesSidebarRoute(pathname, href);
 
           return (
             <Link
@@ -50,12 +58,7 @@ export function MobileWorkspaceTabBar({
         })}
         <MobileSidebar
           variant="bottom"
-          active={
-            !pathname.startsWith(`/workspace/${workspaceId}/analytics`) &&
-            !pathname.startsWith(`/workspace/${workspaceId}/spaces/`) &&
-            !isMessageRoute &&
-            !pathname.startsWith(`/workspace/${workspaceId}/attendance`)
-          }
+          active={isMoreRoute}
         />
       </div>
     </nav>

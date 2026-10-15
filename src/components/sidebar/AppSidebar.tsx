@@ -55,6 +55,7 @@ import UpgradeButton from '@/components/subscription/UpgradeButton';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { useQualityCapabilities } from '@/hooks/queries/useQuality';
+import { matchesSidebarRoute } from './sidebarRouteMatch';
 
 interface AppSidebarProps {
   isMobile?: boolean;
@@ -638,8 +639,18 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   }
 
   const isMembersPage = pathname === `/workspace/${workspaceId}/settings/members`;
+  const isDashboardPage = matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/analytics`);
+  const isTimeTrackingPage = matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/time-tracking`);
   const isSettingsPage =
     pathname.startsWith(`/workspace/${workspaceId}/settings`) && !isMembersPage;
+  const getPrimaryLinkClassName = (isActive: boolean) => isActive
+    ? 'text-primary bg-primary/15 ring-1 ring-inset ring-primary/25 shadow-sm'
+    : themeMode === 'dark'
+      ? 'text-white/50 hover:text-white/90 hover:bg-white/5'
+      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5';
+  const getQuickLinkClassName = (href: string) => matchesSidebarRoute(pathname || '', href)
+    ? 'bg-primary/15 text-primary ring-1 ring-inset ring-primary/30 font-semibold shadow-sm'
+    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800';
 
   return (
     <>
@@ -713,17 +724,16 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
             <div className="relative group">
               <Link
                 href={`/workspace/${workspaceId}/analytics`}
+                aria-current={isDashboardPage ? 'page' : undefined}
                 className={cn(
                   'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
-                  pathname === `/workspace/${workspaceId}/analytics`
-                    ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
-                    : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
+                  getPrimaryLinkClassName(isDashboardPage)
                 )}
                 title="Dashboard"
               >
                 <div className="relative">
                   <BarChart3 className="w-5 h-5 relative z-10" strokeWidth={1.5} />
-                  {pathname === `/workspace/${workspaceId}/analytics` && (
+                  {isDashboardPage && (
                     <motion.div
                       layoutId="active-glow"
                       className="absolute inset-0 blur-md opacity-40 z-0"
@@ -737,7 +747,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
               </Link>
               
               {/* Smooth Indicator Pill */}
-              {pathname === `/workspace/${workspaceId}/analytics` && (
+              {isDashboardPage && (
                 <motion.div
                   layoutId="sidebar-indicator"
                   className="absolute -left-1 top-2 bottom-2 w-1 rounded-r-full z-20 shadow-[0_0_10px_rgba(255,255,255,0.3)]"
@@ -751,11 +761,10 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
             <div className="relative group">
               <Link
                 href={`/workspace/${workspaceId}/settings/members`}
+                aria-current={isMembersPage ? 'page' : undefined}
                 className={cn(
                   'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
-                  isMembersPage
-                    ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
-                    : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
+                  getPrimaryLinkClassName(isMembersPage)
                 )}
                 title="Add Members"
               >
@@ -790,11 +799,10 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
               <div className="relative group">
                 <Link
                   href={`/workspace/${workspaceId}/settings`}
+                  aria-current={isSettingsPage ? 'page' : undefined}
                   className={cn(
                     'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
-                    isSettingsPage
-                      ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
-                      : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
+                    getPrimaryLinkClassName(isSettingsPage)
                   )}
                   title="Settings"
                 >
@@ -829,17 +837,16 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
               <div className="relative group">
                 <Link
                   href={`/workspace/${workspaceId}/time-tracking`}
+                  aria-current={isTimeTrackingPage ? 'page' : undefined}
                   className={cn(
                     'flex flex-col items-center justify-center gap-1.5 py-2.5 rounded-md transition-all duration-300 relative z-10',
-                    pathname.startsWith(`/workspace/${workspaceId}/time-tracking`)
-                      ? (themeMode === 'dark' ? 'text-white' : 'text-slate-900')
-                      : (themeMode === 'dark' ? 'text-white/50 hover:text-white/90' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-900/5')
+                    getPrimaryLinkClassName(isTimeTrackingPage)
                   )}
                   title="Time Tracking"
                 >
                   <div className="relative">
                     <Clock className="w-5 h-5 relative z-10" strokeWidth={1.5} />
-                    {pathname.startsWith(`/workspace/${workspaceId}/time-tracking`) && (
+                    {isTimeTrackingPage && (
                       <motion.div
                         layoutId="active-glow"
                         className="absolute inset-0 blur-md opacity-40 z-0"
@@ -853,7 +860,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                 </Link>
 
                 {/* Smooth Indicator Pill */}
-                {pathname.startsWith(`/workspace/${workspaceId}/time-tracking`) && (
+                {isTimeTrackingPage && (
                   <motion.div
                     layoutId="sidebar-indicator"
                     className="absolute -left-1 top-2 bottom-2 w-1 rounded-r-full z-20 shadow-[0_0_10px_rgba(255,255,255,0.3)]"
@@ -969,11 +976,10 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                     <div className="relative group/chat">
                       <Link
                         href={`/workspace/${workspaceId}/chat`}
+                        aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/chat`) ? 'page' : undefined}
                         className={cn(
                           'relative flex items-center gap-2 px-2 py-1.5 pr-10 rounded-md text-xs transition-colors w-full',
-                          pathname === `/workspace/${workspaceId}/chat`
-                            ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
-                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                          getQuickLinkClassName(`/workspace/${workspaceId}/chat`)
                         )}
                       >
                         <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
@@ -1008,11 +1014,10 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                     </div>
                     <Link
                       href={`/workspace/${workspaceId}/inbox`}
+                      aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/inbox`) ? 'page' : undefined}
                       className={cn(
                         'relative flex items-center gap-2 px-2 py-1.5 pr-10 rounded-md text-xs transition-colors w-full',
-                        pathname === `/workspace/${workspaceId}/inbox`
-                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        getQuickLinkClassName(`/workspace/${workspaceId}/inbox`)
                       )}
                     >
                       <Inbox className="w-3.5 h-3.5 flex-shrink-0" />
@@ -1025,11 +1030,10 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                     </Link>
                     <Link
                       href={`/workspace/${workspaceId}/docs`}
+                      aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/docs`) ? 'page' : undefined}
                       className={cn(
                         'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
-                        pathname?.includes('/docs')
-                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        getQuickLinkClassName(`/workspace/${workspaceId}/docs`)
                       )}
                     >
                       <FileText className="w-3.5 h-3.5" />
@@ -1037,11 +1041,10 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                     </Link>
                     <Link
                       href={`/workspace/${workspaceId}/files`}
+                      aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/files`) ? 'page' : undefined}
                       className={cn(
                         'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
-                        pathname?.includes('/files')
-                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        getQuickLinkClassName(`/workspace/${workspaceId}/files`)
                       )}
                     >
                       <FolderOpen className="w-3.5 h-3.5" />
@@ -1049,11 +1052,10 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                     </Link>
                     <Link
                       href={`/workspace/${workspaceId}/attendance`}
+                      aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/attendance`) ? 'page' : undefined}
                       className={cn(
                         'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
-                        pathname?.startsWith(`/workspace/${workspaceId}/attendance`)
-                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        getQuickLinkClassName(`/workspace/${workspaceId}/attendance`)
                       )}
                     >
                       <Clock className="w-3.5 h-3.5" />
@@ -1061,16 +1063,16 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                     </Link>
                     {qualityCapabilities.data?.canViewQuality && <Link
                       href={`/workspace/${workspaceId}/quality`}
+                      aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/quality`) ? 'page' : undefined}
                       className={cn('flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
-                        pathname?.includes('/quality') ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800')}
+                        getQuickLinkClassName(`/workspace/${workspaceId}/quality`))}
                     ><ClipboardCheck className="w-3.5 h-3.5" />Quality</Link>}
                     <Link
                       href={`/workspace/${workspaceId}/notifications`}
+                      aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/notifications`) ? 'page' : undefined}
                       className={cn(
                         'relative flex items-center gap-2 px-2 py-1.5 pr-10 rounded-md text-xs transition-colors w-full',
-                        pathname === `/workspace/${workspaceId}/notifications`
-                          ? 'bg-slate-100 dark:bg-[#262626] text-slate-900 dark:text-white font-medium'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        getQuickLinkClassName(`/workspace/${workspaceId}/notifications`)
                       )}
                     >
                       <Bell className="w-3.5 h-3.5 flex-shrink-0" />

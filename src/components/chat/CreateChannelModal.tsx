@@ -230,7 +230,7 @@ export const CreateChannelModal = ({ isOpen, onClose, workspaceId, onSuccess }: 
             </div>
           )}
 
-          <DialogFooter className="pt-4">
+          <DialogFooter className="gap-3 pt-4 sm:gap-2 sm:space-x-0">
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>

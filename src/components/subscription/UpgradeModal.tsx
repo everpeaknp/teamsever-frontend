@@ -92,14 +92,14 @@ export default function UpgradeModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0">
                 <Zap className="w-6 h-6 text-white" />
               </div>
-              <div>
-                <DialogTitle className="text-xl">{content.title}</DialogTitle>
+              <div className="min-w-0">
+                <DialogTitle className="text-xl leading-tight break-words">{content.title}</DialogTitle>
               </div>
             </div>
             <DialogDescription className="text-base">
@@ -125,7 +125,7 @@ export default function UpgradeModal({
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-col gap-3 mt-6 sm:flex-row">
             <Button
               variant="outline"
               onClick={onClose}

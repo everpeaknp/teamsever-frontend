@@ -15,9 +15,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Task } from '@/types';
 import { useRef } from 'react';
 import { TaskStatusChart } from '@/components/analytics/TaskStatusChart';
-
-type AnalyticsView = 'workspace' | 'personal';
-type RangeKey = 'today' | '7d' | '30d' | '90d' | 'all' | 'custom';
+import { MobileAnalyticsFilters } from '@/components/analytics/MobileAnalyticsFilters';
+import type { AnalyticsRange as RangeKey, AnalyticsView } from '@/components/analytics/MobileAnalyticsFilters';
 
 // Dynamic imports for heavy chart components - reduces initial bundle size
 const CompletionTrendChart = dynamic(
@@ -629,7 +628,7 @@ export default function AnalyticsPage() {
     return (
         <div className="min-h-screen bg-background">
             <main className="mx-auto max-w-[1440px] overflow-x-hidden px-3 py-4 pb-28 sm:px-6 sm:py-5 lg:pb-5">
-                <section className="mb-4 space-y-3 sm:hidden" aria-label="Dashboard controls">
+                <section className="mb-5 space-y-3 sm:hidden" aria-label="Dashboard controls">
                     <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Dashboard</p>
@@ -637,57 +636,17 @@ export default function AnalyticsPage() {
                         </div>
                         {(loading || summaryLoading) && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" aria-label="Updating dashboard" />}
                     </div>
-                    <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Quick date range">
-                        {([
-                            ['today', 'Today'],
-                            ['7d', '7 days'],
-                            ['30d', '30 days'],
-                        ] as const).map(([value, label]) => (
-                            <Button
-                                key={value}
-                                type="button"
-                                size="sm"
-                                variant={range === value ? 'default' : 'outline'}
-                                aria-pressed={range === value}
-                                onClick={() => setRange(value)}
-                                className="h-8 shrink-0 rounded-full px-3 text-xs"
-                            >
-                                {label}
-                            </Button>
-                        ))}
-                        <select
-                            aria-label="More date ranges"
-                            className="h-8 shrink-0 rounded-full border border-input bg-background px-3 text-xs"
-                            value={range === '90d' || range === 'all' || range === 'custom' ? range : ''}
-                            onChange={(e) => e.target.value && setRange(e.target.value as RangeKey)}
-                        >
-                            <option value="" disabled>More</option>
-                            <option value="90d">90 days</option>
-                            <option value="all">All time</option>
-                            <option value="custom">Custom</option>
-                        </select>
-                    </div>
-                    {(availableViews.length > 1 || range === 'custom') && (
-                        <div className="grid grid-cols-2 gap-2">
-                            {availableViews.length > 1 && (
-                                <select
-                                    aria-label="Analytics view"
-                                    className="h-9 min-w-0 rounded-xl border border-input bg-card px-3 text-xs"
-                                    value={selectedView}
-                                    onChange={(e) => setSelectedView(e.target.value as AnalyticsView)}
-                                >
-                                    {availableViews.includes('workspace') && <option value="workspace">Workspace view</option>}
-                                    {availableViews.includes('personal') && <option value="personal">Personal view</option>}
-                                </select>
-                            )}
-                            {range === 'custom' && (
-                                <>
-                                    <input aria-label="From date" type="date" className="h-9 min-w-0 rounded-xl border border-input bg-card px-2 text-xs" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
-                                    <input aria-label="To date" type="date" className="h-9 min-w-0 rounded-xl border border-input bg-card px-2 text-xs" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
-                                </>
-                            )}
-                        </div>
-                    )}
+                    <MobileAnalyticsFilters
+                        range={range}
+                        onRangeChange={setRange}
+                        availableViews={availableViews}
+                        selectedView={selectedView}
+                        onViewChange={setSelectedView}
+                        customFrom={customFrom}
+                        customTo={customTo}
+                        onCustomFromChange={setCustomFrom}
+                        onCustomToChange={setCustomTo}
+                    />
                 </section>
 
                 {/* Header Actions */}
@@ -753,7 +712,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Metrics Row */}
-                <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-2 sm:gap-4 sm:mb-8 lg:grid-cols-4 lg:gap-6">
+                <div className="grid grid-cols-2 gap-2 mb-4 sm:grid-cols-2 sm:gap-4 sm:mb-8 lg:grid-cols-4 lg:gap-6">
                     {loading && !stats ? (
                         <>
                             <Skeleton className="h-[128px] w-full rounded-2xl" />
@@ -763,10 +722,10 @@ export default function AnalyticsPage() {
                         </>
                     ) : (
                         <>
-                            <MetricCard title="Total Team" value={metrics.totalTeam} icon={<Users className="w-5 h-5"/>} color="blue" badge={`+${metrics.clockedIn} Clocked in`} />
-                            <MetricCard title="Total Tasks" value={metrics.totalTasks} icon={<CheckCircle2 className="w-5 h-5"/>} color="primary" subtext={`${metrics.completedTasks} done`} />
-                            <MetricCard title="On-time Completion Rate" value={`${metrics.deadlineCompletionRate}%`} icon={<TrendingUp className="w-5 h-5"/>} color="emerald" subtext={`${metrics.completedTasks} done`} />
-                            <MetricCard title="Active Projects" value={metrics.activeProjects} icon={<Rocket className="w-5 h-5"/>} color="amber" />
+                            <MetricCard title="Total Team" mobileTitle="Team" value={metrics.totalTeam} icon={<Users className="w-5 h-5"/>} color="blue" badge={metrics.clockedIn > 0 ? `${metrics.clockedIn} active` : undefined} />
+                            <MetricCard title="Total Tasks" mobileTitle="Tasks" value={metrics.totalTasks} icon={<CheckCircle2 className="w-5 h-5"/>} color="primary" subtext={`${metrics.completedTasks} done`} />
+                            <MetricCard title="On-time Completion Rate" mobileTitle="On-time rate" value={`${metrics.deadlineCompletionRate}%`} icon={<TrendingUp className="w-5 h-5"/>} color="emerald" subtext={`${metrics.completedTasks} done`} />
+                            <MetricCard title="Active Projects" mobileTitle="Projects" value={metrics.activeProjects} icon={<Rocket className="w-5 h-5"/>} color="amber" />
                         </>
                     )}
                 </div>
@@ -876,7 +835,7 @@ export default function AnalyticsPage() {
 }
 
 // Helper component for cleaner code
-function MetricCard({ title, value, icon, color, badge, subtext }: any) {
+function MetricCard({ title, mobileTitle, value, icon, color, badge, subtext }: any) {
     const colors: any = {
         blue: "bg-blue-500/10 text-blue-600 dark:text-blue-300",
         primary: "bg-primary/10 text-primary",
@@ -884,10 +843,11 @@ function MetricCard({ title, value, icon, color, badge, subtext }: any) {
         amber: "bg-amber-500/10 text-amber-600 dark:text-amber-300"
     };
     return (
-        <Card className="min-w-0 rounded-2xl border-border/70 shadow-sm">
+        <Card className="min-h-[100px] min-w-0 rounded-2xl border-border/70 shadow-sm sm:min-h-0">
             <CardContent className="p-3 sm:p-6">
-                <div className="mb-3 flex min-h-10 items-start justify-between gap-2 sm:mb-4 sm:min-h-0">
-                    <span className="line-clamp-2 text-[11px] font-medium leading-snug text-muted-foreground sm:text-sm">{title}</span>
+                <div className="mb-2 flex items-center justify-between gap-2 sm:mb-4 sm:min-h-0">
+                    <span className="line-clamp-1 text-[11px] font-medium leading-snug text-muted-foreground sm:hidden">{mobileTitle || title}</span>
+                    <span className="hidden line-clamp-2 text-sm font-medium leading-snug text-muted-foreground sm:block">{title}</span>
                     <div className={`shrink-0 rounded-xl p-1.5 sm:p-2 ${colors[color]}`}>{icon}</div>
                 </div>
                 <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">

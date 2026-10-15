@@ -36,6 +36,15 @@ describe('MobileWorkspaceTabBar', () => {
 
     expect(screen.getByRole('link', { name: 'Spaces' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Spaces' })).toHaveAttribute('href', '/workspace/ws1/spaces');
+    expect(screen.getByRole('button', { name: 'More' })).not.toHaveAttribute('aria-current', 'page');
+  });
+
+  it('keeps More selected for destinations outside the primary tabs', () => {
+    navigation.pathname = '/workspace/ws1/quality/cases';
+    render(<MobileWorkspaceTabBar workspaceId="ws1" />);
+
+    expect(screen.getByRole('button', { name: 'More' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Spaces' })).not.toHaveAttribute('aria-current', 'page');
   });
 
   it('keeps Messages active while the group chat view is open', () => {

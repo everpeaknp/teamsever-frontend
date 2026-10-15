@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Hash, User, Circle, Plus, Lock, Settings, Github, Bell, BellOff } from 'lucide-react';
+import { Hash, User, Circle, Plus, Lock, Settings, Github, Bell, BellOff, MessagesSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/axios';
@@ -16,7 +16,7 @@ import { getSocket } from '@/lib/socket';
 interface ChatChannel {
   _id: string;
   name: string;
-  description: string;
+  description?: string;
   type: 'public' | 'private';
   lastMessageAt?: string;
   isDefault?: boolean;
@@ -256,25 +256,40 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
 
   return (
     <div className="w-full bg-card border-r border-border flex flex-col h-full min-w-0 overflow-hidden">
+      <div className="border-b border-border px-4 py-4 md:hidden">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <MessagesSquare className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="font-semibold text-foreground">Group conversations</h2>
+            <p className="text-sm text-muted-foreground">Choose a channel to see messages</p>
+          </div>
+        </div>
+      </div>
       <div className="flex-1 overflow-y-auto overflow-x-hidden chat-scrollbar px-3 md:px-4">
       <div className="space-y-6 py-3 md:py-4">
         
         {/* Public Channels */}
         <div>
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 px-1">
             <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Channels
             </h3>
-            {isAdmin && (
-              <button 
-                className="p-1 hover:bg-accent rounded-md transition-colors text-muted-foreground"
-                onClick={() => setIsModalOpen(true)}
-              >
-                <Plus className="h-3 w-3" />
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">{publicChannels.length}</span>
+              {isAdmin && (
+                <button
+                  aria-label="Create channel"
+                  className="grid h-11 w-11 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-accent md:h-7 md:w-7 md:rounded-md"
+                  onClick={() => setIsModalOpen(true)}
+                >
+                  <Plus className="h-5 w-5 md:h-3.5 md:w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
-          <div className="space-y-0.5">
+          <div className="space-y-1.5 md:space-y-0.5">
             {publicChannels.map((channel) => {
               const unread = channel.isDefault
                 ? (getRoom(`workspace_${workspaceId}`)?.unreadCount || 0)
@@ -292,21 +307,32 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                   role="button"
                   tabIndex={0}
                   className={cn(
-                    'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative group cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    'w-full min-h-[72px] flex items-center gap-3 px-3 py-3 rounded-xl border border-border/70 bg-background text-sm transition-colors relative group cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary md:min-h-0 md:gap-2 md:px-3 md:py-1.5 md:rounded-md md:border-transparent md:bg-transparent',
                     activeChannel === channel._id
-                      ? 'bg-primary text-primary-foreground'
+                      ? 'bg-primary/10 border-primary/30 text-foreground md:bg-primary md:text-primary-foreground'
                       : 'hover:bg-accent text-foreground'
                   )}
                 >
-                  {channel.name === 'Commit Log' ? (
-                    <Github className={cn("h-4 w-4 flex-shrink-0", activeChannel === channel._id ? "text-primary-foreground" : "text-muted-foreground")} />
-                  ) : (
-                    <Hash className={cn("h-4 w-4 flex-shrink-0", activeChannel === channel._id ? "text-primary-foreground" : "text-muted-foreground")} />
-                  )}
-                  <span className="flex-1 text-left truncate font-medium">{channel.name}</span>
+                  <div className={cn(
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-primary md:h-auto md:w-auto md:rounded-none md:bg-transparent',
+                    activeChannel === channel._id ? 'md:text-primary-foreground' : 'md:text-muted-foreground'
+                  )}>
+                    {channel.name === 'Commit Log' ? <Github className="h-5 w-5 md:h-4 md:w-4" /> : <Hash className="h-5 w-5 md:h-4 md:w-4" />}
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="truncate font-semibold">{channel.name}</span>
+                      {unread > 0 && activeChannel !== channel._id && (
+                        <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label={`${unread} unread messages`} />
+                      )}
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground md:hidden">
+                      {channel.description || (channel.name === 'Commit Log' ? 'Recent code changes' : 'Public channel · Workspace-wide conversation')}
+                    </p>
+                  </div>
                   <div className="flex items-center gap-1">
                     {unread > 0 && activeChannel !== channel._id && (
-                      <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
+                      <span className="hidden rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary md:inline-flex">{unread > 99 ? '99+' : unread}</span>
                     )}
                     <button
                       onClick={(e) => {
@@ -337,10 +363,11 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
         {/* Private Groups */}
         {privateChannels.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Private Groups
-            </h3>
-            <div className="space-y-0.5">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Private Groups</h3>
+              <span className="text-xs text-muted-foreground">{privateChannels.length}</span>
+            </div>
+            <div className="space-y-1.5 md:space-y-0.5">
               {privateChannels.map((channel) => {
                 const unread = getRoom(`channel_${channel._id}`)?.unreadCount || 0;
                 return (
@@ -356,18 +383,31 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
                     role="button"
                     tabIndex={0}
                     className={cn(
-                      'w-full flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors relative group cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                      'w-full min-h-[72px] flex items-center gap-3 px-3 py-3 rounded-xl border border-border/70 bg-background text-sm transition-colors relative group cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary md:min-h-0 md:gap-2 md:px-3 md:py-1.5 md:rounded-md md:border-transparent md:bg-transparent',
                       activeChannel === channel._id
-                        ? 'bg-primary text-primary-foreground'
+                        ? 'bg-primary/10 border-primary/30 text-foreground md:bg-primary md:text-primary-foreground'
                         : 'hover:bg-accent text-foreground'
                     )}
                   >
-                    <Lock className={cn("h-4 w-4 flex-shrink-0", activeChannel === channel._id ? "text-primary-foreground" : "text-muted-foreground")} />
-                    <span className="flex-1 text-left truncate font-medium">{channel.name}</span>
+                    <div className={cn(
+                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-primary md:h-auto md:w-auto md:rounded-none md:bg-transparent',
+                      activeChannel === channel._id ? 'md:text-primary-foreground' : 'md:text-muted-foreground'
+                    )}>
+                      <Lock className="h-5 w-5 md:h-4 md:w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1 text-left">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="truncate font-semibold">{channel.name}</span>
+                        {unread > 0 && activeChannel !== channel._id && (
+                          <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label={`${unread} unread messages`} />
+                        )}
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground md:hidden">
+                        {channel.description || 'Private group · Invited members only'}
+                      </p>
+                    </div>
                     <div className="flex items-center gap-1">
-                      {unread > 0 && activeChannel !== channel._id && (
-                        <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0" />
-                      )}
+                      {unread > 0 && activeChannel !== channel._id && <span className="hidden rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary md:inline-flex">{unread > 99 ? '99+' : unread}</span>}
                       <button
                         onClick={(e) => {
                           e.preventDefault();
@@ -396,7 +436,7 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
         )}
 
         {/* Direct Messages */}
-        <div>
+        <div className="hidden md:block">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             Direct Messages
           </h3>

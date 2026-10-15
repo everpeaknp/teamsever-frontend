@@ -764,13 +764,13 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           <h2 className="text-base md:text-lg font-bold text-foreground truncate">{title}</h2>
           
           {isCommitLog && (
-            <div className="flex items-center gap-1 ml-4 bg-muted/20 p-1 rounded-lg border border-border/30 overflow-x-auto no-scrollbar">
+            <div className="ml-2 flex min-w-0 max-w-full items-center gap-1 rounded-lg border border-border/30 bg-muted/20 p-1 overflow-x-auto no-scrollbar sm:ml-4">
               {(['all', 'today', 'yesterday', '7days', 'week'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setDateFilter(f)}
                   className={cn(
-                    "px-2.5 py-1 text-[11px] font-medium rounded-md transition-all whitespace-nowrap",
+                    "min-h-11 px-3 py-2 text-xs font-medium rounded-md transition-all whitespace-nowrap md:min-h-0 md:px-2.5 md:py-1 md:text-[11px]",
                     dateFilter === f 
                       ? "bg-background text-primary shadow-sm" 
                       : "text-muted-foreground hover:text-foreground hover:bg-background/40"
@@ -805,13 +805,13 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                 <PopoverTrigger asChild>
                   <button
                     className={cn(
-                      "px-2.5 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap",
+                      "min-h-11 px-3 py-2 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap md:min-h-0 md:px-2.5 md:py-1 md:text-[11px]",
                       filterUserId !== 'all' 
                         ? "bg-background text-primary shadow-sm" 
                         : "text-muted-foreground hover:text-foreground hover:bg-background/40"
                     )}
                   >
-                    <User className="w-3 h-3" />
+                    <User className="h-4 w-4 md:h-3 md:w-3" />
                     {filterUserId === 'all' ? 'Users' : workspaceMembers.find(m => (m.user?._id || m.user) === filterUserId)?.user?.name || 'User'}
                   </button>
                 </PopoverTrigger>
@@ -856,13 +856,13 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                 <PopoverTrigger asChild>
                   <button
                     className={cn(
-                      "px-2.5 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap",
+                      "min-h-11 px-3 py-2 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap md:min-h-0 md:px-2.5 md:py-1 md:text-[11px]",
                       filterFolderId !== 'all' 
                         ? "bg-background text-primary shadow-sm" 
                         : "text-muted-foreground hover:text-foreground hover:bg-background/40"
                     )}
                   >
-                    <Folder className="w-3 h-3" />
+                    <Folder className="h-4 w-4 md:h-3 md:w-3" />
                     {filterFolderId === 'all' ? 'Folders' : workspaceFolders.find(f => f._id === filterFolderId)?.name || 'Folder'}
                   </button>
                 </PopoverTrigger>
@@ -903,13 +903,13 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                 <PopoverTrigger asChild>
                   <button
                     className={cn(
-                      "px-2.5 py-1 text-[11px] font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap",
+                      "min-h-11 px-3 py-2 text-xs font-medium rounded-md transition-all flex items-center gap-1.5 whitespace-nowrap md:min-h-0 md:px-2.5 md:py-1 md:text-[11px]",
                       filterSpaceName !== 'all' 
                         ? "bg-background text-primary shadow-sm" 
                         : "text-muted-foreground hover:text-foreground hover:bg-background/40"
                     )}
                   >
-                    <Folder className="w-3 h-3" />
+                    <Folder className="h-4 w-4 md:h-3 md:w-3" />
                     {filterSpaceName === 'all' ? 'Spaces' : filterSpaceName}
                   </button>
                 </PopoverTrigger>

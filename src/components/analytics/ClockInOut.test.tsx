@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ClockInOut } from './ClockInOut';
 
 const { get, post, toastError, toastSuccess, toastWarning, desktopToggle, provision, consent } = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), toastError: vi.fn(), toastSuccess: vi.fn(), toastWarning: vi.fn(), desktopToggle: vi.fn(), provision: vi.fn(), consent: vi.fn() }));
@@ -7,15 +7,63 @@ vi.mock('@/lib/axios', () => ({ api: { get, post } }));
 vi.mock('sonner', () => ({ toast: { error: toastError, success: toastSuccess, warning: toastWarning } }));
 vi.mock('@/lib/desktopAttendance', () => ({ ensureTrustedDesktopDevice: provision, setDesktopActivityConsent: consent, disconnectDesktopDevice: vi.fn() }));
 
+const findMobileClockButton = (name: string) =>
+  within(screen.getByTestId('mobile-clock-summary')).findByRole('button', { name });
+const getMobileClockButton = (name: string) =>
+  within(screen.getByTestId('mobile-clock-summary')).getByRole('button', { name });
+
 describe('ClockInOut location enforcement', () => {
   beforeEach(() => { vi.clearAllMocks(); delete (window as any).teamseverDesktop; get.mockResolvedValue({ data: { data: { policy: { enabled: true } } } }); });
+
+  it('keeps mobile location guidance brief and expandable', async () => {
+    render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
+
+    const detailsButton = await screen.findByRole('button', { name: 'Shift details' });
+
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText(/Keep the Attendance page open during your shift/i)).not.toBeInTheDocument();
+    fireEvent.click(detailsButton);
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(/Keep the Attendance page open during your shift/i)).toBeInTheDocument();
+  });
+
+  it('shows a minimal mobile summary and tucks punch times into shift details', async () => {
+    localStorage.setItem('userId', 'test-user');
+    const { container } = render(
+      <ClockInOut
+        workspaceId="workspace-1"
+        currentStatus="inactive"
+        runningTimer={null}
+        timeTrackingSummary={{
+          todayTracked: '3h 20m',
+          weekTracked: '12h 40m',
+          weekProgressPercent: 32,
+          lastCheckIn: '2026-10-14T01:57:00.000Z',
+          lastCheckOut: '2026-10-14T10:03:00.000Z',
+        }}
+        onStatusChange={vi.fn()}
+      />
+    );
+
+    const mobileSummary = container.querySelector('[data-testid="mobile-clock-summary"]');
+    expect(mobileSummary).not.toBeNull();
+    expect(within(mobileSummary as HTMLElement).getByText('Today')).toBeInTheDocument();
+    expect(within(mobileSummary as HTMLElement).getByText('This week')).toBeInTheDocument();
+    expect(await within(mobileSummary as HTMLElement).findByText('3h 20m')).toBeInTheDocument();
+    const detailsButton = screen.getByRole('button', { name: 'Shift details' });
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
+    expect(detailsButton.querySelector('svg')).toBeInTheDocument();
+    fireEvent.click(detailsButton);
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
+    expect(within(mobileSummary as HTMLElement).getByText('Last check-in')).toBeInTheDocument();
+  });
 
   it('sends a fresh location and does not show clock-in success when the server rejects it', async () => {
     Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
     Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition: (success: Function) => { success({ coords: { latitude: 40, longitude: -74, accuracy: 12 }, timestamp: Date.now() }); return 1; }, clearWatch: vi.fn() } });
     post.mockRejectedValue({ response: { status: 403, data: { message: 'You are outside your allowed attendance area' } } });
     render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
+    fireEvent.click(await findMobileClockButton('Clock In'));
     await waitFor(() => expect(post).toHaveBeenCalled());
     expect(post.mock.calls[0][1].locationFix).toMatchObject({ latitude: 40, longitude: -74, accuracyMeters: 12 });
     await waitFor(() => expect(screen.getByText('CLOCKED OUT')).toBeInTheDocument());
@@ -26,7 +74,7 @@ describe('ClockInOut location enforcement', () => {
     Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
     Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition: (_success: Function, failure: Function) => { failure(new Error('denied')); return 2; }, clearWatch: vi.fn() } });
     render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
+    fireEvent.click(await findMobileClockButton('Clock In'));
     await waitFor(() => expect(toastError).toHaveBeenCalledWith(expect.stringContaining('permission was denied')));
     expect(post).not.toHaveBeenCalled();
     expect(screen.getByText('CLOCKED OUT')).toBeInTheDocument();
@@ -39,7 +87,7 @@ describe('ClockInOut location enforcement', () => {
     Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition: (success: Function, failure: Function) => { success({ coords: { latitude: 28.2, longitude: 83.9, accuracy: 420 }, timestamp: Date.now() }); failure(new Error('provider finished')); return 3; }, clearWatch: vi.fn() } });
     render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
+    fireEvent.click(await findMobileClockButton('Clock In'));
 
     await waitFor(() => expect(post).toHaveBeenCalledWith('/workspaces/workspace-1/clock/toggle', {
       status: 'active', locationFix: expect.objectContaining({ accuracyMeters: 420 }),
@@ -55,7 +103,7 @@ describe('ClockInOut location enforcement', () => {
     post.mockResolvedValue({ data: { success: true, data: { timeEntry: { startTime: new Date().toISOString() } } } });
     render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clock In' }));
+    fireEvent.click(getMobileClockButton('Clock In'));
 
     await waitFor(() => expect(post).toHaveBeenCalledWith('/workspaces/workspace-1/clock/toggle', { status: 'active' }));
     expect(get).toHaveBeenCalledTimes(2);
@@ -68,7 +116,7 @@ describe('ClockInOut location enforcement', () => {
     Object.defineProperty(window, 'isSecureContext', { configurable: true, value: true });
     Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition: (success: Function) => { success({ coords: { latitude: 40.0001, longitude: -74, accuracy: 12 }, timestamp: Date.now() }); return 4; }, clearWatch: vi.fn() } });
     render(<ClockInOut workspaceId="workspace-1" currentStatus="active" runningTimer={{ startTime: new Date().toISOString() }} onStatusChange={vi.fn()} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Clock Out' }));
+    fireEvent.click(await findMobileClockButton('Clock Out'));
     await waitFor(() => expect(post).toHaveBeenCalledWith('/workspaces/workspace-1/clock/toggle', { status: 'inactive', locationFix: expect.objectContaining({ latitude: 40.0001 }) }));
   });
 
@@ -78,7 +126,7 @@ describe('ClockInOut location enforcement', () => {
     Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition: (_success: Function, failure: Function) => { failure(new Error('denied')); return 5; }, clearWatch: vi.fn() } });
     render(<ClockInOut workspaceId="workspace-1" currentStatus="active" runningTimer={{ startTime: new Date().toISOString() }} onStatusChange={vi.fn()} />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Clock Out' }));
+    fireEvent.click(await findMobileClockButton('Clock Out'));
 
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('Clock-out is blocked because your location could not be verified. Allow location access and retry, or ask a workspace admin to stop your shift as an exception.'));
     expect(post).not.toHaveBeenCalled();
@@ -92,7 +140,7 @@ describe('ClockInOut location enforcement', () => {
     Object.defineProperty(window, 'confirm', { configurable: true, value: vi.fn(() => true) });
     Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: { toggleClock: desktopToggle, getStatus: vi.fn().mockResolvedValue({ activityMonitoringEnabled: false }) } });
     render(<ClockInOut workspaceId="0123456789abcdef01234567" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
+    fireEvent.click(await findMobileClockButton('Clock In'));
     await waitFor(() => expect(desktopToggle).toHaveBeenCalledWith({ workspaceId: '0123456789abcdef01234567', status: 'active' }));
     expect(consent).toHaveBeenCalledWith('device-1', true);
     expect(screen.queryByLabelText(/Share app and active\/AFK presence/)).not.toBeInTheDocument();
@@ -108,7 +156,7 @@ describe('ClockInOut location enforcement', () => {
     Object.defineProperty(window, 'confirm', { configurable: true, value: vi.fn(() => false) });
     Object.defineProperty(window, 'teamseverDesktop', { configurable: true, value: { toggleClock: desktopToggle, getStatus: vi.fn().mockResolvedValue({ activityMonitoringEnabled: false }) } });
     render(<ClockInOut workspaceId="0123456789abcdef01234567" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Clock In' }));
+    fireEvent.click(await findMobileClockButton('Clock In'));
     await waitFor(() => expect(desktopToggle).toHaveBeenCalledWith({ workspaceId: '0123456789abcdef01234567', status: 'active' }));
     expect(consent).toHaveBeenCalledWith('device-1', false);
     delete (window as any).teamseverDesktop;

@@ -5,6 +5,10 @@
  */
 
 import { useAuthStore } from '@/store/useAuthStore';
+import {
+  QUALITY_PERMISSION_ACTIONS,
+  type QualityPermissionAction,
+} from '@/lib/permissions/qualityPermissions';
 import { useMemo } from 'react';
 
 /**
@@ -26,6 +30,7 @@ export type ListPermissionLevel = "FULL" | "EDIT" | "COMMENT" | "VIEW";
  * All possible permission actions (must match backend)
  */
 export type PermissionAction =
+  | QualityPermissionAction
   // Workspace actions
   | "DELETE_WORKSPACE"
   | "UPDATE_WORKSPACE"
@@ -418,6 +423,7 @@ const ROLE_PERMISSIONS: Record<string, PermissionAction[]> = {
   ],
 
   QA: [
+    ...QUALITY_PERMISSION_ACTIONS,
     // Workspace
     "VIEW_WORKSPACE",
     "LEAVE_WORKSPACE",

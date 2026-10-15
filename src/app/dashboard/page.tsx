@@ -367,12 +367,12 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="bg-card border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold text-foreground">Teamsever</h1>
-              <p className="text-sm text-muted-foreground">Welcome back, {userName}</p>
+              <p className="text-sm text-muted-foreground truncate">Welcome back, {userName}</p>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center justify-between gap-2 sm:justify-start sm:gap-3">
               {/* Currency Switcher */}
               <CurrencySwitcherCompact />
 
@@ -592,14 +592,14 @@ export default function DashboardPage() {
         </Card>
 
         {/* Workspace Section Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-xl font-semibold">Your Workspaces</h3>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => { setShowInviteCodeModal(true); setRedeemError(null); setRedeemSuccess(null); setInviteCode(''); }}>
+          <div className="grid w-full grid-cols-1 min-[420px]:grid-cols-2 gap-2 sm:w-auto">
+            <Button className="w-full" variant="outline" onClick={() => { setShowInviteCodeModal(true); setRedeemError(null); setRedeemSuccess(null); setInviteCode(''); }}>
               <Key className="w-4 h-4 mr-2" />
               Join Workspace
             </Button>
-            <Button onClick={() => setShowCreateModal(true)}>
+            <Button className="w-full" onClick={() => setShowCreateModal(true)}>
               <Plus className="w-4 h-4 mr-2" />
               New Workspace
             </Button>

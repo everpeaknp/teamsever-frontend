@@ -37,6 +37,7 @@ export function MobileSidebar({
           variant="ghost"
           size={isBottomTab ? 'default' : 'icon'}
           aria-label={isBottomTab ? 'More' : 'Open navigation menu'}
+          aria-current={isBottomTab && active ? 'page' : undefined}
           className={cn(
             'lg:hidden text-muted-foreground hover:text-foreground hover:bg-accent',
             isBottomTab

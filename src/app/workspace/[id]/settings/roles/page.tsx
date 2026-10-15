@@ -61,6 +61,7 @@ import { ICustomRole } from '@/types/pro-features';
 import { TableSkeleton } from '@/components/skeletons/PageSkeleton';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { applyPermissionGroupSelection, getPermissionGroupToggleTargets } from '@/lib/permissionGroupSelection';
+import { QUALITY_PERMISSION_ACTIONS } from '@/lib/permissions/qualityPermissions';
 
 interface PermissionCatalogItem {
   key: string;
@@ -337,6 +338,7 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'VIEW_ANNOUNCEMENT',
   ],
   qa: [
+    ...QUALITY_PERMISSION_ACTIONS,
     'VIEW_WORKSPACE',
     'LEAVE_WORKSPACE',
     'VIEW_SPACE',
@@ -1693,7 +1695,7 @@ export default function RolesPage() {
 
           <div className="space-y-6 p-6">
             <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-              <div className="space-y-4">
+              <div className="min-w-0 space-y-4">
                 <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
                   <div className="space-y-2">
                     <Label>Select Member</Label>
@@ -1772,43 +1774,45 @@ export default function RolesPage() {
                 </div>
               </div>
 
-              <div className="mb-4 flex flex-wrap items-center gap-2 rounded-2xl border border-orange-500/20 bg-orange-500/5 px-4 py-3">
-                <span className="text-sm text-muted-foreground">Editing permissions for</span>
-                <span className="font-semibold text-foreground">{selectedMember?.name || 'Select a member'}</span>
-                {selectedMember ? (
-                  <Badge variant="outline" className="rounded-full border-orange-500/30 text-orange-700 dark:text-orange-300">
-                    {prettifyRole(selectedMember.role)}
-                  </Badge>
-                ) : null}
-                {selectedMember?.customRole && typeof selectedMember.customRole === 'object' ? (
-                  <Badge className="rounded-full bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300">
-                    {selectedMember.customRole.name || selectedMember.customRole.label || 'Custom role'}
-                  </Badge>
-                ) : null}
-              </div>
-
-              {loadingMemberPermissions ? (
-                <div className="flex min-h-[240px] items-center justify-center rounded-3xl border border-border bg-card">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <div className="min-w-0 space-y-4">
+                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-orange-500/20 bg-orange-500/5 px-4 py-3">
+                  <span className="text-sm text-muted-foreground">Editing permissions for</span>
+                  <span className="font-semibold text-foreground">{selectedMember?.name || 'Select a member'}</span>
+                  {selectedMember ? (
+                    <Badge variant="outline" className="rounded-full border-orange-500/30 text-orange-700 dark:text-orange-300">
+                      {prettifyRole(selectedMember.role)}
+                    </Badge>
+                  ) : null}
+                  {selectedMember?.customRole && typeof selectedMember.customRole === 'object' ? (
+                    <Badge className="rounded-full bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300">
+                      {selectedMember.customRole.name || selectedMember.customRole.label || 'Custom role'}
+                    </Badge>
+                  ) : null}
                 </div>
-              ) : (
-                <PermissionPicker
-                  groupedPermissions={groupedPermissions}
-                  selectedPermissions={memberAdditionalPermissions}
-                  togglePermission={(permId) => togglePermissions(memberAdditionalPermissions, setMemberAdditionalPermissions, permId)}
-                  setPermissionGroup={(keys, checked) => setMemberAdditionalPermissions((prev) => applyPermissionGroupSelection(prev, keys, checked, LEGACY_PERMISSION_ALIASES))}
-                  isPermissionSelected={(permId) => isPermissionSelected(permId, memberAdditionalPermissions)}
-                  permissionSearch={memberPermissionSearch}
-                  setPermissionSearch={setMemberPermissionSearch}
-                  lockedPermissions={selectedMemberBasePermissions}
-                  restrictedPermissions={memberRestrictedPermissions}
-                  allowRestrictInherited
-                  toggleRestrictedPermission={(permId) => togglePermissions(memberRestrictedPermissions, setMemberRestrictedPermissions, permId)}
-                  getPermissionMeta={getMemberPermissionMeta}
-                  title="Member Overrides"
-                  description="Inherited permissions can be turned off for this one member. Uninherited permissions can be added on top."
-                />
-              )}
+
+                {loadingMemberPermissions ? (
+                  <div className="flex min-h-[240px] items-center justify-center rounded-3xl border border-border bg-card">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <PermissionPicker
+                    groupedPermissions={groupedPermissions}
+                    selectedPermissions={memberAdditionalPermissions}
+                    togglePermission={(permId) => togglePermissions(memberAdditionalPermissions, setMemberAdditionalPermissions, permId)}
+                    setPermissionGroup={(keys, checked) => setMemberAdditionalPermissions((prev) => applyPermissionGroupSelection(prev, keys, checked, LEGACY_PERMISSION_ALIASES))}
+                    isPermissionSelected={(permId) => isPermissionSelected(permId, memberAdditionalPermissions)}
+                    permissionSearch={memberPermissionSearch}
+                    setPermissionSearch={setMemberPermissionSearch}
+                    lockedPermissions={selectedMemberBasePermissions}
+                    restrictedPermissions={memberRestrictedPermissions}
+                    allowRestrictInherited
+                    toggleRestrictedPermission={(permId) => togglePermissions(memberRestrictedPermissions, setMemberRestrictedPermissions, permId)}
+                    getPermissionMeta={getMemberPermissionMeta}
+                    title="Member Overrides"
+                    description="Inherited permissions can be turned off for this one member. Uninherited permissions can be added on top."
+                  />
+                )}
+              </div>
             </div>
 
             {selectedMember ? (
