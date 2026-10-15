@@ -34,7 +34,6 @@ export default function SystemSettings() {
         setSettings(response.data.data);
       }
     } catch (error) {
-      console.error("Error fetching settings:", error);
       toast.error("Failed to load system settings");
     } finally {
       setLoading(false);
@@ -56,7 +55,6 @@ export default function SystemSettings() {
         }));
       }
     } catch (error) {
-      console.error("Error updating settings:", error);
       toast.error("Failed to update system settings");
     } finally {
       setSaving(false);

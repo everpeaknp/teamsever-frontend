@@ -27,7 +27,6 @@ const messaging = firebase.messaging();
 
 // Handle background messages
 messaging.onBackgroundMessage((payload) => {
-  console.log('[firebase-messaging-sw.js] Received background message ', payload);
 
   const data = payload?.data || {};
   const rawType = String(data?.type || '').toUpperCase();

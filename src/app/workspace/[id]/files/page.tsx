@@ -173,7 +173,6 @@ export default function FilesPage() {
       // Hierarchy returns an object { spaces: [...] }. We need to extract spaces array.
       setSpaces(response.data.data?.spaces || []);
     } catch (error) {
-      console.error('Failed to fetch spaces:', error);
     }
   };
 
@@ -190,7 +189,6 @@ export default function FilesPage() {
       });
       setFiles(response.data.data || []);
     } catch (error: any) {
-      console.error('Failed to fetch files:', error);
       toast.error(error.response?.data?.message || 'Failed to load files');
     } finally {
       setLoading(false);
@@ -225,21 +223,17 @@ export default function FilesPage() {
       setUploading(true);
       setUploadProgress(0);
 
-      console.log('[FileUpload] Starting upload for:', file.name);
 
       // Step 1: Get upload signature
-      console.log('[FileUpload] Step 1: Getting upload signature...');
       const signatureRes = await api.post(
         `/workspaces/${workspaceId}/files/init-upload`
       );
       const { signature, timestamp, cloudName, apiKey, folder } =
         signatureRes.data.data;
 
-      console.log('[FileUpload] Signature received:', { cloudName, folder });
       setUploadProgress(20);
 
       // Step 2: Upload to Cloudinary
-      console.log('[FileUpload] Step 2: Uploading to Cloudinary...');
       const formData = new FormData();
       formData.append('file', file);
       formData.append('signature', signature);
@@ -262,16 +256,13 @@ export default function FilesPage() {
 
       if (!cloudinaryRes.ok) {
         const errorData = await cloudinaryRes.json();
-        console.error('[FileUpload] Cloudinary error:', errorData);
         throw new Error(errorData.error?.message || 'Failed to upload to Cloudinary');
       }
 
       const cloudinaryData = await cloudinaryRes.json();
-      console.log('[FileUpload] Cloudinary upload successful:', cloudinaryData.public_id);
       setUploadProgress(70);
 
       // Step 3: Confirm upload
-      console.log('[FileUpload] Step 3: Confirming upload with backend...');
       const fileExt = file.name.split('.').pop() || 'raw';
       
       await api.post(`/workspaces/${workspaceId}/files/confirm`, {
@@ -285,12 +276,10 @@ export default function FilesPage() {
         spaceId: activeSpaceId, // Upload to the current active space
       });
 
-      console.log('[FileUpload] Upload complete!');
       setUploadProgress(100);
       toast.success('File uploaded successfully');
       fetchFiles();
     } catch (error: any) {
-      console.error('[FileUpload] Upload failed:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to upload file';
       toast.error(errorMessage);
     } finally {
@@ -311,7 +300,6 @@ export default function FilesPage() {
       setFileToDelete(null);
       fetchFiles();
     } catch (error: any) {
-      console.error('Delete failed:', error);
       toast.error(error.response?.data?.message || 'Failed to delete file');
     } finally {
       setDeleting(false);
@@ -344,7 +332,6 @@ export default function FilesPage() {
       setSelectedFileIds([]);
       fetchFiles();
     } catch (error: any) {
-      console.error('Batch delete failed:', error);
       toast.error('Failed to delete some files. You might not have permission.');
     } finally {
       setDeleting(false);
@@ -377,7 +364,6 @@ export default function FilesPage() {
           setTextContent('Failed to load file content.');
         }
       } catch (error) {
-        console.error('Failed to fetch text content:', error);
         setTextContent('Error loading file content. This might be due to CORS restrictions on your browser.');
       } finally {
         setLoadingText(false);

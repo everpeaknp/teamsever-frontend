@@ -151,17 +151,14 @@ export default function ListView() {
   const fetchData = async (fetchKey?: string) => {
     // Guard checks BEFORE any async operations
     if (!listId) {
-      console.error('[ListPage] listId is null or undefined!');
       return;
     }
 
     if (!spaceId) {
-      console.error('[ListPage] spaceId is null or undefined!');
       return;
     }
 
     if (!workspaceId) {
-      console.error('[ListPage] workspaceId is null or undefined!');
       return;
     }
 
@@ -260,7 +257,6 @@ export default function ListView() {
           setListPermissionLevel(null);
         }
       } catch (error) {
-        console.error('Failed to fetch list members:', error);
         setIsListMember(false);
         setListPermissionLevel(null);
         setListMembers([]);
@@ -331,7 +327,6 @@ export default function ListView() {
 
       await taskLoad;
     } catch (error: any) {
-      console.error('Failed to fetch data:', error);
 
       const status = error?.response?.status;
       const failedUrl = String(error?.config?.url || '');
@@ -459,7 +454,6 @@ export default function ListView() {
       }
     } catch (error) {
       // Error toast is already handled in the store
-      console.error('[CreateTask] Error:', error);
     }
   };
 

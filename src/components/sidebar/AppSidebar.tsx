@@ -205,7 +205,6 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
     if (total > 0 && typeof window !== 'undefined') {
       // @ts-ignore
       if (!window._loggedRooms) {
-        console.log('[AppSidebar] Current unread DM rooms:', filteredRooms.map(r => ({ id: r.roomId, count: r.unreadCount })));
         // @ts-ignore
         window._loggedRooms = true;
       }
@@ -271,7 +270,6 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
               setWorkspaceMembers(members);
             }
           } catch (error) {
-            console.error('[AppSidebar] Failed to fetch workspace members:', error);
           }
         }
         
@@ -330,7 +328,6 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
             });
           }
         } catch (error) {
-          console.error('[AppSidebar] Failed to sync inbox unread:', error);
         }
 
         // 2. Sync Workspace Group Chat
@@ -356,7 +353,6 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
               });
             }
           } catch (error) {
-            console.error('[AppSidebar] Failed to sync group chat unread:', error);
           }
         }
 
@@ -369,12 +365,10 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
             setUnreadCount(unread);
             setNotificationHydrated(true);
           } catch (error) {
-            console.error('[AppSidebar] Failed to sync notifications unread:', error);
             setNotificationHydrated(true);
           }
         }
       } catch (error) {
-        console.error('[AppSidebar] Failed to outer sync unread counts:', error);
       }
     };
 
@@ -391,7 +385,6 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
       const response = await api.get('/workspaces');
       setAllWorkspaces(response.data.data || []);
     } catch (error) {
-      console.error('Failed to fetch workspaces:', error);
     }
   };
 
@@ -411,7 +404,6 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
     if (!getValidAuthToken()) return;
 
     if (!/^[0-9a-fA-F]{24}$/.test(workspaceId)) {
-      console.error('Invalid workspace ID format:', workspaceId);
       return;
     }
 
@@ -534,13 +526,11 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
           const newSpaceIds = spaceIds.filter(id => !expandedIds.includes(id));
           if (newSpaceIds.length > 0) {
             useUIStore.getState().expandAll(newSpaceIds);
-            console.log('[AppSidebar] Auto-expanded spaces:', newSpaceIds);
           }
         }
       }
     } catch (err: any) {
       if (err.response?.status !== 401 && err.message !== 'No valid authentication token') {
-        console.error('Failed to load hierarchy:', err);
       }
       
       if (err.response?.status === 404) {

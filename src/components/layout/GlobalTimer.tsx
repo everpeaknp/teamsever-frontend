@@ -59,7 +59,6 @@ export default function GlobalTimer() {
       await api.post(`/tasks/${activeTaskId}/time/stop`);
       stopTimer();
     } catch (error: any) {
-      console.error('Failed to stop timer:', error);
       alert(error.response?.data?.message || 'Failed to stop timer');
     } finally {
       setIsStopping(false);

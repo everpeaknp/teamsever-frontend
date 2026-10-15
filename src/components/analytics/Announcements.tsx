@@ -44,7 +44,6 @@ export function Announcements({
       const res = await api.get(`/v2/workspaces/${workspaceId}/analytics/announcements?page=1&limit=20`);
       setAnnouncements(res.data?.data?.items || []);
     } catch (error) {
-      console.error('Failed to fetch announcements:', error);
       toast.error('Failed to load announcements');
     }
   };
@@ -62,7 +61,6 @@ export function Announcements({
       toast.success('Announcement posted');
       fetchAnnouncements();
     } catch (error: any) {
-      console.error('Failed to post announcement:', error);
       toast.error(error.response?.data?.message || 'Failed to post announcement');
     } finally {
       setLoading(false);
@@ -75,7 +73,6 @@ export function Announcements({
       toast.success('Announcement deleted');
       fetchAnnouncements();
     } catch (error: any) {
-      console.error('Failed to delete announcement:', error);
       toast.error(error.response?.data?.message || 'Failed to delete announcement');
     }
   };

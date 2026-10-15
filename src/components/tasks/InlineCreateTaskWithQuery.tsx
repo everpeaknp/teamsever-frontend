@@ -96,7 +96,6 @@ export default function InlineCreateTaskWithQuery({
       if (context?.previousTasks) {
         queryClient.setQueryData(queryKey, context.previousTasks);
       }
-      console.error('Failed to create task:', err);
       
       // Show user-friendly error message
       if (err.response?.data?.code === 'TASK_LIMIT_REACHED') {

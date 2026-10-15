@@ -50,7 +50,6 @@ export default function PlanBuilderNew() {
         toast.error("Failed to fetch plans");
       }
     } catch (error) {
-      console.error("Error fetching plans:", error);
       toast.error("Error loading plans");
     } finally {
       setLoading(false);
@@ -79,7 +78,6 @@ export default function PlanBuilderNew() {
         toast.error(data.message || "Failed to delete plan");
       }
     } catch (error) {
-      console.error("Error deleting plan:", error);
       toast.error("Error deleting plan");
     }
   };

@@ -127,7 +127,6 @@ export default function PricingPage() {
       const sortedPlans = response.data.data.sort((a: Plan, b: Plan) => a.price - b.price);
       setPlans(sortedPlans);
     } catch (error) {
-      console.error('Failed to fetch plans:', error);
       toast.error('Failed to load plans');
     } finally {
       setLoading(false);

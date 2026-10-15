@@ -36,11 +36,9 @@ interface AuthResponse {
  * Handles both flat and nested response structures
  */
 function normalizeAuthResponse(data: any): AuthResponse {
-  console.log('🔍 Normalizing auth response:', data);
   
   // Format 1: { token, user: { _id, name, email } } - Current login format
   if (data.token && data.user) {
-    console.log('✅ Format 1 detected: token + user object');
     return {
       token: data.token,
       user: {
@@ -57,7 +55,6 @@ function normalizeAuthResponse(data: any): AuthResponse {
 
   // Format 2: { _id, name, email, token } - Old register format
   if (data.token && data._id && data.name && data.email) {
-    console.log('✅ Format 2 detected: flat structure');
     return {
       token: data.token,
       user: {
@@ -70,12 +67,10 @@ function normalizeAuthResponse(data: any): AuthResponse {
 
   // Format 3: Nested in data property
   if (data.data) {
-    console.log('✅ Format 3 detected: nested in data property');
     return normalizeAuthResponse(data.data);
   }
 
   // If we can't normalize, throw error
-  console.error('❌ Could not normalize auth response. Data:', data);
   throw new Error('Invalid auth response format');
 }
 
@@ -169,7 +164,6 @@ export async function register(name: string, email: string, password: string): P
     const authData = normalizeAuthResponse(response.data);
     storeAuthData(authData);
   } catch (error: any) {
-    console.error('Registration error:', error);
     throw new Error(error.response?.data?.message || 'Registration failed');
   }
 }
@@ -179,19 +173,12 @@ export async function register(name: string, email: string, password: string): P
  */
 export async function login(email: string, password: string): Promise<void> {
   try {
-    console.log('🔐 Attempting login...');
     const response = await api.post('/auth/login', { email, password });
-    console.log('✅ Login response received:', response.data);
     
     const authData = normalizeAuthResponse(response.data);
-    console.log('✅ Auth data normalized:', authData);
     
     storeAuthData(authData);
-    console.log('✅ Auth data stored in localStorage');
   } catch (error: any) {
-    console.error('❌ Login error:', error);
-    console.error('❌ Error response:', error.response?.data);
-    console.error('❌ Error status:', error.response?.status);
     throw new Error(error.response?.data?.message || 'Login failed');
   }
 }
@@ -201,24 +188,13 @@ export async function login(email: string, password: string): Promise<void> {
  */
 export async function loginWithGoogle(idToken: string): Promise<void> {
   try {
-    console.log('🔐 Attempting Google login...');
-    console.log('📝 ID Token length:', idToken.length);
-    console.log('📝 ID Token preview:', idToken.substring(0, 50) + '...');
     
     const response = await api.post('/auth/google', { idToken });
-    console.log('✅ Google login response received:', response.data);
     
     const authData = normalizeAuthResponse(response.data);
-    console.log('✅ Auth data normalized:', authData);
     
     storeAuthData(authData);
-    console.log('✅ Auth data stored in localStorage');
   } catch (error: any) {
-    console.error('❌ Google login error:', error);
-    console.error('❌ Error response:', error.response?.data);
-    console.error('❌ Error status:', error.response?.status);
-    console.error('❌ Error message:', error.response?.data?.message);
-    console.error('❌ Full error object:', JSON.stringify(error.response?.data, null, 2));
     
     // Show the actual backend error message
     const backendMessage = error.response?.data?.message || error.response?.data?.error || 'Google login failed';
@@ -231,13 +207,10 @@ export async function loginWithGoogle(idToken: string): Promise<void> {
  */
 export async function loginWithGithub(idToken: string): Promise<void> {
   try {
-    console.log('🔐 Attempting GitHub login...');
     const response = await api.post('/auth/github', { idToken });
     const authData = normalizeAuthResponse(response.data);
     storeAuthData(authData);
-    console.log('✅ GitHub login success');
   } catch (error: any) {
-    console.error('❌ GitHub login error:', error);
     const backendMessage = error.response?.data?.message || 'GitHub login failed';
     throw new Error(backendMessage);
   }
@@ -251,9 +224,7 @@ export async function loginWithApple(idToken: string): Promise<void> {
     const response = await api.post('/auth/apple', { idToken });
     const authData = normalizeAuthResponse(response.data);
     storeAuthData(authData);
-    console.log('✅ Apple login success');
   } catch (error: any) {
-    console.error('❌ Apple login error:', error);
     const backendMessage = error.response?.data?.message || 'Apple login failed';
     throw new Error(backendMessage);
   }

@@ -58,7 +58,6 @@ export function EditChannelModal({ isOpen, onClose, workspaceId, channelId, onSu
             setMembers(membersRes.data.data || []);
           }
         } catch (err) {
-          console.error('Failed to fetch data for edit:', err);
           toast.error('Failed to load channel data');
         } finally {
           setFetchingData(false);

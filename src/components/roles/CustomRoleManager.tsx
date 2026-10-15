@@ -42,11 +42,6 @@ export const CustomRoleManager: React.FC<CustomRoleManagerProps> = ({
       setCanUseCustomRoles(response.data.allowed);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to check entitlement';
-      console.error('Failed to check custom role entitlement:', {
-        error: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
       setCanUseCustomRoles(false);
       toast.error(errorMessage);
     } finally {
@@ -67,14 +62,6 @@ export const CustomRoleManager: React.FC<CustomRoleManagerProps> = ({
       toast.success(title ? 'Custom role assigned' : 'Custom role removed');
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to assign custom role';
-      console.error('Failed to assign custom role:', {
-        workspaceId,
-        memberId,
-        title,
-        error: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
       toast.error(errorMessage);
     } finally {
       setSaving(false);

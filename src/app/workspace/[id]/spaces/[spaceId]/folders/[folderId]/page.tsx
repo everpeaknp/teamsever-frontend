@@ -124,7 +124,6 @@ export default function FolderHomePage() {
           }
         }
       } catch (error: any) {
-        console.error('[FolderPage] Failed to initialize', error);
         toast.error(error.response?.data?.message || 'Failed to load folder');
       }
     };
@@ -146,7 +145,6 @@ export default function FolderHomePage() {
         if (!active) return;
         setFolderActivity(activityRes.data?.data || []);
       } catch (error) {
-        console.error('[FolderPage] Failed to load folder tab data:', error);
         if (active) {
           setFolderActivity([]);
         }
@@ -182,7 +180,6 @@ export default function FolderHomePage() {
         setFolderPermissionLevel((currentUserMember?.folderPermissionLevel || null) as SpacePermissionLevel | null);
       }
     } catch (error) {
-      console.error('[FolderPage] Failed to fetch folder members for invite:', error);
       toast.error('Failed to load invite members');
     }
   };
@@ -227,7 +224,6 @@ export default function FolderHomePage() {
       setShowInviteModal(false);
       await fetchFolderMembers();
     } catch (error: any) {
-      console.error('[FolderPage] Failed to invite folder members:', error);
       toast.error(error.response?.data?.message || 'Failed to invite members');
     }
   };

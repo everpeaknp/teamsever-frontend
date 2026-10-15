@@ -135,11 +135,6 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
         }
       }
       
-      console.log('[ClockInOut] Toggling clock:', { 
-        from: currentStatus, 
-        to: newStatus,
-        workspaceId 
-      });
 
       const response = window.teamseverDesktop
         ? await (async () => {
@@ -159,7 +154,6 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
             ...(locationFix ? { locationFix } : {})
           });
       
-      console.log('[ClockInOut] Toggle response:', response.data);
 
       if (response.data.success) {
         setOptimisticStatus(newStatus);
@@ -167,13 +161,10 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
         setExpectedServerStatus(newStatus);
         setLocalClockStartTime(newStatus === 'active' ? response.data.data?.timeEntry?.startTime || new Date().toISOString() : null);
         const message = newStatus === 'active' ? 'Clocked in successfully!' : 'Clocked out successfully!';
-        console.log('[ClockInOut] Success:', message);
         if (response.data.data?.timeEntry?.locationReviewReason) toast.warning(`Clocked out. Review needed: ${response.data.data.timeEntry.locationReviewReason}`);
         else toast.success(message);
         // Refresh parent data without blocking UI feedback
-        Promise.resolve(onStatusChange(true)).catch((refreshErr) => {
-          console.error('[ClockInOut] Failed to refresh status after toggle:', refreshErr);
-        });
+        Promise.resolve(onStatusChange(true)).catch(() => undefined);
       } else {
         throw new Error('Toggle failed');
       }
@@ -187,11 +178,6 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
         ? responseData.message
         : typeof responseData?.error === 'string' ? responseData.error : null;
       const message = serverMessage || error.message || 'Failed to update status';
-      if (error?.response?.status >= 400 && error?.response?.status < 500) {
-        console.warn('[ClockInOut] Clock request rejected:', { status: error.response.status, message, code: error.code });
-      } else {
-        console.error('[ClockInOut] Failed to toggle clock status:', { message, status: error?.response?.status, code: error?.code });
-      }
       toast.error(message);
     } finally {
       setLoading(false);

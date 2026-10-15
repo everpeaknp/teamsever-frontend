@@ -45,7 +45,6 @@ export default function DocumentsPage() {
       const response = await api.get(`/docs/workspace/${workspaceId}/hierarchy`);
       setDocuments(response.data.data);
     } catch (error: any) {
-      console.error('Failed to fetch documents:', error);
       setError(error.response?.data?.message || 'Failed to load documents');
     } finally {
       setLoading(false);
@@ -62,7 +61,6 @@ export default function DocumentsPage() {
       const newDoc = response.data.data;
       router.push(`/workspace/${workspaceId}/docs/${newDoc._id}`);
     } catch (error: any) {
-      console.error('Failed to create document:', error);
       toast.error(error.response?.data?.message || 'Failed to create document');
     } finally {
       setCreating(false);

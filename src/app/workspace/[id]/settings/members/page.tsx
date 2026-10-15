@@ -154,7 +154,6 @@ export default function MembersPage() {
       const res = await api.get(`/workspaces/${workspaceId}/custom-roles`);
       setAvailableCustomRoles(res.data.data);
     } catch (error) {
-      console.error('Failed to fetch custom roles:', error);
     }
   };
 
@@ -232,7 +231,6 @@ export default function MembersPage() {
 
     // Set a new timer to regenerate after 500ms of no changes
     regenerateTimerRef.current = setTimeout(() => {
-      console.log('[Auto-Regenerate] Settings changed, regenerating invite code...');
       handleGenerateLink(true); // Pass flag to indicate auto-regeneration
     }, 500);
 
@@ -249,24 +247,20 @@ export default function MembersPage() {
     const socket = getSocket();
     if (!socket || !workspaceId) return;
 
-    console.log('[Members Page] Setting up socket listeners');
 
     const handleMemberAdded = (data: any) => {
-      console.log('[Members Page] Member added:', data);
       if (data.workspaceId === workspaceId) {
         fetchMembers(); // Refresh members list
       }
     };
 
     const handleMemberRemoved = (data: any) => {
-      console.log('[Members Page] Member removed:', data);
       if (data.workspaceId === workspaceId) {
         fetchMembers();
       }
     };
 
     const handleMemberUpdated = (data: any) => {
-      console.log('[Members Page] Member updated:', data);
       if (data.workspaceId === workspaceId) {
         fetchMembers();
       }
@@ -286,14 +280,12 @@ export default function MembersPage() {
   const fetchMembers = async () => {
     try {
       setError(null);
-      console.log('[Members Page] Fetching workspace data for:', workspaceId);
       
       const [membersRes, workspaceRes] = await Promise.all([
         api.get(`/workspaces/${workspaceId}/members`),
         api.get(`/workspaces/${workspaceId}`)
       ]);
       
-      console.log('[Members Page] Raw workspace response:', workspaceRes.data);
       
       setMembers(membersRes.data.data);
       
@@ -301,13 +293,6 @@ export default function MembersPage() {
       const workspace = workspaceRes.data.data;
       
       // Debug logging
-      console.log('[Members Page] Workspace object:', {
-        hasSubscription: !!workspace?.subscription,
-        hasResolvedFeatures: !!workspace?.subscription?.resolvedFeatures,
-        hasPlanFeatures: !!workspace?.subscription?.plan?.features,
-        resolvedFeatures: workspace?.subscription?.resolvedFeatures,
-        planFeatures: workspace?.subscription?.plan?.features
-      });
       
       // Get max admins from owner's subscription - use resolved features directly
       const resolvedFeatures = workspace?.subscription?.resolvedFeatures;
@@ -316,7 +301,6 @@ export default function MembersPage() {
       const maxAdminsLimit = resolvedFeatures?.maxAdmins ?? planFeatures?.maxAdmins ?? 1;
       setMaxAdmins(maxAdminsLimit);
       
-      console.log('[Members Page] Max Admins:', maxAdminsLimit);
       
       // Count current admins
       const adminCount = membersRes.data.data.filter((m: Member) => m.role === 'admin').length;
@@ -329,15 +313,11 @@ export default function MembersPage() {
       const maxMembersLimit = resolvedFeatures?.maxMembers ?? planFeatures?.maxMembers ?? 5;
       setMaxMembers(maxMembersLimit);
       
-      console.log('[Members Page] Max Custom Roles:', maxCustomRolesLimit);
-      console.log('[Members Page] Resolved Features maxCustomRoles:', resolvedFeatures?.maxCustomRoles);
-      console.log('[Members Page] Plan Features maxCustomRoles:', planFeatures?.maxCustomRoles);
       
       // Count current custom roles
       const customRoleCount = membersRes.data.data.filter((m: Member) => m.customRoleTitle && m.customRoleTitle.trim() !== '').length;
       setCurrentCustomRoleCount(customRoleCount);
     } catch (error: any) {
-      console.error('Failed to fetch members:', error);
       setError(error.response?.data?.message || 'Failed to load members');
     } finally {
       setLoading(false);
@@ -382,7 +362,6 @@ export default function MembersPage() {
       fetchMembers(); // Refresh to get the fully populated customRole object
     } catch (error: any) {
       if (error?.response?.status !== 403) {
-        console.error('Failed to update role:', error);
       }
       const errorMessage = error.response?.data?.message || 'Failed to update role';
       toast.error(errorMessage);
@@ -404,7 +383,6 @@ export default function MembersPage() {
       );
       toast.success(canMarkTaskDone ? 'Done approval enabled' : 'Done approval disabled');
     } catch (error: any) {
-      console.error('Failed to update done-approval toggle:', error);
       const errorMessage = error.response?.data?.message || 'Failed to update permission';
       toast.error(errorMessage);
       setError(errorMessage);
@@ -423,7 +401,6 @@ export default function MembersPage() {
       await api.delete(`/workspaces/${workspaceId}/members/${userId}`);
       setMembers(members.filter((member) => member._id !== userId));
     } catch (error: any) {
-      console.error('Failed to remove member:', error);
       setError(error.response?.data?.message || 'Failed to remove member');
     }
   };
@@ -533,13 +510,11 @@ export default function MembersPage() {
         if (!isAutoRegenerate) {
           toast.success('Invite link generated!');
         } else {
-          console.log('[Auto-Regenerate] Code updated successfully');
         }
       } else {
         throw new Error('No token received from backend');
       }
     } catch (error: any) {
-      console.error('Failed to generate invite link:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to generate link';
       toast.error(errorMessage);
       setError(errorMessage);
@@ -580,7 +555,6 @@ export default function MembersPage() {
       });
       setCanUseCustomRoles(response.data.allowed);
     } catch (error: any) {
-      console.error('Failed to check custom role entitlement:', error);
       setCanUseCustomRoles(false);
     }
   };
@@ -651,37 +625,21 @@ export default function MembersPage() {
   };
 
   const handleOpenCustomRoleModal = (memberId: string, currentTitle?: string) => {
-    console.log('[handleOpenCustomRoleModal] Called with:', {
-      memberId,
-      currentTitle,
-      canUseCustomRoles,
-      maxCustomRoles,
-      currentCustomRoleCount
-    });
     
     if (!canUseCustomRoles) {
-      console.log('[handleOpenCustomRoleModal] Feature not enabled, showing upgrade modal');
       setShowUpgradeModal(true);
       return;
     }
     
     // Check if adding a new custom role (not editing existing)
     if (!currentTitle) {
-      console.log('[handleOpenCustomRoleModal] Adding new role, checking limit...');
       // Check if limit is reached
       if (maxCustomRoles !== -1 && currentCustomRoleCount >= maxCustomRoles) {
-        console.log('[handleOpenCustomRoleModal] Limit reached!', {
-          maxCustomRoles,
-          currentCustomRoleCount,
-          limitReached: true
-        });
         toast.error(`You've reached your custom role limit (${currentCustomRoleCount}/${maxCustomRoles}). Upgrade your plan to add more custom roles.`);
         setShowUpgradeModal(true);
         return;
       }
-      console.log('[handleOpenCustomRoleModal] Limit check passed');
     } else {
-      console.log('[handleOpenCustomRoleModal] Editing existing role, skipping limit check');
     }
     
     setEditingCustomRole({ memberId, currentTitle: currentTitle || '' });
@@ -723,7 +681,6 @@ export default function MembersPage() {
       setEditingCustomRole(null);
       setCustomRoleTitle('');
     } catch (error: any) {
-      console.error('Failed to assign custom role:', error);
       
       // Check for limit error
       if (error.response?.data?.code === 'CUSTOM_ROLE_LIMIT_REACHED') {

@@ -63,7 +63,6 @@ export function EditListModal() {
         name: list.name,
       });
     } catch (error) {
-      console.error('Failed to fetch list data:', error);
       toast.error('Failed to load list data');
       closeModal();
     } finally {
@@ -90,7 +89,6 @@ export function EditListModal() {
         await onSuccess();
       }
     } catch (error: any) {
-      console.error('Failed to update list:', error);
       
       form.setError('name', {
         type: 'manual',

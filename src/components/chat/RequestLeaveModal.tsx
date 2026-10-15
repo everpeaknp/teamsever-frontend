@@ -77,7 +77,6 @@ export function RequestLeaveModal({
           setQuotaInfo(res.data.data);
         })
         .catch((err) => {
-          console.error('[RequestLeaveModal] Failed to fetch quota:', err);
         })
         .finally(() => {
           setQuotaChecking(false);
@@ -133,7 +132,6 @@ export function RequestLeaveModal({
       if (onRequestSubmitted) onRequestSubmitted();
       onClose();
     } catch (err: any) {
-      console.error('[RequestLeaveModal] Failed to submit leave request:', err);
       toast.error(err.response?.data?.message || 'Failed to submit leave request');
     } finally {
       setLoading(false);

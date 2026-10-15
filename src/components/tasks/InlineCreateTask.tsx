@@ -85,7 +85,6 @@ export default function InlineCreateTask({
       setTitle('');
       setIsCreating(false);
     } catch (error: any) {
-      console.error('Failed to create task:', error.response?.data || error);
       
       const backendMessage = error.response?.data?.message;
       

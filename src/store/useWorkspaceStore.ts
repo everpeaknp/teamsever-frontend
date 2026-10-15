@@ -104,19 +104,16 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       state.lastFetchTime &&
       now - state.lastFetchTime < CACHE_DURATION
     ) {
-      console.log('[WorkspaceStore] Using cached hierarchy');
       return;
     }
 
     const inFlightRequest = hierarchyRequestCache.get(workspaceId);
     if (inFlightRequest) {
-      console.log('[WorkspaceStore] Reusing in-flight hierarchy request for workspace:', workspaceId);
       return inFlightRequest;
     }
 
     const requestPromise = (async () => {
       set({ loading: true, error: null });
-      console.log('[WorkspaceStore] Fetching hierarchy for workspace:', workspaceId);
 
       const response = await api.get(`/workspaces/${workspaceId}/hierarchy`);
       const hierarchyData = response.data.data;
@@ -146,14 +143,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         })),
       };
 
-      console.log('[WorkspaceStore] Hierarchy fetched successfully:', {
-        spaces: transformedHierarchy.spaces.length,
-        totalFolders: transformedHierarchy.spaces.reduce((sum, s) => sum + s.folders.length, 0),
-        totalLists: transformedHierarchy.spaces.reduce(
-          (sum, s) => sum + s.lists.length + s.folders.reduce((fSum, f) => fSum + f.lists.length, 0),
-          0
-        ),
-      });
 
       set({
         hierarchy: transformedHierarchy,
@@ -164,7 +153,6 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       });
     })()
       .catch((err: any) => {
-        console.error('[WorkspaceStore] Failed to fetch hierarchy:', err);
         const errorMessage = err.response?.data?.message || err.message || 'Failed to load workspace';
         set({ error: errorMessage, loading: false });
         throw err;

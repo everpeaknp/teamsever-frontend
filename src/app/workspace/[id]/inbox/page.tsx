@@ -69,7 +69,6 @@ export default function InboxPage() {
         finalToken === 'undefined' || 
         finalToken === 'null' || 
         finalToken.trim() === '') {
-      console.error('[Inbox] Auth failed - redirecting to login');
       
       // Clear invalid tokens
       localStorage.removeItem('token');
@@ -105,7 +104,6 @@ export default function InboxPage() {
           setConversations(conversationsRes.data.data || []);
         }
       } catch (err) {
-        console.error('Failed to fetch inbox data:', err);
       }
     };
 
@@ -193,7 +191,6 @@ export default function InboxPage() {
         setShowMembersList(false);
       }
     } catch (err) {
-      console.error('Failed to start conversation:', err);
     }
   };
 

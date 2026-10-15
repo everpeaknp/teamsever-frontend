@@ -105,7 +105,6 @@ export default function UserManagementNew() {
         setUsers(data.data);
       }
     } catch (error) {
-      console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
@@ -123,7 +122,6 @@ export default function UserManagementNew() {
         setPlans(data.data);
       }
     } catch (error) {
-      console.error("Error fetching plans:", error);
     }
   };
 
@@ -174,7 +172,6 @@ export default function UserManagementNew() {
         toast.error("Failed to update subscription");
       }
     } catch (error) {
-      console.error("Error updating subscription:", error);
       toast.error("Error updating subscription");
     }
   };

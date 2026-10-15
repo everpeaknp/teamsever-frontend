@@ -56,18 +56,11 @@ export const useCustomTable = (tableId: string): UseCustomTableReturn => {
         };
         setTable(normalizedTable);
       } else {
-        console.error('[useCustomTable] No table data in response:', response.data);
         setError('Table data not found in response');
         toast.error('Failed to load table data');
       }
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to load table';
-      console.error('Failed to load table:', {
-        tableId,
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -130,14 +123,6 @@ export const useCustomTable = (tableId: string): UseCustomTableReturn => {
     } catch (err: any) {
       // Revert on error
       const errorMessage = err.response?.data?.message || 'Failed to save changes';
-      console.error('Failed to save cell update:', {
-        tableId,
-        rowId,
-        columnId,
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
       setTable(previousTable);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -213,15 +198,6 @@ export const useCustomTable = (tableId: string): UseCustomTableReturn => {
     } catch (err: any) {
       // Revert on error
       const errorMessage = err.response?.data?.message || 'Failed to update cell color';
-      console.error('Failed to update cell color:', {
-        tableId,
-        rowId,
-        columnId,
-        color,
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
       setTable(previousTable);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -295,15 +271,6 @@ export const useCustomTable = (tableId: string): UseCustomTableReturn => {
     } catch (err: any) {
       // Revert on error
       const errorMessage = err.response?.data?.message || 'Failed to update cell text color';
-      console.error('Failed to update cell text color:', {
-        tableId,
-        rowId,
-        columnId,
-        color,
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
       setTable(previousTable);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -338,12 +305,6 @@ export const useCustomTable = (tableId: string): UseCustomTableReturn => {
       return response.data.rowId || null;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to add row';
-      console.error('Failed to add row:', {
-        tableId,
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
       setError(errorMessage);
       toast.error(errorMessage);
       throw err;
@@ -374,13 +335,6 @@ export const useCustomTable = (tableId: string): UseCustomTableReturn => {
     } catch (err: any) {
       // Revert on error
       const errorMessage = err.response?.data?.message || 'Failed to delete row';
-      console.error('Failed to delete row:', {
-        tableId,
-        rowId,
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
       setTable(previousTable);
       setError(errorMessage);
       toast.error(errorMessage);
@@ -418,7 +372,6 @@ export const useCustomTable = (tableId: string): UseCustomTableReturn => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to add column';
       const errorCode = err.response?.data?.code;
-      console.error('Failed to add column:', err);
       setError(errorMessage);
       
       // Check if it's a limit error
@@ -461,7 +414,6 @@ export const useCustomTable = (tableId: string): UseCustomTableReturn => {
       toast.success('Column deleted');
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to delete column';
-      console.error('Failed to delete column:', err);
       setTable(previousTable);
       setError(errorMessage);
       toast.error(errorMessage);

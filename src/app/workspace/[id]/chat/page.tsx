@@ -98,7 +98,6 @@ export default function GroupChatPage() {
           setCheckingAccess(false);
         }
       } catch (err) {
-        console.error('Failed to fetch workspace:', err);
         setCheckingAccess(false);
       }
     };

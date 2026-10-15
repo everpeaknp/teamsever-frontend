@@ -40,7 +40,6 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
       const sortedPlans = response.data.data.sort((a: Plan, b: Plan) => a.price - b.price);
       setPlans(sortedPlans);
     } catch (error) {
-      console.error('Failed to fetch plans:', error);
       toast.error('Failed to load plans');
     } finally {
       setLoading(false);
@@ -71,7 +70,6 @@ export function PricingModal({ isOpen, onClose }: PricingModalProps) {
         setProcessingPlanId(null);
       }
     } catch (error: any) {
-      console.error('Payment initiation error:', error);
       
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);

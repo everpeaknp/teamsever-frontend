@@ -232,7 +232,6 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({ tableId, space
       toast.success(`Color ${color ? 'applied' : 'removed'} from ${selectedCells.size} cell(s)`);
       announceCellUpdate(`Color ${color ? 'applied' : 'removed'} from ${selectedCells.size} cell(s)`);
     } catch (error) {
-      console.error('Error applying bulk color:', error);
       // Error already handled by updateCellColor
     }
   }, [selectedCells, updateCellColor, canEdit, announceCellUpdate]);
@@ -256,7 +255,6 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({ tableId, space
       toast.success(`Text color ${color ? 'applied' : 'removed'} from ${selectedCells.size} cell(s)`);
       announceCellUpdate(`Text color ${color ? 'applied' : 'removed'} from ${selectedCells.size} cell(s)`);
     } catch (error) {
-      console.error('Error applying bulk text color:', error);
       // Error already handled by updateCellTextColor
     }
   }, [selectedCells, updateCellTextColor, canEdit, announceCellUpdate]);

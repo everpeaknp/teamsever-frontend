@@ -35,13 +35,6 @@ export const ExportButton: React.FC<ExportButtonProps> = ({ tableId, tableName }
       toast.success('Table exported successfully');
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to export table';
-      console.error('Export failed:', {
-        tableId,
-        tableName,
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
       toast.error(errorMessage);
     } finally {
       setLoading(false);

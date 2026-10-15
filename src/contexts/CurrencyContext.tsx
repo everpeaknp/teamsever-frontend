@@ -56,7 +56,6 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       // Silently fail for auth errors (user not logged in)
       if (error.message !== 'No valid authentication token' && 
           error.response?.status !== 401) {
-        console.error('Failed to fetch exchange rate:', error);
       }
       // Keep default rate on error
     } finally {

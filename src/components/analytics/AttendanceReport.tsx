@@ -56,7 +56,6 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
            setMembers(membersRes.data.data);
         }
       } catch (error) {
-        console.error('Failed to fetch attendance initial data:', error);
       } finally {
         setLoading(false);
       }
@@ -114,7 +113,6 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
       const response = await api.get(`/attendance/workspace/${workspaceId}/report?${queryParams.toString()}`);
       setReportData(response.data.data);
     } catch (error) {
-      console.error('Failed to fetch report:', error);
       setReportError((error as any)?.response?.data?.message || (error instanceof Error ? error.message : 'Failed to load the attendance report.'));
       toast.error('Failed to update report');
     } finally {
@@ -141,7 +139,6 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
       link.click();
       link.remove();
     } catch (error) {
-      console.error('Export failed:', error);
       toast.error('Failed to export report');
     }
   };
@@ -165,7 +162,6 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
       link.click();
       link.remove();
     } catch (error) {
-      console.error('Excel export failed:', error);
       toast.error('Failed to export to Excel');
     }
   };

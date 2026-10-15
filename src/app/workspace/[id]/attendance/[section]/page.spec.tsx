@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import AttendanceSectionPage from './page';
 
 vi.mock('next/navigation', () => ({
   useParams: () => ({ id: 'ws1', section: 'timesheets' }),
   notFound: vi.fn(),
 }));
-vi.mock('@/lib/axios', () => ({ api: { get: vi.fn() } }));
+vi.mock('@/lib/axios', () => ({
+  api: { get: vi.fn().mockResolvedValue({ data: { data: { canManage: false } } }) },
+}));
 vi.mock('@/components/analytics/AttendanceReport', () => ({
   AttendanceReport: () => <div data-testid="attendance-report">Attendance report</div>,
 }));
@@ -24,8 +26,8 @@ vi.mock('@/components/attendance/DesktopPresenceTimeline', () => ({ DesktopPrese
 describe('AttendanceSectionPage', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('shows current clock-ins above the timesheet report', () => {
-    render(<AttendanceSectionPage />);
+  it('shows current clock-ins above the timesheet report', async () => {
+    await act(async () => { render(<AttendanceSectionPage />); });
 
     const currentClockIns = screen.getByTestId('live-attendance-timers');
     const report = screen.getByTestId('attendance-report');

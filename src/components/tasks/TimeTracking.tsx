@@ -55,7 +55,6 @@ export default function TimeTracking({ taskId, taskTitle }: TimeTrackingProps) {
       setTimeLogs(response.data.data.timeLogs || []);
       setTotalTimeSpent(response.data.data.totalTimeSpent || 0);
     } catch (error) {
-      console.error('Failed to fetch time logs:', error);
     } finally {
       setLoading(false);
     }
@@ -70,7 +69,6 @@ export default function TimeTracking({ taskId, taskTitle }: TimeTrackingProps) {
       const startTime = new Date(response.data.data.startTime).getTime();
       startTimer(taskId, taskTitle, startTime);
     } catch (error: any) {
-      console.error('Failed to start timer:', error);
       alert(error.response?.data?.message || 'Failed to start timer');
     } finally {
       setStarting(false);
@@ -86,7 +84,6 @@ export default function TimeTracking({ taskId, taskTitle }: TimeTrackingProps) {
       stopTimer();
       await fetchTimeLogs();
     } catch (error: any) {
-      console.error('Failed to stop timer:', error);
       alert(error.response?.data?.message || 'Failed to stop timer');
     } finally {
       setStopping(false);
@@ -108,7 +105,6 @@ export default function TimeTracking({ taskId, taskTitle }: TimeTrackingProps) {
       setShowManualEntry(false);
       await fetchTimeLogs();
     } catch (error: any) {
-      console.error('Failed to add manual log:', error);
       alert(error.response?.data?.message || 'Failed to add manual time log');
     } finally {
       setAddingManual(false);
@@ -122,7 +118,6 @@ export default function TimeTracking({ taskId, taskTitle }: TimeTrackingProps) {
       await api.delete(`/tasks/${taskId}/time/logs/${logId}`);
       await fetchTimeLogs();
     } catch (error: any) {
-      console.error('Failed to delete log:', error);
       alert(error.response?.data?.message || 'Failed to delete time log');
     }
   };

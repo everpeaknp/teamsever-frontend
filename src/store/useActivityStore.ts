@@ -54,7 +54,6 @@ export const useActivityStore = create<ActivityStore>((set, get) => ({
       const activitiesData = response.data.data || [];
       set({ activities: activitiesData, loading: false });
     } catch (error: any) {
-      console.error('Failed to fetch activities:', error);
       set({ 
         error: error.response?.data?.message || 'Failed to fetch activities',
         loading: false,

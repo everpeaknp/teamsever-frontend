@@ -91,7 +91,6 @@ export function FolderMemberManagement({
       const response = await api.get(`/folders/${folderId}/folder-members`);
       setMembers(response.data.data);
     } catch (error: any) {
-      console.error('Failed to fetch folder members:', error);
       toast.error('Failed to load folder members');
     } finally {
       setLoading(false);
@@ -111,7 +110,6 @@ export function FolderMemberManagement({
       toast.success('Permission updated successfully');
       fetchMembers();
     } catch (error: any) {
-      console.error('Failed to update permission:', error);
       toast.error(error.response?.data?.message || 'Failed to update permission');
     } finally {
       setUpdating(null);
@@ -125,7 +123,6 @@ export function FolderMemberManagement({
       toast.success('Permission override removed');
       fetchMembers();
     } catch (error: any) {
-      console.error('Failed to remove override:', error);
       toast.error('Failed to remove permission override');
     } finally {
       setUpdating(null);

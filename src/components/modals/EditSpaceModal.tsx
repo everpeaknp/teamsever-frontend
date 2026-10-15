@@ -72,7 +72,6 @@ export function EditSpaceModal() {
         status: space.status || 'active',
       });
     } catch (error) {
-      console.error('Failed to fetch space data:', error);
       toast.error('Failed to load space data');
       closeModal();
     } finally {
@@ -103,7 +102,6 @@ export function EditSpaceModal() {
         await onSuccess();
       }
     } catch (error: any) {
-      console.error('Failed to update space:', error);
       
       form.setError('name', {
         type: 'manual',

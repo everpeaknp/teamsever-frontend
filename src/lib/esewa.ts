@@ -68,7 +68,6 @@ export const decodeEsewaData = (encodedData: string): any => {
     const decodedString = atob(encodedData);
     return JSON.parse(decodedString);
   } catch (error) {
-    console.error('Failed to decode eSewa data:', error);
     return null;
   }
 };

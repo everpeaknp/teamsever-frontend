@@ -48,7 +48,6 @@ export function StickyNotes({ workspaceId, userId, initialContent }: StickyNotes
         isFirstLoad.current = false;
       }
     } catch (error) {
-      console.error('Failed to load notes:', error);
     } finally {
       isLoadingRef.current = false;
     }
@@ -58,9 +57,7 @@ export function StickyNotes({ workspaceId, userId, initialContent }: StickyNotes
     try {
       const { api } = await import('@/lib/axios');
       await api.patch(`/workspaces/${workspaceId}/sticky-note`, { content: newContent });
-      console.log('[StickyNotes] Saved to API');
     } catch (error) {
-      console.error('[StickyNotes] Failed to save to API:', error);
     }
   };
 
@@ -79,7 +76,6 @@ export function StickyNotes({ workspaceId, userId, initialContent }: StickyNotes
         localStorage.setItem(storageKey, newContent);
         saveToAPI(newContent);
       } catch (error) {
-        console.error('Failed to auto-save notes:', error);
       }
     }, 1000); // 1s debounce for API calls
   };
@@ -103,7 +99,6 @@ export function StickyNotes({ workspaceId, userId, initialContent }: StickyNotes
         try {
           localStorage.setItem(storageKey, currentContent);
         } catch (error) {
-          console.error('Failed to save notes on unmount:', error);
         }
       }
     };
@@ -132,7 +127,6 @@ export function StickyNotes({ workspaceId, userId, initialContent }: StickyNotes
                 localStorage.setItem(storageKey, currentContent);
                 saveToAPI(currentContent);
               } catch (error) {
-                console.error('Failed to save notes on blur:', error);
               }
             }
           }}

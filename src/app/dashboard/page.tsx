@@ -199,7 +199,6 @@ export default function DashboardPage() {
       const count = response.data?.data?.unreadCount || 0;
       setUnreadNotifications(count);
     } catch (error) {
-      console.error('Failed to fetch notification count:', error);
       // Silently fail - don't break the dashboard if notifications fail
       setUnreadNotifications(0);
     }

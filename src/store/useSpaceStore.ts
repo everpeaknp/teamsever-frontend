@@ -44,7 +44,6 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
 
   fetchSpace: async (spaceId: string) => {
     if (!spaceId || spaceId === 'undefined') {
-      console.warn('[useSpaceStore] fetchSpace called with invalid spaceId:', spaceId);
       set({ loading: false, error: 'Space ID is required' });
       return;
     }
@@ -72,7 +71,6 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
 
   fetchLists: async (spaceId: string) => {
     if (!spaceId || spaceId === 'undefined') {
-      console.warn('[useSpaceStore] fetchLists called with invalid spaceId:', spaceId);
       set({ lists: [] });
       return;
     }
@@ -88,7 +86,6 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
 
   fetchFolders: async (spaceId: string) => {
     if (!spaceId || spaceId === 'undefined') {
-      console.warn('[useSpaceStore] fetchFolders called with invalid spaceId:', spaceId);
       set({ folders: [] });
       return;
     }
@@ -98,7 +95,6 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
       set({ folders: response.data.data });
     } catch (error: any) {
       // If folders endpoint doesn't exist, just set empty array
-      console.log('[useSpaceStore] fetchFolders error (setting empty array):', error.response?.status);
       set({ folders: [] });
     }
   },
@@ -207,10 +203,7 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
   },
 
   addListOptimistic: (list: List) => {
-    console.log('[SpaceStore] addListOptimistic called with:', list);
     set((state) => {
-      console.log('[SpaceStore] Current folders:', state.folders);
-      console.log('[SpaceStore] List folderId:', list.folderId);
       
       // Add to main lists array
       const newLists = [...state.lists, list];
@@ -220,14 +213,12 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
       if (list.folderId) {
         newFolders = state.folders.map(folder => {
           if (folder._id === list.folderId) {
-            console.log('[SpaceStore] Adding list to folder:', folder.name);
             return { ...folder, lists: [...folder.lists, list] };
           }
           return folder;
         });
       }
       
-      console.log('[SpaceStore] New folders:', newFolders);
       
       return {
         lists: newLists,

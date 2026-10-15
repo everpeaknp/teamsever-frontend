@@ -42,7 +42,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const checkToken = () => {
       const currentToken = localStorage.getItem('authToken');
       if (currentToken !== token) {
-        console.log('[SocketContext] Token changed:', currentToken ? 'Token found' : 'No token');
         setToken(currentToken);
         // Set connecting state immediately when token is found
         if (currentToken && !token) {
@@ -56,7 +55,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Listen for auth token updates (from login/register)
     const handleAuthUpdate = (event: CustomEvent) => {
-      console.log('[SocketContext] Auth token updated event received');
       setIsConnecting(true);
       checkToken();
     };
@@ -79,7 +77,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (!token) {
       // No token, disconnect if connected
       if (socket) {
-        console.log('[SocketContext] No token, disconnecting...');
         disconnectSocket();
         setSocket(null);
         setIsConnected(false);
@@ -91,7 +88,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Check if socket already exists and is connected
     const existingSocket = getSocket();
     if (existingSocket && existingSocket.connected) {
-      console.log('[SocketContext] Socket already connected, reusing...');
       setSocket(existingSocket);
       setIsConnected(true);
       setIsConnecting(false);
@@ -100,7 +96,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // Token exists, initialize socket
     try {
-      console.log('[SocketContext] Initializing socket with token...');
       setIsConnecting(true);
       
       const socketInstance = initializeSocket(token);
@@ -108,13 +103,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Set initial connection state
       if (socketInstance.connected) {
-        console.log('[SocketContext] Socket already connected on init');
         setIsConnected(true);
         setIsConnecting(false);
       }
 
       const handleConnect = async () => {
-        console.log('[SocketContext] ✓ Connected');
         setIsConnected(true);
         setIsConnecting(false);
 
@@ -128,25 +121,18 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
 
           joinedWorkspaceIdsRef.current.forEach((workspaceId) => {
-            console.log(`[SocketContext] Joining workspace room: ${workspaceId}`);
             socketInstance.emit('join_workspace', { workspaceId });
           });
-        } catch (error) {
-          console.error('[SocketContext] Failed to join workspace rooms:', error);
+        } catch {
         }
       };
 
       const handleDisconnect = () => {
-        console.log('[SocketContext] ✗ Disconnected');
         setIsConnected(false);
         setIsConnecting(false);
       };
 
-      const handleConnectError = (error: Error) => {
-        // Only log non-websocket errors to reduce console noise
-        if (!error.message?.includes('websocket error')) {
-          console.log('[SocketContext] ✗ Connection error:', error.message);
-        }
+      const handleConnectError = () => {
         setIsConnecting(false);
       };
 
@@ -371,7 +357,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Cleanup only removes listeners, doesn't disconnect
       return () => {
-        console.log('[SocketContext] Removing event listeners...');
         socketInstance.off('connect', handleConnect);
         socketInstance.off('disconnect', handleDisconnect);
         socketInstance.off('connect_error', handleConnectError);
@@ -381,7 +366,6 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         socketInstance.off('notification:new', handleGlobalNotification);
       };
     } catch (error) {
-      console.error('[SocketContext] Failed to initialize socket:', error);
       setSocket(null);
       setIsConnected(false);
       setIsConnecting(false);

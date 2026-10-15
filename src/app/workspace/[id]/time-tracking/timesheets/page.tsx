@@ -138,7 +138,6 @@ export default function TimesheetsPage() {
 
       setData(response.data.data);
     } catch (error: any) {
-      console.error('Failed to fetch timesheets:', error);
       if (error.response?.status === 403) {
         toast.error('You do not have permission to view timesheets');
         router.push(`/workspace/${workspaceId}/time-tracking`);

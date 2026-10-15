@@ -52,7 +52,6 @@ export function ContributionHeatmap({ userId, workspaceId }: ContributionHeatmap
       const response = await api.get(url);
       setData(response.data.data);
     } catch (err) {
-      console.error('Failed to fetch contributions:', err);
       setError('Failed to load contribution data');
     } finally {
       setLoading(false);

@@ -83,7 +83,6 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
         }
       }
     } catch (err) {
-      console.error('Failed to fetch channels:', err);
     }
   }, [workspaceId, activeChannel, onChannelSelect]);
 
@@ -113,7 +112,6 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
           setConversations(convsRes.data.data || []);
         }
       } catch (err) {
-        console.error('Failed to fetch sidebar data:', err);
       } finally {
         setLoading(false);
       }
@@ -228,7 +226,6 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
         onChannelSelect(member._id, 'direct', member.name, response.data.data._id, member._id);
       }
     } catch (err) {
-      console.error('Failed to start conversation:', err);
     }
   }, [workspaceId, onChannelSelect]);
 

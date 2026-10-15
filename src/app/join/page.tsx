@@ -43,16 +43,12 @@ function JoinPageContent() {
       setVerifying(true);
       setError(null);
 
-      console.log('[Join Page] Verifying invitation token:', token?.substring(0, 20) + '...');
       const response = await api.get(`/invites/verify/${token}`);
-      console.log('[Join Page] Invitation verified successfully:', response.data);
       
       setInvitation(response.data.data);
       setVerifying(false);
       setLoading(false);
     } catch (err: any) {
-      console.error('[Join Page] Failed to verify invitation:', err);
-      console.error('[Join Page] Error response:', err.response?.data);
       
       const errorMessage = err.response?.data?.message || 'Invalid or expired invitation';
       setError(errorMessage);
@@ -82,7 +78,6 @@ function JoinPageContent() {
         }
       }, 2000);
     } catch (err: any) {
-      console.error('Failed to accept invitation:', err);
       setError(err.response?.data?.message || 'Failed to accept invitation');
       setAccepting(false);
     }

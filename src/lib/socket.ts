@@ -46,7 +46,6 @@ export const initializeSocket = (token: string): Socket => {
   });
 
   socket.on('connect', () => {
-    console.log('[Socket] ✓ Connected');
     isInitializing = false;
   });
 
@@ -54,7 +53,6 @@ export const initializeSocket = (token: string): Socket => {
     // Log the disconnect reason (e.g., "io server disconnect", "transport close")
     // Note: Do NOT clear the token here. 'io server disconnect' happens when the server restarts
     // gracefully via Nodemon. Genuine auth errors are caught by 'connect_error' or Axios 401s.
-    console.log(`[Socket] Disconnected: ${reason}`);
     
     // If it was a forced disconnect by the server, we might want to manually reconnect
     // but socket.io typically handles this or wait for page interactions.
@@ -92,7 +90,6 @@ export const initializeSocket = (token: string): Socket => {
 
   socket.on('reconnect_failed', () => {
     // Stop reconnection attempts after max attempts reached
-    console.log('[Socket] Reconnection failed - stopping attempts');
     if (socket) {
       socket.disconnect();
     }
@@ -102,7 +99,6 @@ export const initializeSocket = (token: string): Socket => {
   socket.on('reconnect_attempt', (attemptNumber) => {
     // Only log every 3rd attempt to reduce console noise
     if (attemptNumber % 3 === 0) {
-      console.log(`[Socket] Reconnection attempt ${attemptNumber}`);
     }
   });
 

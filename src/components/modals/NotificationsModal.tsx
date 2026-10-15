@@ -69,7 +69,6 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
       setNotifications(fetchedNotifications);
       setUnreadCount(response.data.pagination?.unreadCount ?? 0);
     } catch (error: any) {
-      console.error('Failed to fetch notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -102,7 +101,6 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
       const { setUnreadCount } = useNotificationStore.getState();
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
     }
   };
 
@@ -120,7 +118,6 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
       const { setUnreadCount } = useNotificationStore.getState();
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
     }
   };
 
@@ -149,7 +146,6 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
         window.location.reload();
       }, 1000);
     } catch (error: any) {
-      console.error('Failed to accept invitation:', error);
       toast.error(error.response?.data?.message || 'Failed to accept invitation');
     } finally {
       setAccepting(null);

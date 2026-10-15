@@ -206,7 +206,6 @@ export function TaskDetailSidebar() {
         setAssigneeId('null');
       }
     } catch (err: any) {
-      console.error('Failed to fetch task:', err);
       setError(err.response?.data?.message || 'Failed to load task');
     } finally {
       setLoading(false);
@@ -227,7 +226,6 @@ export function TaskDetailSidebar() {
           const response = await api.get(`/workspaces/${task.list.space.workspace._id}/members`);
           setWorkspaceMembers(response.data.data || []);
         } catch (err) {
-          console.error('Failed to fetch members:', err);
         }
       }
     };
@@ -244,7 +242,6 @@ export function TaskDetailSidebar() {
       // Refresh task to get updated activity
       await fetchTask();
     } catch (err: any) {
-      console.error('Failed to save:', err);
     } finally {
       setSaving(false);
     }
@@ -323,7 +320,6 @@ export function TaskDetailSidebar() {
       await fetchTask(); // Refresh to show new subtask
       toast.success('Subtask created');
     } catch (err: any) {
-      console.error('Failed to create subtask:', err);
       toast.error(err.response?.data?.message || 'Failed to create subtask');
     } finally {
       setSaving(false);
@@ -341,7 +337,6 @@ export function TaskDetailSidebar() {
       await fetchTask(); // Refresh to show updated status
       toast.success(`Subtask marked as ${newStatus}`);
     } catch (err: any) {
-      console.error('Failed to toggle subtask status:', err);
       toast.error('Failed to update subtask');
     } finally {
       setSaving(false);
@@ -358,7 +353,6 @@ export function TaskDetailSidebar() {
       setCommentText('');
       await fetchTask(); // Refresh comments
     } catch (err: any) {
-      console.error('Failed to submit comment:', err);
       toast.error(err.response?.data?.message || 'Failed to submit comment');
     } finally {
       setSaving(false);

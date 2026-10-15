@@ -98,7 +98,6 @@ export function UserProfileModal({ userId, isOpen, onClose }: UserProfileModalPr
       setUser(userRes.data.data);
       setStats(statsRes.data.data.performanceStats);
     } catch (err) {
-      console.error('Failed to fetch user profile data:', err);
     } finally {
       setLoading(false);
     }

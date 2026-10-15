@@ -38,7 +38,6 @@ export const useEntitlements = (): UseEntitlementsReturn => {
       setUsage(response.data.usage);
       setLimits(response.data.limits);
     } catch (err: any) {
-      console.error('Failed to load usage and limits:', err);
       setError(err.response?.data?.message || 'Failed to load entitlements');
     } finally {
       setLoading(false);
@@ -62,7 +61,6 @@ export const useEntitlements = (): UseEntitlementsReturn => {
       });
       return response.data;
     } catch (err: any) {
-      console.error('Failed to check entitlement:', err);
       return {
         success: false,
         allowed: false,

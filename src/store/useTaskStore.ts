@@ -62,7 +62,6 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
     // Cast status to proper type
     const taskStatus = status as Task['status'];
 
-    console.log('[TaskStore] updateTaskStatus called:', { taskId, status: taskStatus });
 
     // 1. Optimistic Update (Instant UI move)
     set({
@@ -71,13 +70,10 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       )
     });
 
-    console.log('[TaskStore] Optimistic update applied');
 
     try {
-      console.log('[TaskStore] Sending PATCH request to /tasks/' + taskId);
       const response = await api.patch(`/tasks/${taskId}`, { status: taskStatus });
 
-      console.log('[TaskStore] API response received:', response.data);
 
       // Sync with real server data
       set({
@@ -91,15 +87,11 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
         window.dispatchEvent(new Event('invalidateAnalyticsCache'));
       }
 
-      console.log('[TaskStore] State synced with server response');
 
     } catch (error: any) {
       // 2. Rollback on error
-      console.error('[TaskStore] Error updating task status, rolling back');
       set({ tasks: previousTasks });
 
-      console.error('[updateTaskStatus] Error:', error);
-      console.error('[updateTaskStatus] Error response:', error.response?.data);
 
       const errorMsg =
         error.response?.data?.message ||

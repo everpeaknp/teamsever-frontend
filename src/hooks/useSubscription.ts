@@ -70,7 +70,6 @@ export function useSubscription() {
       setSubscription(response.data.data);
       setError(null);
     } catch (err: any) {
-      console.error('Failed to fetch subscription:', err);
       setError(err.response?.data?.message || 'Failed to load subscription info');
     } finally {
       setLoading(false);
@@ -95,7 +94,6 @@ export function useSubscription() {
       // Silently fail - next plan is optional feature
       // Only log if it's not a 404/403/401/500 error (which are expected)
       if (err.response?.status !== 404 && err.response?.status !== 403 && err.response?.status !== 401 && err.response?.status !== 500) {
-        console.error('Unexpected error fetching next plan:', err);
       }
       setNextPlan({ hasNextPlan: false, nextPlan: null });
     }

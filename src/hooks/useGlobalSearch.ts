@@ -49,19 +49,16 @@ export function useGlobalSearch() {
     }
 
     if (!workspaceId) {
-      console.warn('No workspace ID found for search');
       setResults([]);
       setIsSearching(false);
       return;
     }
 
     setIsSearching(true);
-    console.log('Searching for:', searchQuery, 'in workspace:', workspaceId);
 
     try {
       // Fetch spaces first
       const spacesRes = await api.get(`/workspaces/${workspaceId}/spaces`).catch(err => {
-        console.error('Failed to fetch spaces:', err);
         return { data: { data: [] } };
       });
 
@@ -69,7 +66,6 @@ export function useGlobalSearch() {
       const results: SearchResult[] = [];
       const allTasks: any[] = [];
 
-      console.log('Fetched spaces:', spaces.length);
 
       // Search through spaces and fetch their lists and tasks
       for (const space of spaces) {
@@ -122,15 +118,12 @@ export function useGlobalSearch() {
                 });
               });
             } catch (err) {
-              console.error(`Failed to fetch tasks for list ${list._id}:`, err);
             }
           }
         } catch (err) {
-          console.error(`Failed to fetch lists for space ${space._id}:`, err);
         }
       }
 
-      console.log('Total tasks fetched:', allTasks.length);
 
       // Search through tasks
       for (const task of allTasks) {
@@ -164,10 +157,8 @@ export function useGlobalSearch() {
         return typeOrder[a.type] - typeOrder[b.type];
       });
 
-      console.log('Search results:', results.length, results);
       setResults(results);
     } catch (error) {
-      console.error('Search error:', error);
       setResults([]);
     } finally {
       setIsSearching(false);

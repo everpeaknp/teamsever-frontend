@@ -90,9 +90,6 @@
             resultDiv.innerHTML = '<p>⏳ Logging in...</p>';
 
             try {
-                console.log('🔐 Attempting login...');
-                console.log('Email:', email);
-                console.log('Password:', password);
 
                 const response = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
@@ -102,9 +99,7 @@
                     body: JSON.stringify({ email, password })
                 });
 
-                console.log('Response status:', response.status);
                 const data = await response.json();
-                console.log('Response data:', data);
 
                 if (response.ok) {
                     resultDiv.innerHTML = `
@@ -123,7 +118,6 @@
                     localStorage.setItem('userId', data.user._id);
                     localStorage.setItem('userName', data.user.name);
                     localStorage.setItem('userEmail', data.user.email);
-                    console.log('✅ Stored in localStorage');
                 } else {
                     resultDiv.innerHTML = `
                         <div class="result error">
@@ -136,7 +130,6 @@
                     `;
                 }
             } catch (error) {
-                console.error('❌ Error:', error);
                 resultDiv.innerHTML = `
                     <div class="result error">
                         <h3>❌ Network Error</h3>
@@ -151,9 +144,7 @@
         window.addEventListener('load', () => {
             const token = localStorage.getItem('authToken');
             if (token) {
-                console.log('✅ Found token in localStorage:', token.substring(0, 50) + '...');
             } else {
-                console.log('ℹ️ No token in localStorage');
             }
         });
     </script>

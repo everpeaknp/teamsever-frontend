@@ -87,7 +87,6 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
       setCanViewOverall(overallRes.status === 'fulfilled');
       if (todayRes.status === 'rejected' && membersRes.status === 'rejected' && reviewRes.status === 'rejected' && overallRes.status === 'rejected') toast.error('You do not have permission to view attendance and leave records');
     } catch (err: any) {
-      console.error('[LeaveManagementTab] Failed to fetch supporting attendance data:', err);
     }
   };
 
@@ -118,7 +117,6 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
       setPage(Number(result.pagination.page) || requestedPage);
     } catch (err: any) {
       if (sequence !== fetchSequence.current) return;
-      console.error('[LeaveManagementTab] Failed to fetch leave history:', err);
       toast.error(err.response?.data?.message || 'Failed to load leave records');
     } finally {
       if (sequence === fetchSequence.current) setLoading(false);

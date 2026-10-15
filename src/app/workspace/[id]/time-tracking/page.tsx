@@ -127,7 +127,6 @@ export default function TimeTrackingPage() {
       });
       setLocalDurations(durations);
     } catch (error: any) {
-      console.error('Failed to fetch time tracking data:', error);
       if (error.response?.status === 403) {
         toast.error('You do not have permission to view time tracking data');
         router.push(`/workspace/${workspaceId}/analytics`);
@@ -197,7 +196,6 @@ export default function TimeTrackingPage() {
       setStopReason('');
       fetchData();
     } catch (error: any) {
-      console.error('Failed to stop timer:', error);
       toast.error(error.response?.data?.message || 'Failed to stop timer');
     } finally {
       setStoppingTimer(false);
@@ -219,7 +217,6 @@ export default function TimeTrackingPage() {
       
       fetchData();
     } catch (error: any) {
-      console.error('Failed to cleanup orphaned timers:', error);
       toast.error(error.response?.data?.message || 'Failed to cleanup orphaned timers');
     } finally {
       setCleaningUp(false);
@@ -243,7 +240,6 @@ export default function TimeTrackingPage() {
       setSelectedUser(null);
       fetchData();
     } catch (error: any) {
-      console.error('Failed to stop user timers:', error);
       toast.error(error.response?.data?.message || 'Failed to stop user timers');
     } finally {
       setStoppingAllUserTimers(null);

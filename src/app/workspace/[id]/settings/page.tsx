@@ -53,7 +53,6 @@ export default function GeneralSettingsPage() {
       setWorkspaceLogo(workspace.logo || null);
       setQualityEnabled(Boolean(workspace.qualityEnabled));
     } catch (error: any) {
-      console.error('Failed to fetch workspace:', error);
       toast.error('Failed to load workspace settings');
     } finally {
       setLoading(false);
@@ -72,7 +71,6 @@ export default function GeneralSettingsPage() {
       toast.success('Workspace updated successfully');
       window.dispatchEvent(new CustomEvent('workspace-updated'));
     } catch (error: any) {
-      console.error('Failed to update workspace:', error);
       toast.error(error.response?.data?.message || 'Failed to update workspace');
     } finally {
       setSaving(false);
@@ -109,7 +107,6 @@ export default function GeneralSettingsPage() {
       toast.success('Workspace logo updated successfully');
       window.dispatchEvent(new CustomEvent('workspace-updated'));
     } catch (error: any) {
-      console.error('Failed to upload logo:', error);
       toast.error(error.response?.data?.message || 'Failed to upload logo');
     } finally {
       setUploadingLogo(false);
@@ -142,7 +139,6 @@ export default function GeneralSettingsPage() {
       toast.success('Workspace deleted successfully');
       router.push('/dashboard');
     } catch (error: any) {
-      console.error('Failed to delete workspace:', error);
       toast.error(error.response?.data?.message || 'Failed to delete workspace');
     } finally {
       setIsFinalDeleting(false);

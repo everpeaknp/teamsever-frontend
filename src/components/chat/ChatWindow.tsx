@@ -137,7 +137,6 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           await api.patch(`/dm/${conversationId}/read?workspaceId=${workspaceId}`);
         }
       } catch (error) {
-        console.error('[ChatWindow] Failed to sync read state:', error);
       }
     };
 
@@ -162,7 +161,6 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       if (!response.data.success) throw new Error('Member lookup failed');
       setWorkspaceMembers(response.data.data || []);
     } catch (error) {
-      console.error('[ChatWindow] Failed to fetch channel members for mentions:', error);
       setMemberLookupError('Could not load channel members. Click to retry.');
     } finally {
       setMembersLoading(false);
@@ -176,7 +174,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     } else if (workspaceId && title.includes('Commit Log')) {
       api.get(`/workspaces/${workspaceId}`).then((response) => {
         if (response.data.success) setWorkspaceMembers(response.data.data.members || []);
-      }).catch((err) => console.error('Failed to fetch workspace members for filtering:', err));
+      }).catch((err) => undefined);
     }
   }, [workspaceId, channelId, type, title, fetchChannelMembers]);
 
@@ -495,7 +493,6 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       ...(type === 'workspace' ? { workspace: workspaceId, channel: channelId } : { conversation: conversationId }),
     };
 
-    console.log('[ChatWindow] Adding optimistic message:', tempId);
 
     // Add optimistic message to optimistic state
     setOptimisticMessages(prev => [...prev, optimisticMessage]);
@@ -523,7 +520,6 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       setSelectedMentionIds([]);
       setMentionQuery(null);
       
-      console.log('[ChatWindow] Message sent successfully, waiting for socket confirmation');
       
       // Update optimistic message status
       setOptimisticMessages(prev => 
@@ -538,7 +534,6 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       updateMessage(roomId, tempId, { sending: false });
       
     } catch (error) {
-      console.error('[ChatWindow] Failed to send message:', error);
       
       // Mark message as failed in optimistic state
       setOptimisticMessages(prev => 
@@ -571,7 +566,6 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         await api.post(`/dm/messages/${messageId}/react`, { emoji });
       }
     } catch (err: any) {
-      console.error('[ChatWindow] Failed to toggle reaction:', err);
       toast.error('Failed to react to message');
     }
   }, [type]);
@@ -637,7 +631,6 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       );
       updateMessage(roomId, tempId, { sending: false });
     } catch (error) {
-      console.error('[ChatWindow] Failed to quick send emoji:', error);
       setOptimisticMessages((prev) =>
         prev.map((m) => (m._id === tempId ? { ...m, sending: false, failed: true } : m))
       );

@@ -87,7 +87,6 @@ export function LeaveCard({
       toast.success(`${isRemoteRequest ? 'Remote work' : 'Leave'} request approved!`);
       if (onStatusUpdated) onStatusUpdated();
     } catch (err: any) {
-      console.error('[LeaveCard] Approve error:', err);
       toast.error(err.response?.data?.message || 'Failed to approve leave');
       onStatusUpdated?.();
     } finally {
@@ -107,7 +106,6 @@ export function LeaveCard({
       setDenialReason('');
       if (onStatusUpdated) onStatusUpdated();
     } catch (err: any) {
-      console.error('[LeaveCard] Deny error:', err);
       toast.error(err.response?.data?.message || 'Failed to deny leave');
       onStatusUpdated?.();
     } finally {

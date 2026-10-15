@@ -30,7 +30,6 @@ export const usePresence = (workspaceId: string) => {
       }
     } catch (err: any) {
       if (err?.response?.status !== 401) {
-        console.error('Failed to fetch presence:', err);
       }
     }
   }, [workspaceId]);

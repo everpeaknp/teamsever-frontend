@@ -71,7 +71,6 @@ export function PaymentSelectionModal({
         setProcessingEsewa(false);
       }
     } catch (error: any) {
-      console.error('Payment initiation error:', error);
       
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);

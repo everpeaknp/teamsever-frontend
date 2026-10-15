@@ -73,7 +73,6 @@ export function GitHubWebhookModal() {
             }
           }
         } catch (error) {
-          console.error('Failed to fetch webhook details:', error);
         }
       }
     };
@@ -100,7 +99,6 @@ export function GitHubWebhookModal() {
       
       toast.success('Webhook generated successfully!');
     } catch (error: any) {
-      console.error('Failed to generate webhook:', error);
       toast.error(error.response?.data?.message || 'Failed to generate webhook');
     } finally {
       setIsSubmitting(false);

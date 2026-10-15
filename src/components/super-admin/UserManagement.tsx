@@ -54,7 +54,6 @@ export default function UserManagement() {
         setUsers(data.data);
       }
     } catch (error) {
-      console.error("Error fetching users:", error);
     } finally {
       setLoading(false);
     }
@@ -72,7 +71,6 @@ export default function UserManagement() {
         setPlans(data.data);
       }
     } catch (error) {
-      console.error("Error fetching plans:", error);
     }
   };
 
@@ -105,7 +103,6 @@ export default function UserManagement() {
         setSelectedPlan("");
       }
     } catch (error) {
-      console.error("Error updating subscription:", error);
     }
   };
 

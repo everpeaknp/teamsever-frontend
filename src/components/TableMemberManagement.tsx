@@ -58,7 +58,6 @@ export function TableMemberManagement({
       const tier = response.data.data?.subscription?.plan?.features?.accessControlTier || 'basic';
       setAccessControlTier(tier);
     } catch (error) {
-      console.error('Failed to fetch access control tier:', error);
       setAccessControlTier('basic');
     }
   };
@@ -69,7 +68,6 @@ export function TableMemberManagement({
       const response = await api.get(`/tables/${tableId}/table-members`);
       setMembers(response.data.data);
     } catch (error) {
-      console.error('Failed to fetch table members:', error);
       toast.error('Failed to load table members');
     } finally {
       setLoading(false);
@@ -84,7 +82,6 @@ export function TableMemberManagement({
       toast.success('Permission updated successfully');
       fetchMembers();
     } catch (error) {
-      console.error('Failed to update permission:', error);
       toast.error('Failed to update permission');
     }
   };
@@ -95,7 +92,6 @@ export function TableMemberManagement({
       toast.success('Member removed from table');
       fetchMembers();
     } catch (error) {
-      console.error('Failed to remove member:', error);
       toast.error('Failed to remove member');
     }
   };
@@ -118,13 +114,11 @@ export function TableMemberManagement({
           data: { resourceType: 'table' },
         });
       } catch (notifError) {
-        console.error('Failed to send notification:', notifError);
       }
       
       toast.success('Member assigned to table');
       fetchMembers();
     } catch (error) {
-      console.error('Failed to assign member:', error);
       toast.error('Failed to assign member');
     }
   };

@@ -86,7 +86,6 @@ export default function TeamPerformanceDetailsPage() {
           router.push(`/workspace/${workspaceId}/analytics`);
           return;
         }
-        console.error('Failed to load team performance details:', error);
       } finally {
         setLoading(false);
       }

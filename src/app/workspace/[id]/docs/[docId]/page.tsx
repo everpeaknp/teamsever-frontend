@@ -57,7 +57,6 @@ export default function DocumentPage() {
       setTitle(doc.title);
       setIcon(doc.icon);
     } catch (error: any) {
-      console.error('Failed to fetch document:', error);
       setError(error.response?.data?.message || 'Failed to load document');
     } finally {
       setLoading(false);
@@ -69,7 +68,6 @@ export default function DocumentPage() {
     try {
       await api.patch(`/docs/${docId}`, { title: newTitle });
     } catch (error) {
-      console.error('Failed to update title:', error);
     }
   };
 
@@ -77,7 +75,7 @@ export default function DocumentPage() {
     const newIcon = window.prompt('Enter an emoji:', icon);
     if (newIcon) {
       setIcon(newIcon);
-      api.patch(`/docs/${docId}`, { icon: newIcon }).catch(console.error);
+      api.patch(`/docs/${docId}`, { icon: newIcon }).catch(() => undefined);
     }
   };
 
@@ -88,7 +86,6 @@ export default function DocumentPage() {
       await api.delete(`/docs/${docId}`);
       router.push(`/workspace/${workspaceId}/docs`);
     } catch (error: any) {
-      console.error('Failed to delete document:', error);
       alert(error.response?.data?.message || 'Failed to delete document');
     }
   };

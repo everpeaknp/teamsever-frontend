@@ -53,27 +53,18 @@ export function EditFolderModal() {
 
   const fetchFolderData = async () => {
     if (!parentId) {
-      console.error('[EditFolderModal] No parentId provided');
       return;
     }
     
-    console.log('[EditFolderModal] Fetching folder data for:', parentId);
     setLoading(true);
     try {
       const response = await api.get(`/folders/${parentId}`);
-      console.log('[EditFolderModal] Folder data received:', response.data);
       const folder = response.data.data;
       
       form.reset({
         name: folder.name,
       });
     } catch (error: any) {
-      console.error('[EditFolderModal] Failed to fetch folder data:', {
-        error,
-        response: error.response?.data,
-        status: error.response?.status,
-        parentId
-      });
       toast.error(error.response?.data?.message || 'Failed to load folder data');
       closeModal();
     } finally {
@@ -100,7 +91,6 @@ export function EditFolderModal() {
         await onSuccess();
       }
     } catch (error: any) {
-      console.error('Failed to update folder:', error);
       
       form.setError('name', {
         type: 'manual',

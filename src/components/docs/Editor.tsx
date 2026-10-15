@@ -74,7 +74,6 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
         });
         if (onSave) onSave();
       } catch (error) {
-        console.error('Failed to save document:', error);
       }
     }, 1000),
     [documentId, onSave]

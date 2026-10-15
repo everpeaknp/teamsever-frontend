@@ -27,7 +27,6 @@ export default function FeedbackPage() {
       const response = await api.get(`/workspaces/${workspaceId}`);
       setWorkspaceName(response.data.data.name);
     } catch (error: any) {
-      console.error('Failed to fetch workspace details:', error);
       setError(error.response?.data?.message || 'Failed to load workspace details');
     } finally {
       setLoading(false);

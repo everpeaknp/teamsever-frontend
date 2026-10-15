@@ -195,7 +195,6 @@ export default function SpaceHomePage() {
   useEffect(() => {
     // CRITICAL: Guard against undefined params and missing auth
     if (!spaceId || !workspaceId || !userId) {
-      console.warn('[SpacePage] Waiting for params/auth:', { spaceId, workspaceId, userId });
       return;
     }
 
@@ -205,7 +204,6 @@ export default function SpaceHomePage() {
       setIsInitializing(true);
       
       try {
-        console.log('[SpacePage] Initializing with:', { spaceId, workspaceId, userId });
         
         // Workspace access and the space hierarchy load independently.
         const [workspaceRes] = await Promise.all([
@@ -249,7 +247,6 @@ export default function SpaceHomePage() {
           const tablesRes = tablesResult.value;
           setTables(tablesRes.data.data || tablesRes.data.tables || []);
         } else {
-          console.error('[SpacePage] Failed to fetch tables:', tablesResult.reason);
         }
 
         // Fetch space permission level
@@ -272,14 +269,12 @@ export default function SpaceHomePage() {
             }
           }
         } catch (error) {
-          console.error('[SpacePage] Failed to fetch space permission level:', error);
           // Non-critical error, continue
         }
 
       } catch (error: any) {
         if (!isMounted) return;
         
-        console.error('[SpacePage] Initialization failed:', error);
         
         if (error.response?.status === 404) {
           toast.error('Space not found');
@@ -362,9 +357,6 @@ export default function SpaceHomePage() {
       // Don't refresh folders - the list is already added to state
       // await fetchFolders(spaceId);
     } catch (error: any) {
-      console.error('[handleCreateList] Error creating list:', error);
-      console.error('[handleCreateList] Error response:', error.response?.data);
-      console.error('[handleCreateList] Error status:', error.response?.status);
       
       // Check for list limit error
       const errorCode = error.response?.data?.code;
@@ -483,7 +475,6 @@ export default function SpaceHomePage() {
       setShowDeleteFolderModal(false);
       setFolderToDelete(null);
     } catch (error: any) {
-      console.error('Failed to delete folder:', error);
       const errorMessage = error.response?.data?.message || 'Failed to delete folder';
       toast.error(errorMessage);
     }
@@ -519,7 +510,6 @@ export default function SpaceHomePage() {
           )
         );
       } catch (notifError) {
-        console.error('Failed to send notifications:', notifError);
       }
       
       setSelectedMembers([]);
@@ -623,12 +613,9 @@ export default function SpaceHomePage() {
         setNewTableName('');
         toast.success(`Table created with ${numColumns} column${numColumns !== 1 ? 's' : ''} and ${numRows} row${numRows !== 1 ? 's' : ''}`);
       } else {
-        console.error('[Table Creation] No table data in response:', response.data);
         toast.error('Table created but could not be displayed. Please refresh the page.');
       }
     } catch (error: any) {
-      console.error('[Table Creation] Error:', error);
-      console.error('[Table Creation] Response:', error.response?.data);
       
       const errorMessage = error.response?.data?.message || 'Failed to create table';
       const errorCode = error.response?.data?.code;
@@ -661,7 +648,6 @@ export default function SpaceHomePage() {
       }
       toast.success('Table deleted successfully');
     } catch (error: any) {
-      console.error('[Table Deletion] Error:', error);
       const errorMessage = error.response?.data?.message || 'Failed to delete table';
       toast.error(errorMessage);
     } finally {

@@ -156,7 +156,6 @@ export default function AnalyticsPage() {
         try {
             // If force refresh, clear the cache but don't show loading spinner
             if (force) {
-                console.log('[Analytics] Force refresh - clearing cache and fetching in background');
                 sessionStorage.removeItem(CACHE_KEY);
             } else {
                 // Check if we have cached data in sessionStorage
@@ -169,12 +168,9 @@ export default function AnalyticsPage() {
                         const cacheAge = now - parsed.timestamp;
                         
                         if (cacheAge < CACHE_DURATION) {
-                            console.log('[Analytics] Using cached data from sessionStorage');
                             const cachedMembers = Array.isArray(parsed.members) ? parsed.members : [];
                             const hasUsableMembers = cachedMembers.length > 0;
-                            if (!hasUsableMembers) {
-                                console.log('[Analytics] Cached payload missing members, fetching fresh data');
-                            } else {
+                            if (hasUsableMembers) {
                             setTasks(parsed.tasks || []);
                             setSpaces(parsed.spaces || []);
                             setMembers(parsed.members || []);
@@ -214,7 +210,6 @@ export default function AnalyticsPage() {
                             }
                         }
                     } catch (e) {
-                        console.error('[Analytics] Failed to parse cached data:', e);
                         sessionStorage.removeItem(CACHE_KEY);
                     }
                 }
@@ -226,7 +221,6 @@ export default function AnalyticsPage() {
             if (localUserId) setUserId(localUserId);
 
             // Fast first paint: summary first, heavy blocks second
-            console.log('[Analytics] Fetching analytics v2 summary');
             const { from, to } = getPresetDates();
             const query = new URLSearchParams();
             query.set('view', selectedView);
@@ -311,7 +305,6 @@ export default function AnalyticsPage() {
                         setTrendData(Array.isArray(trend?.chartData) ? trend.chartData : []);
                     })
                     .catch((trendError) => {
-                        console.error('[Analytics] Failed to load completion trend:', trendError);
                     })
                     .finally(() => {
                         if (currentRequestSeq === requestSeqRef.current) setTrendLoading(false);
@@ -393,7 +386,6 @@ export default function AnalyticsPage() {
                         sessionStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
                     })
                     .catch((detailError) => {
-                        console.error('[Analytics] Failed to load v2 details block:', detailError);
                     });
             };
 
@@ -407,7 +399,6 @@ export default function AnalyticsPage() {
             }
 
         } catch (error: any) {
-            console.error('Failed to fetch analytics data:', error);
             const message = error.response?.data?.message || 'Failed to load dashboard data. Please try again later.';
             if (error.response?.status === 403) {
                 setAccessDeniedMessage(message);
@@ -452,7 +443,6 @@ export default function AnalyticsPage() {
     useEffect(() => {
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === `${CACHE_KEY}_invalidate` && e.newValue) {
-                console.log('[Analytics] Cache invalidated by external event');
                 sessionStorage.removeItem(CACHE_KEY);
                 sessionStorage.removeItem(`${CACHE_KEY}_invalidate`);
                 // Refresh data in background without loading spinner
@@ -467,7 +457,6 @@ export default function AnalyticsPage() {
     // Listen for custom events within the same tab
     useEffect(() => {
         const handleCacheInvalidation = () => {
-            console.log('[Analytics] Cache invalidated by custom event');
             sessionStorage.removeItem(CACHE_KEY);
             // Refresh data in background without loading spinner
             fetchAnalyticsData(true);

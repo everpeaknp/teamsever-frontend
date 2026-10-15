@@ -73,7 +73,6 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [],
       const currentSkip = isInitial ? 0 : skip;
       const limit = isInitial ? INITIAL_LIMIT : LOAD_MORE_LIMIT;
       
-      console.log('[WorkspaceActivity] Fetching activities for workspace:', workspaceId);
       const response = await api.get(`/v2/workspaces/${workspaceId}/analytics/activity`, {
         params: {
           page: Math.floor(currentSkip / limit) + 1,
@@ -83,7 +82,6 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [],
         },
       });
       
-      console.log('[WorkspaceActivity] Response:', response.data);
       const fetchedActivities = response.data?.data?.items || [];
       
       // Check if there are more activities
@@ -100,11 +98,7 @@ export function WorkspaceActivity({ workspaceId, userId, initialActivities = [],
       
       setSkip(currentSkip + activitiesToAdd.length);
       
-      console.log('[WorkspaceActivity] Activities count:', activitiesToAdd.length);
-      console.log('[WorkspaceActivity] Has more:', hasMoreActivities);
     } catch (error: any) {
-      console.error('[WorkspaceActivity] Failed to fetch workspace activities:', error);
-      console.error('[WorkspaceActivity] Error response:', error.response?.data);
     } finally {
       setLoading(false);
       setLoadingMore(false);

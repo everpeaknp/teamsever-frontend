@@ -27,7 +27,6 @@ export function useSystemSettings() {
     } catch (err: any) {
       // Silently use default if can't fetch
       if (err.response?.status !== 403 && err.response?.status !== 401 && err.response?.status !== 500) {
-        console.error('Unexpected error fetching system settings:', err);
       }
       setSettings({ 
         whatsappContactNumber: '+1234567890',

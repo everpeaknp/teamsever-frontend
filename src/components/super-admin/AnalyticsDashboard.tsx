@@ -53,7 +53,6 @@ export default function AnalyticsDashboard() {
         setAnalytics(data.data);
       }
     } catch (error) {
-      console.error("Error fetching analytics:", error);
     } finally {
       setLoading(false);
     }

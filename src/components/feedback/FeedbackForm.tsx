@@ -89,7 +89,6 @@ export default function FeedbackForm({
       setDescription("");
       setCategory("");
     } catch (error: any) {
-      console.error("Error submitting feedback:", error);
       
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);

@@ -155,16 +155,13 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
   requestPermission: async () => {
     if (typeof window === 'undefined' || typeof Notification === 'undefined') {
-      console.warn('⚠️ Notifications not supported in this environment');
       return 'denied';
     }
 
     try {
-      console.log('🔔 Requesting browser notification permission...');
       
       // If already granted, just initialize FCM
       if (Notification.permission === 'granted') {
-        console.log('✅ Permission already granted');
         set({ permission: 'granted' });
         await get().initializeFCM();
         return 'granted';
@@ -172,19 +169,16 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       
       // Request permission
       const permission = await Notification.requestPermission();
-      console.log('🔔 Permission response:', permission);
       
       set({ permission });
       
       // If permission granted, initialize FCM
       if (permission === 'granted') {
-        console.log('✅ Permission granted, initializing FCM...');
         await get().initializeFCM();
       }
       
       return permission;
     } catch (error) {
-      console.error('❌ Failed to request notification permission:', error);
       return 'denied';
     }
   },
@@ -194,7 +188,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
     // Check if browser supports notifications
     if (!('Notification' in window)) {
-      console.warn('This browser does not support notifications');
       toast.info(title, { description: body });
       return;
     }
@@ -235,7 +228,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
           }
         };
       } catch (error) {
-        console.error('Failed to show native notification:', error);
         toast.info(title, { description: body });
       }
     } else {
@@ -259,43 +251,33 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
 
   initializeFCM: async (isRetry: boolean = false) => {
     try {
-      console.log('🔔 Initializing FCM...');
       
       // Check if VAPID key is configured
       let vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
       if (!vapidKey) {
-        console.warn('Web push is disabled: NEXT_PUBLIC_FIREBASE_VAPID_KEY is not configured.');
         return;
       }
       
       vapidKey = vapidKey.trim();
-      console.log(`✅ VAPID key found (Length: ${vapidKey.length})`);
       
       // Request FCM token
       const token = await requestNotificationPermission();
       
       if (token) {
-        console.log('✅ FCM Token received:', token.substring(0, 50) + '...');
         set({ fcmToken: token });
         
         // Send token to backend
         try {
           const authToken = localStorage.getItem('authToken');
           if (authToken) {
-            console.log('📤 Sending FCM token to backend...');
             await api.post('/notifications/devices/fcm-token', { fcmToken: token });
-            console.log('✅ FCM Token sent to backend');
           } else {
-            console.warn('⚠️ No auth token found, skipping backend registration');
           }
         } catch (error) {
-          console.error('❌ Failed to send FCM token to backend:', error);
         }
         
         // Listen for foreground messages
-        console.log('👂 Setting up foreground message listener...');
         onMessageListener((payload) => {
-          console.log('📨 Foreground message received:', payload);
           
           const notification = payload.notification;
           const data = payload.data;
@@ -306,7 +288,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
             if (notificationId) {
               const isProcessed = get().processedNotificationIds.has(notificationId);
               if (isProcessed) {
-                console.log('🚫 Skipping duplicate FCM notification (already handled by socket)');
                 return;
               }
               // Mark as processed
@@ -362,9 +343,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
           }
         });
         
-        console.log('✅ FCM initialization complete');
       } else {
-        console.warn('⚠️ Failed to get FCM token');
       }
     } catch (error: any) {
       const errorMsg = error.message || 'Unknown error';
@@ -372,12 +351,10 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       // If it's the annoying AbortError or push service error, log it once and STOP. 
       // Do not throw, do not retry indefinitely, and do not break the UI.
       if (errorMsg.includes('push service error') || errorMsg.includes('AbortError')) {
-        console.warn('⚠️ Browser Push Service is unavailable. Falling back to Socket-only notifications.');
         set({ fcmToken: null, isLoading: false });
         return;
       }
 
-      console.error('❌ Failed to initialize FCM:', error);
       set({ fcmToken: null, isLoading: false });
     }
   },
@@ -403,7 +380,6 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   syncPermission: () => {
     if (typeof window !== 'undefined' && typeof Notification !== 'undefined') {
       const currentPermission = Notification.permission;
-      console.log('🔄 Syncing permission:', currentPermission);
       set({ permission: currentPermission });
     }
   },

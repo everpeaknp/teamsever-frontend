@@ -39,12 +39,6 @@ export const useCustomRoles = (workspaceId: string): UseCustomRolesReturn => {
       setMembers(response.data.members || []);
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Failed to load members';
-      console.error('Failed to load members:', {
-        workspaceId,
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -62,11 +56,6 @@ export const useCustomRoles = (workspaceId: string): UseCustomRolesReturn => {
       });
       setCanUseCustomRoles(response.data.allowed);
     } catch (err: any) {
-      console.error('Failed to check entitlement:', {
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
       setCanUseCustomRoles(false);
     }
   }, []);
@@ -104,14 +93,6 @@ export const useCustomRoles = (workspaceId: string): UseCustomRolesReturn => {
     } catch (err: any) {
       // Revert on error
       const errorMessage = err.response?.data?.message || 'Failed to update custom role';
-      console.error('Failed to update custom role:', {
-        workspaceId,
-        memberId,
-        customRoleTitle,
-        error: err.message,
-        response: err.response?.data,
-        status: err.response?.status
-      });
       setMembers(previousMembers);
       setError(errorMessage);
       toast.error(errorMessage);

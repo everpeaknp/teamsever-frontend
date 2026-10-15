@@ -183,7 +183,6 @@ export default function AccountSettingsPage() {
         setNotificationPrefs(normalizeNotificationPrefs(userData.notificationPreferences));
         
       } catch (error) {
-        console.error('Failed to fetch user data:', error);
         toast.error('Failed to load user data');
       } finally {
         setIsLoading(false);
@@ -299,7 +298,6 @@ export default function AccountSettingsPage() {
       
       toast.success('Profile updated successfully!');
     } catch (error: any) {
-      console.error('Failed to update profile:', error);
       toast.error(error.response?.data?.message || 'Failed to update profile');
     } finally {
       setIsSaving(false);
@@ -320,7 +318,6 @@ export default function AccountSettingsPage() {
       
       toast.success('Notification preferences updated!');
     } catch (error: any) {
-      console.error('Failed to update notification preferences:', error);
       toast.error(error.response?.data?.message || 'Failed to update preferences');
     } finally {
       setIsSaving(false);
@@ -339,7 +336,6 @@ export default function AccountSettingsPage() {
       toast.success('Password changed successfully!');
       passwordForm.reset();
     } catch (error: any) {
-      console.error('Failed to change password:', error);
       toast.error(error.response?.data?.message || 'Failed to change password');
     } finally {
       setIsSaving(false);
@@ -363,7 +359,6 @@ export default function AccountSettingsPage() {
       const githubUsername = additionalInfo?.username;
 
       if (!githubUsername) {
-        console.error('Additional Info:', additionalInfo);
         throw new Error('Could not retrieve GitHub username from your profile');
       }
 
@@ -379,7 +374,6 @@ export default function AccountSettingsPage() {
       
       toast.success(`Successfully linked GitHub account: @${githubUsername}`);
     } catch (error: any) {
-      console.error('GitHub Linking Error:', error);
       if (error.code === 'auth/credential-already-in-use') {
         toast.error('This GitHub account is already linked to another Teamsever user.');
       } else {
@@ -410,7 +404,6 @@ export default function AccountSettingsPage() {
       
       toast.success('GitHub account unlinked successfully');
     } catch (error: any) {
-      console.error('GitHub Unlinking Error:', error);
       toast.error('Failed to unlink GitHub account');
     } finally {
       setIsLinkingGithub(false);
@@ -461,7 +454,6 @@ export default function AccountSettingsPage() {
       toast.success('Your account has been deleted.');
       router.push('/');
     } catch (error: any) {
-      console.error('Failed to delete account:', error);
       toast.error(error.response?.data?.message || 'Failed to delete account');
     }
   };

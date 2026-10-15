@@ -137,7 +137,6 @@ export default function EditPlanPage() {
         router.push('/super-admin?tab=plans');
       }
     } catch (error) {
-      console.error("Error fetching plan:", error);
       toast.error('Error loading plan');
       router.push('/super-admin?tab=plans');
     } finally {
@@ -189,7 +188,6 @@ export default function EditPlanPage() {
       },
     };
 
-    console.log('[Edit Plan] Submitting payload:', payload);
     setSubmitting(true);
     try {
       const token = localStorage.getItem("authToken");
@@ -205,7 +203,6 @@ export default function EditPlanPage() {
 
       const data = await response.json();
 
-      console.log('[Edit Plan] Response:', { status: response.status, data });
 
       if (response.ok) {
         toast.success('Plan updated successfully!');
@@ -214,7 +211,6 @@ export default function EditPlanPage() {
         toast.error(data.message || 'Failed to update plan');
       }
     } catch (error: any) {
-      console.error('[Edit Plan] Error:', error);
       toast.error(`Error: ${error.message || 'Network error occurred'}`);
     } finally {
       setSubmitting(false);

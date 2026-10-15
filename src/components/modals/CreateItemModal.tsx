@@ -180,12 +180,6 @@ export function CreateItemModal() {
         const folderId = parentType === 'folder' ? parentId : undefined;
         const spaceIdForList = parentType === 'space' ? parentId : createdItem.space;
         
-        console.log('[CreateItemModal] Creating list with:', {
-          parentType,
-          parentId,
-          folderId,
-          createdItem
-        });
         
         // Ensure the list object has the folderId
         const listWithFolder = {
@@ -194,13 +188,11 @@ export function CreateItemModal() {
           folderId: folderId, // Explicitly add folderId
         };
         
-        console.log('[CreateItemModal] List with folder:', listWithFolder);
         
         // Update workspace store (for sidebar)
         addList(spaceIdForList, listWithFolder, folderId);
         
         // Also update space store (for space page instant display)
-        console.log('[CreateItemModal] Calling spaceStore.addListOptimistic');
         spaceStore.addListOptimistic(listWithFolder);
         
         toast.success('List created successfully!');
@@ -215,7 +207,6 @@ export function CreateItemModal() {
         onSuccess();
       }
     } catch (error: any) {
-      console.error(`Failed to create ${type}:`, error);
       
       // Check for limit errors
       const errorCode = error.response?.data?.code;

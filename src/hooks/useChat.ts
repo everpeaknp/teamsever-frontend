@@ -230,11 +230,9 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
         if (senderId && currentUserId && senderId !== currentUserId) {
           if (type === 'workspace' && workspaceId) {
             api.patch(`/workspaces/${workspaceId}/chat/read`).catch((err) => {
-              console.error('[useChat] Failed to mark workspace chat as read:', err);
             });
           } else if (type === 'direct' && conversationId && workspaceId) {
             api.patch(`/dm/${conversationId}/read?workspaceId=${workspaceId}`).catch((err) => {
-              console.error('[useChat] Failed to mark DM as read:', err);
             });
           }
         }

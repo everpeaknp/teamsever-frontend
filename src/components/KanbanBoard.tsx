@@ -69,7 +69,6 @@ export function KanbanBoard({
   const handleStatusChange = (taskId: string, newStatus: Task['status']) => {
     if (!canChangeStatus) return;
     
-    console.log('[KanbanBoard] Status change:', taskId, newStatus);
     onStatusChange(taskId, newStatus);
     
     // Confetti for done tasks
@@ -111,10 +110,8 @@ export function KanbanBoard({
   const handleDeleteConfirm = async () => {
     if (taskToDelete) {
       try {
-        console.log('[KanbanBoard] Deleting task:', taskToDelete._id);
         await deleteTask(taskToDelete._id);
       } catch (error) {
-        console.error('[KanbanBoard] Failed to delete task:', error);
       } finally {
         // Always reset state
         setShowDeleteModal(false);

@@ -55,7 +55,6 @@ export const CreateChannelModal = ({ isOpen, onClose, workspaceId, onSuccess }: 
             setMembers(members);
           }
         } catch (err) {
-          console.error('Failed to fetch members:', err);
         } finally {
           setFetchingMembers(false);
         }
@@ -83,7 +82,6 @@ export const CreateChannelModal = ({ isOpen, onClose, workspaceId, onSuccess }: 
         handleClose();
       }
     } catch (err: any) {
-      console.error('Failed to create channel:', err);
       toast.error(err.response?.data?.message || 'Failed to create channel');
     } finally {
       setLoading(false);

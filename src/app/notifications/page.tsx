@@ -56,39 +56,25 @@ export default function NotificationsPage() {
     const checkPermission = () => {
       if (typeof window !== 'undefined' && 'Notification' in window) {
         const currentPermission = Notification.permission;
-        console.log('🔔 [NOTIFICATION CHECK]');
-        console.log('🔔 Browser Notification.permission:', currentPermission);
-        console.log('🔔 Store permission:', permission);
-        console.log('🔔 Should show banner:', currentPermission !== 'granted');
-        console.log('🔔 Banner state will be set to:', currentPermission !== 'granted');
         
         // Always show banner if permission is not granted
         const shouldShow = currentPermission !== 'granted';
         setShowBanner(shouldShow);
         
-        console.log('🔔 Banner visibility set to:', shouldShow);
-      } else {
-        console.log('❌ Notifications not supported or window not available');
       }
     };
     
     checkPermission();
     
-    // Debug: Log permission status
-    console.log('🔔 Initial notification permission status:', permission);
   }, []);
 
   useEffect(() => {
     // Update banner when permission changes
-    console.log('🔔 [PERMISSION CHANGED]');
-    console.log('🔔 New permission value:', permission);
     
     if (typeof window !== 'undefined' && 'Notification' in window) {
       const currentPermission = Notification.permission;
       const shouldShow = currentPermission !== 'granted';
       
-      console.log('🔔 Browser permission:', currentPermission);
-      console.log('🔔 Setting banner to:', shouldShow);
       
       setShowBanner(shouldShow);
     }
@@ -101,7 +87,6 @@ export default function NotificationsPage() {
       setNotifications(response.data.data || []);
       setUnreadCount(response.data.pagination?.unreadCount ?? 0);
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -135,7 +120,6 @@ export default function NotificationsPage() {
       const { setUnreadCount } = useNotificationStore.getState();
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
     }
   };
 
@@ -150,13 +134,11 @@ export default function NotificationsPage() {
       const { setUnreadCount } = useNotificationStore.getState();
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
     }
   };
 
   const handleEnableNotifications = async () => {
     try {
-      console.log('🔔 Requesting notification permission...');
       
       if (typeof window === 'undefined' || !('Notification' in window)) {
         toast.error('This browser does not support notifications');
@@ -172,7 +154,6 @@ export default function NotificationsPage() {
         toast.error('Notification permission was denied. Please check browser settings.');
       }
     } catch (error: any) {
-      console.error('❌ Error requesting permission:', error);
       toast.error(`Error: ${error.message}`);
     }
   };
@@ -201,7 +182,6 @@ export default function NotificationsPage() {
         window.location.reload();
       }, 1000);
     } catch (error: any) {
-      console.error('Failed to accept invitation:', error);
       toast.error(error.response?.data?.message || 'Failed to accept invitation');
     } finally {
       setAccepting(null);

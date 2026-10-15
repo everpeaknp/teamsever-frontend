@@ -42,13 +42,11 @@ export function NotificationBell() {
     if (!error?.response && (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error')) {
       const now = Date.now();
       if (now - lastNetworkWarningAt.current >= 60_000) {
-        console.warn('Notification service is temporarily unreachable; retrying automatically.');
         lastNetworkWarningAt.current = now;
       }
       return;
     }
 
-    console.error(message, error);
   };
 
   // Fetch notifications on mount and poll periodically
@@ -159,7 +157,6 @@ export function NotificationBell() {
       // Refresh unread count from server
       await fetchUnreadCount();
     } catch (error) {
-      console.error('Failed to mark as read:', error);
     }
   };
 
@@ -186,7 +183,6 @@ export function NotificationBell() {
         window.location.reload();
       }, 1000);
     } catch (error: any) {
-      console.error('Failed to accept invitation:', error);
       toast.error(error.response?.data?.message || 'Failed to accept invitation');
     } finally {
       setAccepting(null);
@@ -259,7 +255,6 @@ export function NotificationBell() {
                     // Refresh unread count (should be 0)
                     await fetchUnreadCount();
                   } catch (error) {
-                    console.error('Failed to mark all as read:', error);
                   }
                 }}
                 className="text-xs text-primary hover:text-primary/80 font-medium"

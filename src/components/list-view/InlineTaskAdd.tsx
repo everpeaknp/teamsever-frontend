@@ -23,7 +23,6 @@ export default function InlineTaskAdd({ status, onAdd }: InlineTaskAddProps) {
       setTitle('');
       setIsAdding(false);
     } catch (error) {
-      console.error('Failed to add task:', error);
     } finally {
       setIsSubmitting(false);
     }

@@ -100,7 +100,6 @@ export function PerformanceMetrics({
         setTeamMetrics([]);
       }
     } catch (error) {
-      console.error('Failed to fetch performance data:', error);
     } finally {
       setLoading(false);
     }

@@ -15,13 +15,9 @@ export default function PaymentSuccessPage() {
   useEffect(() => {
     const verifyPayment = async () => {
       try {
-        console.log('[Payment Success] Starting verification...');
-        console.log('[Payment Success] Current URL:', window.location.href);
         
         // Get encoded data from URL
         const encodedData = searchParams.get('data');
-        console.log('[Payment Success] Encoded data:', encodedData ? 'Present' : 'Missing');
-        console.log('[Payment Success] Encoded data length:', encodedData?.length);
         
         if (!encodedData) {
           setStatus('failed');
@@ -35,8 +31,6 @@ export default function PaymentSuccessPage() {
           token = localStorage.getItem('authToken');
         }
         
-        console.log('[Payment Success] Token:', token ? 'Present' : 'Missing');
-        console.log('[Payment Success] Token length:', token?.length);
         
         if (!token || token === 'undefined' || token === 'null') {
           setStatus('failed');
@@ -49,9 +43,6 @@ export default function PaymentSuccessPage() {
           return;
         }
 
-        console.log('[Payment Success] Calling verify API...');
-        console.log('[Payment Success] API URL:', '/payment/verify');
-        console.log('[Payment Success] Request payload:', { data: encodedData.substring(0, 50) + '...' });
         
         // Add timeout to the request (30 seconds)
         const controller = new AbortController();
@@ -66,9 +57,6 @@ export default function PaymentSuccessPage() {
           });
 
           clearTimeout(timeoutId);
-          console.log('[Payment Success] Verify response received');
-          console.log('[Payment Success] Response status:', response.status);
-          console.log('[Payment Success] Response data:', response.data);
 
           if (response.data.success) {
             setStatus('success');
@@ -90,7 +78,6 @@ export default function PaymentSuccessPage() {
           clearTimeout(timeoutId);
           
           if (apiError.name === 'AbortError' || apiError.code === 'ECONNABORTED') {
-            console.error('[Payment Success] Request timeout');
             setStatus('failed');
             setMessage('Verification is taking too long. Please check your transaction status or contact support.');
             return;
@@ -99,11 +86,6 @@ export default function PaymentSuccessPage() {
           throw apiError; // Re-throw to be caught by outer catch
         }
       } catch (error: any) {
-        console.error('[Payment Success] Verification error:', error);
-        console.error('[Payment Success] Error name:', error.name);
-        console.error('[Payment Success] Error message:', error.message);
-        console.error('[Payment Success] Error response:', error.response?.data);
-        console.error('[Payment Success] Error status:', error.response?.status);
         
         setStatus('failed');
         

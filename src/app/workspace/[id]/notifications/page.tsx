@@ -48,7 +48,6 @@ export default function NotificationsPage() {
       setNotifications(response.data.data || []);
       setUnreadCount(response.data.pagination?.unreadCount ?? 0);
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -59,7 +58,6 @@ export default function NotificationsPage() {
       await api.patch(`/notifications/${notificationId}/read`);
       markAsRead(notificationId);
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
     }
   };
 
@@ -68,7 +66,6 @@ export default function NotificationsPage() {
       await api.patch(`/notifications/read-all?workspaceId=${workspaceId}`);
       markAllAsRead(workspaceId);
     } catch (error) {
-      console.error('Failed to mark all as read:', error);
     }
   };
 

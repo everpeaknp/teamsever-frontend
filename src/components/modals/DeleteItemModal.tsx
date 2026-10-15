@@ -107,7 +107,6 @@ export function DeleteItemModal() {
         await onSuccess();
       }
     } catch (error: any) {
-      console.error(`Failed to delete ${type}:`, error);
       toast.error(error.response?.data?.message || `Failed to delete ${type}`);
     } finally {
       setIsSubmitting(false);

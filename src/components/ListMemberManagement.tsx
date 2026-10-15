@@ -61,7 +61,6 @@ export function ListMemberManagement({
       const tier = response.data.data?.subscription?.plan?.features?.accessControlTier || 'basic';
       setAccessControlTier(tier);
     } catch (error) {
-      console.error('Failed to fetch access control tier:', error);
       setAccessControlTier('basic');
     }
   };
@@ -72,7 +71,6 @@ export function ListMemberManagement({
       const response = await api.get(`/lists/${listId}/list-members`);
       setMembers(response.data.data);
     } catch (error) {
-      console.error('Failed to fetch list members:', error);
       toast.error('Failed to load list members');
     } finally {
       setLoading(false);
@@ -84,7 +82,6 @@ export function ListMemberManagement({
       const response = await api.get(`/spaces/${spaceId}/space-members`);
       setSpaceMembers(response.data.data || []);
     } catch (error) {
-      console.error('Failed to fetch space members:', error);
       // If space members endpoint doesn't exist, we'll use workspace members from the list members API
     }
   };
@@ -97,7 +94,6 @@ export function ListMemberManagement({
       toast.success('Permission updated successfully');
       fetchMembers();
     } catch (error) {
-      console.error('Failed to update permission:', error);
       toast.error('Failed to update permission');
     }
   };
@@ -108,7 +104,6 @@ export function ListMemberManagement({
       toast.success('Member removed from list');
       fetchMembers();
     } catch (error) {
-      console.error('Failed to remove member:', error);
       toast.error('Failed to remove member');
     }
   };
@@ -131,13 +126,11 @@ export function ListMemberManagement({
           data: { resourceType: 'list' },
         });
       } catch (notifError) {
-        console.error('Failed to send notification:', notifError);
       }
       
       toast.success('Member assigned to list');
       fetchMembers();
     } catch (error) {
-      console.error('Failed to assign member:', error);
       toast.error('Failed to assign member');
     }
   };

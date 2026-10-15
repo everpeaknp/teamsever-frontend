@@ -54,7 +54,6 @@ export default function PermissionsSettings() {
       const tier = workspaceData?.subscription?.plan?.features?.accessControlTier || 'basic';
       setAccessControlTier(tier);
     } catch (error) {
-      console.error('Error fetching workspace:', error);
       toast.error('Failed to load workspace settings');
     } finally {
       setLoading(false);

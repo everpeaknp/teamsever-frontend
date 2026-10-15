@@ -95,7 +95,6 @@ export function SpaceMemberManagement({
       const response = await api.get(`/spaces/${spaceId}/space-members`);
       setMembers(response.data.data);
     } catch (error: any) {
-      console.error('Failed to fetch space members:', error);
       toast.error('Failed to load space members');
     } finally {
       setLoading(false);
@@ -115,7 +114,6 @@ export function SpaceMemberManagement({
       toast.success('Permission updated successfully');
       fetchMembers();
     } catch (error: any) {
-      console.error('Failed to update permission:', error);
       toast.error(error.response?.data?.message || 'Failed to update permission');
     } finally {
       setUpdating(null);
@@ -129,7 +127,6 @@ export function SpaceMemberManagement({
       toast.success('Permission override removed');
       fetchMembers();
     } catch (error: any) {
-      console.error('Failed to remove override:', error);
       toast.error('Failed to remove permission override');
     } finally {
       setUpdating(null);
@@ -143,7 +140,6 @@ export function SpaceMemberManagement({
       toast.success(`${memberName} removed from space`);
       fetchMembers();
     } catch (error: any) {
-      console.error('Failed to remove member from space:', error);
       toast.error(error.response?.data?.message || 'Failed to remove member');
     } finally {
       setUpdating(null);

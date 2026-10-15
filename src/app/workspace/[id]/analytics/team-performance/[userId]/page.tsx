@@ -135,7 +135,6 @@ export default function UserPerformanceDetailsPage() {
         setCurrentStreak(contribRes.data?.data?.currentStreak || 0);
         setLongestStreak(contribRes.data?.data?.longestStreak || 0);
       } catch (error) {
-        console.error('Failed to load user performance details:', error);
       } finally {
         setLoading(false);
       }
