@@ -13,6 +13,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useProfileModalStore } from '@/store/useProfileModalStore';
 import { AppUpdateNotifier } from '@/components/layout/AppUpdateNotifier';
 import { DesktopUpdateNotifier } from '@/components/layout/DesktopUpdateNotifier';
+import { MobileShiftSyncPrompt } from '@/components/layout/MobileShiftSyncPrompt';
 import { MobileWorkspaceNavigation } from '@/components/layout/MobileWorkspaceNavigation';
 import {
   MobileConversationProvider,
@@ -162,6 +163,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         <Toaster position="top-right" richColors />
         <AppUpdateNotifier />
         <DesktopUpdateNotifier />
+        {user && <MobileShiftSyncPrompt />}
         {showShell && <GlobalTimer />}
 
         {showShell ? (

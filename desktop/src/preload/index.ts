@@ -6,6 +6,7 @@ const desktop = Object.freeze({
   forgetCredential: () => ipcRenderer.invoke('desktop:forget-credential'),
   setMonitoringEnabled: (enabled: boolean) => ipcRenderer.invoke('desktop:set-monitoring', enabled),
   getStatus: () => ipcRenderer.invoke('desktop:get-status'),
+  respondToMobileShift: (timeEntryId: string, action: 'sync_once' | 'always' | 'not_now') => ipcRenderer.invoke('desktop:respond-mobile-shift', timeEntryId, action),
   getCurrentPresence: () => ipcRenderer.invoke('desktop:get-current-presence'),
   getPresenceDiagnostics: () => ipcRenderer.invoke('desktop:get-presence-diagnostics'),
   attachPresenceToActiveShift: () => ipcRenderer.invoke('desktop:attach-presence-to-active-shift'),
