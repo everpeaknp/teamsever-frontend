@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -15,20 +15,29 @@ import {
 
 type MobileShift = { timeEntryId: string; workspaceId: string; startTime: string };
 type SyncAction = 'sync_once' | 'always' | 'not_now';
+const dismissedMobileShiftStorageKey = 'teamsever:desktop:dismissed-mobile-shift';
 
 export function MobileShiftSyncPrompt() {
   const [pending, setPending] = useState<MobileShift | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const dismissedShiftId = useRef<string | null>(null);
 
   useEffect(() => {
     const bridge = window.teamseverDesktop;
     if (!bridge) return;
     let active = true;
+    try {
+      dismissedShiftId.current = window.localStorage.getItem(dismissedMobileShiftStorageKey);
+    } catch {
+      dismissedShiftId.current = null;
+    }
     const refresh = async () => {
       try {
         const status = await bridge.getStatus();
-        if (active) setPending(status.pendingMobileShift || null);
+        if (!active) return;
+        const nextPending = status.pendingMobileShift || null;
+        setPending(nextPending?.timeEntryId === dismissedShiftId.current ? null : nextPending);
       } catch {
         // The desktop may not be paired yet; keep checking while the app is open.
       }
@@ -46,6 +55,14 @@ export function MobileShiftSyncPrompt() {
     setError('');
     try {
       const result = await bridge.respondToMobileShift(pending.timeEntryId, action);
+      if (action === 'not_now') {
+        dismissedShiftId.current = pending.timeEntryId;
+        try {
+          window.localStorage.setItem(dismissedMobileShiftStorageKey, pending.timeEntryId);
+        } catch {
+          // Keep the dismissal for this renderer session even when storage is unavailable.
+        }
+      }
       setPending(null);
       if (action === 'not_now') toast.message('Desktop presence was not linked to this mobile shift.');
       else if (result.synced) toast.success('Desktop presence linked to this mobile shift.');

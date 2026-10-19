@@ -4,9 +4,11 @@ import { MobileShiftSyncPrompt } from './MobileShiftSyncPrompt';
 
 describe('MobileShiftSyncPrompt', () => {
   const respondToMobileShift = vi.fn();
+  const dismissedShiftKey = 'teamsever:desktop:dismissed-mobile-shift';
 
   beforeEach(() => {
     vi.clearAllMocks();
+    window.localStorage.clear();
     Object.defineProperty(window, 'teamseverDesktop', {
       configurable: true,
       value: {
@@ -40,5 +42,24 @@ describe('MobileShiftSyncPrompt', () => {
 
     await waitFor(() => expect(respondToMobileShift).toHaveBeenCalledWith('entry-1', 'always'));
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Mobile shift found' })).not.toBeInTheDocument());
+  });
+
+  it('does not show a shift dismissed by the in-app prompt again after reload', async () => {
+    window.localStorage.setItem(dismissedShiftKey, 'entry-1');
+    render(<MobileShiftSyncPrompt />);
+
+    await waitFor(() => expect(window.teamseverDesktop!.getStatus).toHaveBeenCalled());
+    expect(screen.queryByRole('heading', { name: 'Mobile shift found' })).not.toBeInTheDocument();
+  });
+
+  it('persists a Not now choice for the current shift', async () => {
+    respondToMobileShift.mockResolvedValue({ synced: false });
+    render(<MobileShiftSyncPrompt />);
+
+    expect(await screen.findByRole('heading', { name: 'Mobile shift found' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Not now' }));
+
+    await waitFor(() => expect(respondToMobileShift).toHaveBeenCalledWith('entry-1', 'not_now'));
+    await waitFor(() => expect(window.localStorage.getItem(dismissedShiftKey)).toBe('entry-1'));
   });
 });
