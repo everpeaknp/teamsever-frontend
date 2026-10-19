@@ -65,6 +65,11 @@ describe('LeaveCard decision actions', () => {
 
     expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Deny' })).toBeNull();
+    expect(screen.getByText(/you sent this request/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /review inbox/i })).toHaveAttribute(
+      'href',
+      '/workspace/workspace-1/attendance/leave-remote',
+    );
   });
 
   it('lets an authorized assigned approver decide the request', () => {

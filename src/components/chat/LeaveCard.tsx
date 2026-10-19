@@ -291,10 +291,20 @@ export function LeaveCard({
           </div>
         )}
 
-        {/* If pending and user is the requester without manage leave */}
-        {status === 'pending' && !canManageLeaves && isRequester && (
-          <div className="text-[11px] text-muted-foreground text-center py-1 bg-muted/20 rounded">
-            Awaiting manager approval
+        {status === 'pending' && isRequester && !isWorkspaceOwner && (
+          <div className="rounded bg-muted/20 px-2 py-1.5 text-center text-[11px] text-muted-foreground">
+            You sent this request. The assigned approver can approve or deny it in the{' '}
+            <a className="font-medium text-primary underline underline-offset-2" href={`/workspace/${workspaceId}/attendance/leave-remote`}>
+              Review inbox
+            </a>.
+          </div>
+        )}
+        {status === 'pending' && !isRequester && !canManageLeaves && (
+          <div className="rounded bg-muted/20 px-2 py-1.5 text-center text-[11px] text-muted-foreground">
+            Only the assigned approver or a workspace owner can approve or deny this request. Open the{' '}
+            <a className="font-medium text-primary underline underline-offset-2" href={`/workspace/${workspaceId}/attendance/leave-remote`}>
+              Review inbox
+            </a>.
           </div>
         )}
       </div>
