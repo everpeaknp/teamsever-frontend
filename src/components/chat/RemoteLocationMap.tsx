@@ -33,7 +33,7 @@ export function RemoteLocationMap({ latitude, longitude, className = 'h-36' }: P
     };
   }, [latitude, longitude]);
 
-  return <div className="relative overflow-hidden rounded-md border bg-muted">
+  return <div className="relative isolate z-0 min-w-0 overflow-hidden rounded-md border bg-muted">
     <div ref={containerRef} role="application" aria-label={`Map showing the requested remote location at ${latitude.toFixed(5)}, ${longitude.toFixed(5)}`} className={`${className} w-full`} />
     <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="absolute bottom-1 right-1 z-[500] rounded bg-background/90 px-1.5 py-0.5 text-[10px] text-muted-foreground shadow-sm hover:underline">© OpenStreetMap contributors</a>
     <style jsx global>{`

@@ -3,7 +3,7 @@ import { fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { LeaveCard } from './LeaveCard';
 
-vi.mock('next/dynamic', () => ({ default: () => ({ latitude, longitude }: { latitude: number; longitude: number }) => <div data-testid="remote-location-map">Map at {latitude}, {longitude}<span>© OpenStreetMap contributors</span></div> }));
+vi.mock('next/dynamic', () => ({ default: () => ({ latitude, longitude, className }: { latitude: number; longitude: number; className?: string }) => <div data-testid="remote-location-map" className={className}>Map at {latitude}, {longitude}<span>© OpenStreetMap contributors</span></div> }));
 
 const message = {
   _id: 'message-1',
@@ -41,15 +41,19 @@ describe('LeaveCard decision actions', () => {
         remoteLocation: { name: 'Temporary apartment', latitude: 28.21555, longitude: 83.98274 },
       },
     };
-    render(<LeaveCard message={remoteMessage} currentUserId="approver-1" canManageLeaves={true} isWorkspaceOwner={false} workspaceId="workspace-1" />);
+    render(<LeaveCard message={remoteMessage} currentUserId="approver-1" canManageLeaves={true} isWorkspaceOwner={false} isDirectConversation={false} workspaceId="workspace-1" />);
 
     expect(screen.getByTestId('remote-location-map')).toBeInTheDocument();
     expect(screen.getByText(/© OpenStreetMap contributors/i)).toBeInTheDocument();
     expect(screen.queryByText(/Report a problem|Make a Donation/i)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Expand map' }));
+    const expandMapButton = screen.getByRole('button', { name: 'Expand map' });
+    expect(expandMapButton.closest('.isolate')).toHaveClass('z-0', 'overflow-hidden');
+    expect(expandMapButton).not.toHaveClass('absolute');
+    expect(screen.getByTestId('remote-location-map')).toHaveClass('h-28', 'sm:h-36');
+    fireEvent.click(expandMapButton);
 
-    expect(screen.getByRole('dialog', { name: 'Temporary apartment' })).toHaveClass('max-h-[calc(100dvh-1rem)]', 'overflow-y-auto');
-    expect(screen.getAllByTestId('remote-location-map')).toHaveLength(2);
+    expect(screen.getByRole('dialog', { name: 'Temporary apartment' })).toHaveClass('z-[70]', 'max-h-[calc(100dvh-2rem)]', 'overflow-y-auto');
+    expect(screen.getAllByTestId('remote-location-map')).toHaveLength(1);
     fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Temporary apartment' })).not.toBeInTheDocument());
     expect(screen.getAllByTestId('remote-location-map')).toHaveLength(1);
@@ -58,8 +62,8 @@ describe('LeaveCard decision actions', () => {
   it('renders as a compact message-sized card rather than filling the conversation width', () => {
     renderCard({ currentUserId: 'approver-1', canManageLeaves: true });
     const card = screen.getByTestId('leave-request-card');
-    expect(card.className).toContain('w-fit');
-    expect(card.className).not.toContain('w-full');
+    expect(card).toHaveClass('w-full', 'min-w-0');
+    expect(card.className).toContain('max-w-[min(100%,32rem)]');
   });
 
   it('does not let a non-owner requester decide their own leave request', () => {

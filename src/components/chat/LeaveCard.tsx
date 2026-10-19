@@ -123,22 +123,27 @@ export function LeaveCard({
   };
 
   return (
-    <div data-testid="leave-request-card" className="w-fit max-w-[min(82vw,30rem)] rounded-xl border border-border bg-card shadow-sm overflow-hidden text-card-foreground my-1 transition-all">
+    <div data-testid="leave-request-card" className="my-1 w-full min-w-0 max-w-[min(100%,32rem)] overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
       {/* Top Banner / Status */}
       <div
         className={cn(
-          'flex items-center justify-between gap-4 px-3 py-1.5 text-xs font-semibold border-b',
-          status === 'pending' && 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-          status === 'approved' && 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-          status === 'denied' && 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+          'flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3 text-sm font-semibold',
+          status === 'pending' && 'border-border bg-muted/40',
+          status === 'approved' && 'border-border bg-muted/40',
+          status === 'denied' && 'border-border bg-muted/40'
         )}
       >
         <div className="flex items-center gap-1.5">
-          <Calendar className="h-4 w-4" />
+          <Calendar className="h-4 w-4 text-primary" />
           <span>{isRemoteRequest ? 'Remote Work Request' : 'Leave Request'}</span>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className={cn(
+          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium',
+          status === 'pending' && 'border-amber-500/25 bg-amber-500/10 text-amber-500',
+          status === 'approved' && 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500',
+          status === 'denied' && 'border-rose-500/25 bg-rose-500/10 text-rose-500'
+        )}>
           {status === 'pending' && (
             <>
               <Clock className="h-3.5 w-3.5" />
@@ -161,36 +166,42 @@ export function LeaveCard({
       </div>
 
       {/* Body Content */}
-      <div className="px-3 py-2.5 space-y-2 text-xs">
+      <div className="space-y-3 px-3 py-3 text-xs sm:space-y-4 sm:px-4 sm:py-4">
         {/* Requester & Date Range */}
-        <div className="flex items-center justify-between gap-3 text-muted-foreground">
-          <div className="min-w-0">
-            <span className="font-semibold text-foreground">{message.sender.name}</span>
-            <span className="ml-2 whitespace-nowrap text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-muted-foreground">
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="text-sm font-semibold text-foreground">{message.sender.name}</span>
+            <span className="text-[11px]">
               {formatDate(meta.startDate)}{meta.endDate && meta.endDate !== meta.startDate ? ` – ${formatDate(meta.endDate)}` : ''}
             </span>
           </div>
-          <span className="shrink-0 text-[11px]">{meta.daysCount || 1}d</span>
+          <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground">{meta.daysCount || 1} day{(meta.daysCount || 1) === 1 ? '' : 's'}</span>
         </div>
 
-        {isRemoteRequest && <div className="rounded-md border border-blue-500/20 bg-blue-500/5 p-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Private remote place</span>
-          <p className="mt-0.5 text-xs">{remoteLocation?.name || meta.remoteAreaName || 'Existing approved private place'}</p>
+        {isRemoteRequest && <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Remote work location</span>
+            <p className="mt-0.5 text-sm font-medium text-foreground">{remoteLocation?.name || meta.remoteAreaName || 'Approved private place'}</p>
+          </div>
           {hasRemoteCoordinates ? <>
-            <div className="relative mt-2">
-              <RemoteLocationMap latitude={remoteLocation.latitude!} longitude={remoteLocation.longitude!} />
-              <Button type="button" variant="secondary" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="absolute left-2 top-2 z-[500] h-8 gap-1.5 bg-background/95 text-xs shadow-md">
-                <Maximize2 className="h-3.5 w-3.5" /> Expand map
-              </Button>
+            <div className="relative isolate z-0 min-w-0 overflow-hidden rounded-lg">
+              {!isMapExpanded && <RemoteLocationMap latitude={remoteLocation.latitude!} longitude={remoteLocation.longitude!} className="h-28 sm:h-36" />}
+              <div className="flex min-w-0 items-center justify-between gap-2 pt-2">
+                <span className="min-w-0 break-words text-[10px] leading-snug text-muted-foreground">
+                  {remoteLocation.latitude!.toFixed(5)}, {remoteLocation.longitude!.toFixed(5)} · private to this DM
+                </span>
+                <Button type="button" variant="outline" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="h-8 shrink-0 gap-1.5 px-2.5 text-xs">
+                  <Maximize2 className="h-3.5 w-3.5" /> Map
+                </Button>
+              </div>
             </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">{remoteLocation.latitude!.toFixed(5)}, {remoteLocation.longitude!.toFixed(5)} · shared in this DM only</p>
             <Dialog open={isMapExpanded} onOpenChange={setIsMapExpanded}>
-              <DialogContent aria-label={`${remoteLocation.name || 'Requested remote location'} map`} className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl overflow-y-auto p-3 sm:p-5">
+              <DialogContent aria-label={`${remoteLocation.name || 'Requested remote location'} map`} className="z-[70] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-6xl overflow-y-auto p-3 sm:p-5">
                 <DialogHeader>
                   <DialogTitle>{remoteLocation.name || 'Requested remote location'}</DialogTitle>
                   <DialogDescription>Map of the location shared in this remote work request.</DialogDescription>
                 </DialogHeader>
-                <RemoteLocationMap latitude={remoteLocation.latitude!} longitude={remoteLocation.longitude!} className="h-[min(72vh,48rem)]" />
+                <RemoteLocationMap latitude={remoteLocation.latitude!} longitude={remoteLocation.longitude!} className="h-[min(68dvh,42rem)]" />
                 <p className="text-xs text-muted-foreground">{remoteLocation.latitude!.toFixed(5)}, {remoteLocation.longitude!.toFixed(5)} · shared in this DM only</p>
               </DialogContent>
             </Dialog>
@@ -199,15 +210,15 @@ export function LeaveCard({
 
         {/* Reason (Compulsory) */}
         <div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Reason</span>
-          <p className="text-xs text-foreground/90 mt-0.5 whitespace-pre-wrap break-words">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Reason</span>
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/90">
             {meta.reason || message.content}
           </p>
         </div>
 
         {/* 2-Day Warning Badge if exceeded */}
         {meta.isExceedingMonthlyQuota && (
-          <div className="flex items-start gap-1.5 p-2 rounded bg-amber-500/10 border border-amber-500/30 text-amber-500 text-[11px] leading-tight">
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-2.5 text-[11px] leading-relaxed text-amber-500">
             <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
             <span>
               <strong>Limit Warning:</strong> Exceeds 2-day monthly guideline ({meta.monthlyLeaveCountAtRequest || 0} approved days already on record).
@@ -225,19 +236,19 @@ export function LeaveCard({
 
         {/* Status resolved footer */}
         {status === 'approved' && meta.approvedBy && (
-          <div className="text-[10px] text-muted-foreground">
+          <div className="border-t border-border/60 pt-2 text-[11px] text-muted-foreground">
             Approved by {meta.approvedBy.name}{meta.approvedAt ? ` · ${new Date(meta.approvedAt).toLocaleDateString()}` : ''}
           </div>
         )}
         {status === 'denied' && meta.deniedBy && (
-          <div className="text-[10px] text-muted-foreground">
+          <div className="border-t border-border/60 pt-2 text-[11px] text-muted-foreground">
             Denied by {meta.deniedBy.name}{meta.deniedAt ? ` · ${new Date(meta.deniedAt).toLocaleDateString()}` : ''}
           </div>
         )}
 
         {/* Action Buttons for Managers with MANAGE_LEAVES permission */}
         {canDecide && (
-          <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+          <div className="flex items-center gap-2 border-t border-border/60 pt-3">
             <Button
               type="button"
               size="sm"

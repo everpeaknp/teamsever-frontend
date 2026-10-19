@@ -225,7 +225,7 @@ export function RequestLeaveModal({
             </select>
             {remoteAreaId === 'propose' && <>
               <p className="text-xs text-muted-foreground">{remoteAreas.some((area) => area.isActive) ? 'Need to work from another address?' : 'No approved place yet?'} Propose a private address for {startDate === endDate ? 'this date' : 'these dates'}. It becomes authorized only for these dates after {managerName} approves it.</p>
-              <div className="relative min-w-0 w-full overflow-hidden">
+              <div className="relative isolate z-0 min-w-0 w-full overflow-hidden rounded-md">
                 <AttendanceLocationMapPicker latitude={remotePoint?.latitude ?? 27.7172} longitude={remotePoint?.longitude ?? 85.324} hasSelection={!!remotePoint} radiusMeters={60} mapHeightClassName="h-40" onSelect={(latitude, longitude) => setRemotePoint({ latitude, longitude })} />
                 <Button type="button" variant="secondary" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="absolute right-2 top-2 z-[500] h-8 gap-1.5 bg-background/95 text-xs shadow-md">
                   <Maximize2 className="h-3.5 w-3.5" /> Expand map
