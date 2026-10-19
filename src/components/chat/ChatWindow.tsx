@@ -1211,6 +1211,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                       currentUserId={currentUserId || ''}
                       canManageLeaves={canManageLeaves}
                       isWorkspaceOwner={isWorkspaceOwner}
+                      isDirectConversation={type === 'direct'}
                       workspaceId={workspaceId || ''}
                       onStatusUpdated={() => void refreshMessages(1, false)}
                     />

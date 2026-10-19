@@ -47,6 +47,7 @@ interface LeaveCardProps {
   currentUserId: string;
   canManageLeaves: boolean;
   isWorkspaceOwner: boolean;
+  isDirectConversation: boolean;
   workspaceId: string;
   onStatusUpdated?: () => void;
 }
@@ -56,6 +57,7 @@ export function LeaveCard({
   currentUserId,
   canManageLeaves,
   isWorkspaceOwner,
+  isDirectConversation,
   workspaceId,
   onStatusUpdated,
 }: LeaveCardProps) {
@@ -72,6 +74,13 @@ export function LeaveCard({
   const [denialReason, setDenialReason] = useState('');
 
   const isRequester = message.sender._id === currentUserId;
+  // Leave requests are created in a private DM with exactly the requester and
+  // the assigned approver. The server remains the authority for each decision;
+  // this lets the recipient see the controls before workspace permissions hydrate.
+  const canDecide = status === 'pending' && (
+    (isDirectConversation && !isRequester) ||
+    (canManageLeaves && (!isRequester || isWorkspaceOwner))
+  );
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -227,7 +236,7 @@ export function LeaveCard({
         )}
 
         {/* Action Buttons for Managers with MANAGE_LEAVES permission */}
-        {status === 'pending' && canManageLeaves && (!isRequester || isWorkspaceOwner) && (
+        {canDecide && (
           <div className="flex items-center gap-2 pt-2 border-t border-border/50">
             <Button
               type="button"
@@ -299,7 +308,7 @@ export function LeaveCard({
             </a>.
           </div>
         )}
-        {status === 'pending' && !isRequester && !canManageLeaves && (
+        {status === 'pending' && !isRequester && !canDecide && (
           <div className="rounded bg-muted/20 px-2 py-1.5 text-center text-[11px] text-muted-foreground">
             Only the assigned approver or a workspace owner can approve or deny this request. Open the{' '}
             <a className="font-medium text-primary underline underline-offset-2" href={`/workspace/${workspaceId}/attendance/leave-remote`}>

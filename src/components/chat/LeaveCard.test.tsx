@@ -13,10 +13,11 @@ const message = {
   createdAt: '2026-09-29T00:00:00.000Z',
 };
 
-function renderCard({ currentUserId, canManageLeaves, isWorkspaceOwner = false }: {
+function renderCard({ currentUserId, canManageLeaves, isWorkspaceOwner = false, isDirectConversation = false }: {
   currentUserId: string;
   canManageLeaves: boolean;
   isWorkspaceOwner?: boolean;
+  isDirectConversation?: boolean;
 }) {
   return render(
     <LeaveCard
@@ -24,6 +25,7 @@ function renderCard({ currentUserId, canManageLeaves, isWorkspaceOwner = false }
       currentUserId={currentUserId}
       canManageLeaves={canManageLeaves}
       isWorkspaceOwner={isWorkspaceOwner}
+      isDirectConversation={isDirectConversation}
       workspaceId="workspace-1"
     />
   );
@@ -77,6 +79,30 @@ describe('LeaveCard decision actions', () => {
 
     expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Deny' })).toBeTruthy();
+  });
+
+  it('shows actions to the assigned direct-message approver while workspace permissions hydrate', () => {
+    render(
+      <LeaveCard
+        message={message}
+        currentUserId="approver-1"
+        canManageLeaves={false}
+        isWorkspaceOwner={false}
+        isDirectConversation
+        workspaceId="workspace-1"
+      />
+    );
+
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Deny' })).toBeTruthy();
+  });
+
+  it('does not expose actions to an unprivileged participant outside the assigned direct message', () => {
+    renderCard({ currentUserId: 'other-user', canManageLeaves: false });
+
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Deny' })).toBeNull();
+    expect(screen.getByRole('link', { name: /review inbox/i })).toBeInTheDocument();
   });
 
   it('keeps decision actions available to a workspace owner requesting leave', () => {
