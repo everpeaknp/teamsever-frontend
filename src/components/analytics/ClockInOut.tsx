@@ -52,6 +52,45 @@ export function ClockInOut({ workspaceId, currentStatus, runningTimer, timeTrack
   }, [workspaceId]);
 
   useEffect(() => {
+    let cancelled = false;
+    const syncClockStatus = async () => {
+      if (loading || awaitingServerStatus) return;
+      try {
+        const response = await api.get(`/time/workspace/${workspaceId}/clock-status`);
+        const data = response?.data?.data;
+        if (
+          cancelled ||
+          !data ||
+          !Object.prototype.hasOwnProperty.call(data, 'viewerTimer')
+        ) {
+          return;
+        }
+        const timer = data.viewerTimer;
+        const isRunning = timer?.isRunning === true;
+        setOptimisticStatus(isRunning ? 'active' : 'inactive');
+        setLocalClockStartTime(
+          isRunning && typeof timer.startTime === 'string' ? timer.startTime : null,
+        );
+      } catch {
+        // Keep the last confirmed status when a temporary network error occurs.
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void syncClockStatus();
+    };
+    const interval = window.setInterval(() => void syncClockStatus(), 30_000);
+    window.addEventListener('focus', syncClockStatus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    void syncClockStatus();
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', syncClockStatus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [workspaceId, loading, awaitingServerStatus]);
+
+  useEffect(() => {
     if (awaitingServerStatus && expectedServerStatus) {
       if (currentStatus === expectedServerStatus) {
         setAwaitingServerStatus(false);

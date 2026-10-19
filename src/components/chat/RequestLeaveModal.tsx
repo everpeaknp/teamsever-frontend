@@ -167,8 +167,8 @@ export function RequestLeaveModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className={`grid grid-cols-1 gap-4 py-2 ${requestType === 'remote' ? 'md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : ''}`}>
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className={`grid w-full min-w-0 grid-cols-1 gap-4 py-2 ${requestType === 'remote' ? 'md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : ''}`}>
+          <div className="min-w-0 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-foreground">From Date</Label>
@@ -217,7 +217,7 @@ export function RequestLeaveModal({
           </div>
           </div>
 
-          {requestType === 'remote' && <div className="space-y-2 rounded-lg border p-3">
+          {requestType === 'remote' && <div data-testid="remote-location-panel" className="min-w-0 space-y-2 overflow-hidden rounded-lg border p-3">
             <Label htmlFor="remote-work-location" className="text-xs font-semibold">Remote work location</Label>
             <select id="remote-work-location" aria-label="Remote work location" className="h-9 w-full rounded-md border bg-background px-2 text-sm" value={remoteAreaId} onChange={(event) => { setRemoteAreaId(event.target.value); setRemotePoint(null); setRemoteAreaName(''); }}>
               <option value="propose">Request approval for another address (temporary)</option>
@@ -225,7 +225,7 @@ export function RequestLeaveModal({
             </select>
             {remoteAreaId === 'propose' && <>
               <p className="text-xs text-muted-foreground">{remoteAreas.some((area) => area.isActive) ? 'Need to work from another address?' : 'No approved place yet?'} Propose a private address for {startDate === endDate ? 'this date' : 'these dates'}. It becomes authorized only for these dates after {managerName} approves it.</p>
-              <div className="relative">
+              <div className="relative min-w-0 w-full overflow-hidden">
                 <AttendanceLocationMapPicker latitude={remotePoint?.latitude ?? 27.7172} longitude={remotePoint?.longitude ?? 85.324} hasSelection={!!remotePoint} radiusMeters={60} mapHeightClassName="h-40" onSelect={(latitude, longitude) => setRemotePoint({ latitude, longitude })} />
                 <Button type="button" variant="secondary" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="absolute right-2 top-2 z-[500] h-8 gap-1.5 bg-background/95 text-xs shadow-md">
                   <Maximize2 className="h-3.5 w-3.5" /> Expand map

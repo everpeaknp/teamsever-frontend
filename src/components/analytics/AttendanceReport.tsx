@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,8 @@ import { DesktopPresenceTimeline } from '@/components/attendance/DesktopPresence
 import { AttendanceRecordsView } from './AttendanceRecordsView';
 import type { AttendanceReportEntry } from './attendanceReportTypes';
 
+const ATTENDANCE_REPORT_PAGE_SIZE = 25;
+
 interface Member {
   _id: string;
   name: string;
@@ -26,7 +28,12 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
   const [reportData, setReportData] = useState<AttendanceReportEntry[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [nextPage, setNextPage] = useState(2);
   const [reportError, setReportError] = useState('');
+  const reportRequestId = useRef(0);
   const [period, setPeriod] = useState<string>('30d');
   const [filters, setFilters] = useState({
     startDate: format(new Date(new Date().setDate(new Date().getDate() - 30)), 'yyyy-MM-dd'),
@@ -42,7 +49,6 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
       if (!workspaceId || workspaceId === 'undefined') return;
       
       try {
-        setLoading(true);
         // 1. Fetch Workspace to check roles and get members if admin
         const wsRes = await api.get(`/workspaces/${workspaceId}`);
         const workspace = wsRes.data.data;
@@ -55,9 +61,7 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
            const membersRes = await api.get(`/workspaces/${workspaceId}/members`);
            setMembers(membersRes.data.data);
         }
-      } catch (error) {
-      } finally {
-        setLoading(false);
+      } catch {
       }
     };
 
@@ -102,21 +106,69 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
   const fetchReport = async () => {
     if (!workspaceId || workspaceId === 'undefined') return;
 
+    const requestId = ++reportRequestId.current;
     try {
       setReportError('');
       setLoading(true);
+      setLoadingMore(false);
       const queryParams = new URLSearchParams();
       if (filters.startDate) queryParams.append('startDate', filters.startDate);
       if (filters.endDate) queryParams.append('endDate', filters.endDate);
       if (filters.userId && filters.userId !== 'all') queryParams.append('userId', filters.userId);
-      
+
+      queryParams.append('page', '1');
+      queryParams.append('pageSize', String(ATTENDANCE_REPORT_PAGE_SIZE));
       const response = await api.get(`/attendance/workspace/${workspaceId}/report?${queryParams.toString()}`);
-      setReportData(response.data.data);
+      if (requestId !== reportRequestId.current) return;
+
+      const result = response.data.data;
+      const records: AttendanceReportEntry[] = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.records) ? result.records : [];
+      setReportData(records);
+      setTotalRecords(typeof result?.pagination?.total === 'number' ? result.pagination.total : records.length);
+      setHasMore(result?.pagination?.hasNextPage === true);
+      setNextPage(2);
     } catch (error) {
+      if (requestId !== reportRequestId.current) return;
       setReportError((error as any)?.response?.data?.message || (error instanceof Error ? error.message : 'Failed to load the attendance report.'));
       toast.error('Failed to update report');
     } finally {
-      setLoading(false);
+      if (requestId === reportRequestId.current) setLoading(false);
+    }
+  };
+
+  const loadMoreReports = async () => {
+    if (!hasMore || loadingMore || !workspaceId || workspaceId === 'undefined') return;
+
+    const requestId = ++reportRequestId.current;
+    const page = nextPage;
+    try {
+      setLoadingMore(true);
+      const queryParams = new URLSearchParams();
+      if (filters.startDate) queryParams.append('startDate', filters.startDate);
+      if (filters.endDate) queryParams.append('endDate', filters.endDate);
+      if (filters.userId && filters.userId !== 'all') queryParams.append('userId', filters.userId);
+      queryParams.append('page', String(page));
+      queryParams.append('pageSize', String(ATTENDANCE_REPORT_PAGE_SIZE));
+
+      const response = await api.get(`/attendance/workspace/${workspaceId}/report?${queryParams.toString()}`);
+      if (requestId !== reportRequestId.current) return;
+
+      const result = response.data.data;
+      const records: AttendanceReportEntry[] = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.records) ? result.records : [];
+      setReportData((current) => [...current, ...records]);
+      setTotalRecords(typeof result?.pagination?.total === 'number' ? result.pagination.total : totalRecords);
+      setHasMore(result?.pagination?.hasNextPage === true);
+      setNextPage(page + 1);
+    } catch (error) {
+      if (requestId === reportRequestId.current) {
+        toast.error((error as any)?.response?.data?.message || 'Failed to load more attendance records');
+      }
+    } finally {
+      if (requestId === reportRequestId.current) setLoadingMore(false);
     }
   };
 
@@ -254,6 +306,18 @@ export function AttendanceReport({ workspaceId }: { workspaceId: string }) {
           </div>
 
           <AttendanceRecordsView entries={reportData} loading={loading} error={reportError} onRetry={() => void fetchReport()} />
+          {!loading && reportData.length > 0 && (
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <p className="text-sm text-muted-foreground" aria-live="polite">
+                Showing {reportData.length} of {totalRecords} records
+              </p>
+              {hasMore && (
+                <Button type="button" variant="outline" className="h-11 w-full sm:w-auto" onClick={() => void loadMoreReports()} disabled={loadingMore}>
+                  {loadingMore ? 'Loading more…' : 'Load more records'}
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
       <DesktopPresenceTimeline workspaceId={workspaceId} />

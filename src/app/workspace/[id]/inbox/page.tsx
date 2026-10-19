@@ -305,7 +305,7 @@ export default function InboxPage() {
           onMouseDown={startSidebarResizing}
           onDoubleClick={resetSidebarWidth}
         />
-        <div className="border-b border-border bg-background px-4 py-3">
+        <div className="hidden border-b border-border bg-background px-4 py-3 md:block">
           <h2 className="text-base font-semibold text-foreground">Start a conversation</h2>
           <p className="text-xs text-muted-foreground">Choose a workspace member</p>
         </div>

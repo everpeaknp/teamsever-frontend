@@ -27,6 +27,20 @@ describe('ClockInOut location enforcement', () => {
     expect(screen.getByText(/Keep the Attendance page open during your shift/i)).toBeInTheDocument();
   });
 
+  it('syncs an already open clock card from the shared status endpoint', async () => {
+    const startTime = '2026-10-18T08:00:00.000Z';
+    get.mockImplementation((path: string) => {
+      if (path.endsWith('/clock-status')) {
+        return Promise.resolve({ data: { data: { viewerTimer: { isRunning: true, startTime } } } });
+      }
+      return Promise.resolve({ data: { data: { policy: { enabled: false } } } });
+    });
+    render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
+
+    await waitFor(() => expect(getMobileClockButton('Clock Out')).toBeInTheDocument());
+    expect(get).toHaveBeenCalledWith('/time/workspace/workspace-1/clock-status');
+  });
+
   it('shows a minimal mobile summary and tucks punch times into shift details', async () => {
     localStorage.setItem('userId', 'test-user');
     const { container } = render(
@@ -98,15 +112,24 @@ describe('ClockInOut location enforcement', () => {
 
   it('retries policy verification on clock-in while the initial policy request is still pending', async () => {
     let resolveInitialPolicy!: (value: any) => void;
-    get.mockImplementationOnce(() => new Promise((resolve) => { resolveInitialPolicy = resolve; }))
-      .mockResolvedValueOnce({ data: { data: { policy: { enabled: false } } } });
+    let policyRequests = 0;
+    get.mockImplementation((path: string) => {
+      if (path.endsWith('/clock-status')) {
+        return Promise.resolve({ data: { data: { viewerTimer: null } } });
+      }
+      policyRequests += 1;
+      if (policyRequests === 1) {
+        return new Promise((resolve) => { resolveInitialPolicy = resolve; });
+      }
+      return Promise.resolve({ data: { data: { policy: { enabled: false } } } });
+    });
     post.mockResolvedValue({ data: { success: true, data: { timeEntry: { startTime: new Date().toISOString() } } } });
     render(<ClockInOut workspaceId="workspace-1" currentStatus="inactive" runningTimer={null} onStatusChange={vi.fn()} />);
 
     fireEvent.click(getMobileClockButton('Clock In'));
 
     await waitFor(() => expect(post).toHaveBeenCalledWith('/workspaces/workspace-1/clock/toggle', { status: 'active' }));
-    expect(get).toHaveBeenCalledTimes(2);
+    expect(get.mock.calls.filter(([path]) => path.endsWith('/location-policy'))).toHaveLength(2);
     await act(async () => resolveInitialPolicy({ data: { data: { policy: { enabled: false } } } }));
   });
 

@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Settings, HelpCircle, Palette, User, LogOut, Building2, Keyboard, Menu } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Settings, HelpCircle, Palette, User, LogOut, Building2, Keyboard, Menu, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useUIStore } from '@/store/useUIStore';
@@ -21,9 +21,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { clearAuthData } from '@/lib/auth';
 import { toast } from 'sonner';
+import { useAuthStore } from '@/store/useAuthStore';
+import { getManageWorkspaceHref } from '@/lib/workspaceNavigation';
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
+  const currentWorkspaceId = useAuthStore(state => state.currentWorkspaceId);
   const { toggleSidebar } = useUIStore();
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -36,6 +40,10 @@ export function Header() {
 
   const handleSwitchWorkspace = () => {
     router.push('/dashboard');
+  };
+
+  const handleManageWorkspaces = () => {
+    router.push(getManageWorkspaceHref(pathname, currentWorkspaceId));
   };
 
   const handleAccountManagement = () => {
@@ -120,7 +128,7 @@ export function Header() {
                 <Settings className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="max-h-[80vh] w-56 overflow-y-auto">
               <DropdownMenuItem onClick={handleAccountManagement}>
                 <User className="w-4 h-4 mr-2" />
                 Account Management
@@ -128,6 +136,10 @@ export function Header() {
               <DropdownMenuItem onClick={handleSwitchWorkspace}>
                 <Building2 className="w-4 h-4 mr-2" />
                 Switch Workspace
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleManageWorkspaces}>
+                <Settings2 className="w-4 h-4 mr-2" />
+                Manage Workspaces
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setCustomizeOpen(true)}>
                 <Palette className="w-4 h-4 mr-2" />

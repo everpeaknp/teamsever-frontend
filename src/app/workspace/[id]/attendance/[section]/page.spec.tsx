@@ -15,9 +15,6 @@ vi.mock('@/components/analytics/AttendanceReport', () => ({
 vi.mock('@/components/attendance/LiveAttendanceTimers', () => ({
   LiveAttendanceTimers: () => <div data-testid="live-attendance-timers">Currently clocked in</div>,
 }));
-vi.mock('@/components/attendance/LocationReviewPanel', () => ({
-  LocationReviewPanel: () => <div data-testid="location-review">Location review</div>,
-}));
 vi.mock('@/components/attendance/LeaveManagementTab', () => ({ LeaveManagementTab: () => null }));
 vi.mock('@/components/attendance/AttendanceLocationSettings', () => ({ AttendanceLocationSettings: () => null }));
 vi.mock('@/components/attendance/DesktopPresenceSettings', () => ({ DesktopPresenceSettings: () => null }));
@@ -33,5 +30,6 @@ describe('AttendanceSectionPage', () => {
     const report = screen.getByTestId('attendance-report');
     expect(currentClockIns).toBeInTheDocument();
     expect(currentClockIns.compareDocumentPosition(report) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByTestId('location-review')).not.toBeInTheDocument();
   });
 });

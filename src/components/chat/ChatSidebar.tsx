@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Hash, User, Circle, Plus, Lock, Settings, Github, Bell, BellOff, MessagesSquare } from 'lucide-react';
+import { Hash, User, Circle, Plus, Lock, Settings, Github, Bell, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/axios';
@@ -253,17 +253,6 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
 
   return (
     <div className="w-full bg-card border-r border-border flex flex-col h-full min-w-0 overflow-hidden">
-      <div className="border-b border-border px-4 py-4 md:hidden">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <MessagesSquare className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="font-semibold text-foreground">Group conversations</h2>
-            <p className="text-sm text-muted-foreground">Choose a channel to see messages</p>
-          </div>
-        </div>
-      </div>
       <div className="flex-1 overflow-y-auto overflow-x-hidden chat-scrollbar px-3 md:px-4">
       <div className="space-y-6 py-3 md:py-4">
         

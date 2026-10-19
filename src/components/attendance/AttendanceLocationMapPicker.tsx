@@ -79,12 +79,8 @@ export function AttendanceLocationMapPicker({ latitude, longitude, hasSelection,
     if (map.getZoom() < 10 || !map.getBounds().contains(L.latLng(latitude, longitude))) map.setView(point, 15);
   }, [latitude, longitude, hasSelection, radiusMeters]);
 
-  return <div className="overflow-hidden rounded-lg border">
+  return <div className="relative isolate z-0 w-full min-w-0 overflow-hidden rounded-lg border">
     <div ref={containerRef} role="application" aria-label="Pick an attendance area on the map" className={`${mapHeightClassName} w-full bg-muted`} />
     <p className="border-t px-3 py-2 text-xs text-muted-foreground">Click the map or drag the pin to choose the area center. The circle shows its allowed radius.</p>
-    <style jsx global>{`
-      .attendance-location-pin { background: transparent; border: 0; }
-      .attendance-location-pin span { display: block; width: 18px; height: 18px; margin: 2px; border: 3px solid white; border-radius: 50%; background: #2563eb; box-shadow: 0 1px 6px #0008; }
-    `}</style>
   </div>;
 }

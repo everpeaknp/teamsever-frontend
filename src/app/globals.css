@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+.attendance-location-pin {
+  background: transparent;
+  border: 0;
+}
+
+.attendance-location-pin span {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 2px;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: #2563eb;
+  box-shadow: 0 1px 6px #0008;
+}
+
 @layer base {
   * {
     @apply border-border;

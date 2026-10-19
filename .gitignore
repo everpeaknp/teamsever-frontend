@@ -50,6 +50,7 @@ coverage
 !src/lib/chat/isMessageForChatRoom.spec.ts
 !src/lib/chat/mentions.spec.ts
 !src/components/layout/DesktopDownloadButton.spec.tsx
+!src/components/layout/MobileShiftSyncPrompt.test.tsx
 !src/components/layout/AppUpdateNotifier.spec.tsx
 !src/components/layout/MobileWorkspaceTabBar.spec.tsx
 !src/components/attendance/DesktopPresenceSettings.spec.tsx
@@ -104,3 +105,5 @@ Thumbs.db
 !src/app/workspace/[[]id[]]/attendance/[[]section[]]/page.test.tsx
 
 !src/store/useNotificationStore.test.ts
+
+!src/lib/workspaceNavigation.test.ts

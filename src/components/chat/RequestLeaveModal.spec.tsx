@@ -1,11 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { api } from '@/lib/axios';
+import { AttendanceLocationMapPicker } from '@/components/attendance/AttendanceLocationMapPicker';
 import { RequestLeaveModal } from './RequestLeaveModal';
+
+const { mapMock } = vi.hoisted(() => ({
+  mapMock: { on: vi.fn(), remove: vi.fn(), invalidateSize: vi.fn() },
+}));
 
 vi.mock('@/lib/axios', () => ({ api: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock('leaflet', () => ({ default: { map: vi.fn(() => mapMock), tileLayer: vi.fn(() => ({ addTo: vi.fn() })) } }));
 vi.mock('next/dynamic', () => ({ default: () => ({ latitude, longitude, hasSelection, onSelect }: any) => <button type="button" data-testid="map-picker" onClick={() => onSelect(latitude, longitude)}>{hasSelection ? 'Map point selected' : 'Choose map point'}</button> }));
+
+class ResizeObserverMock {
+  observe() {}
+  disconnect() {}
+}
 
 describe('RequestLeaveModal remote locations', () => {
   beforeEach(() => {
@@ -26,6 +37,8 @@ describe('RequestLeaveModal remote locations', () => {
     expect(screen.getByRole('combobox', { name: 'Remote work location' })).toHaveValue('propose');
     expect(screen.getByText(/request approval for another address/i)).toBeInTheDocument();
     expect(screen.getByTestId('map-picker')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Remote work location' }).closest('form')).toHaveClass('min-w-0');
+    expect(screen.getByTestId('remote-location-panel')).toHaveClass('min-w-0');
     fireEvent.click(screen.getByTestId('map-picker'));
     fireEvent.change(screen.getByLabelText('Private area name'), { target: { value: 'Temporary apartment' } });
     fireEvent.change(screen.getByPlaceholderText('Reason for requesting remote work…'), { target: { value: 'Working away from office' } });
@@ -62,5 +75,12 @@ describe('RequestLeaveModal remote locations', () => {
     expect(maps).toHaveLength(2);
     fireEvent.click(maps[1]);
     expect(screen.getByText(/Selected point: 27\.71720, 85\.32400/)).toBeInTheDocument();
+  });
+
+  it('contains Leaflet panes in an isolated stacking context', () => {
+    vi.stubGlobal('ResizeObserver', ResizeObserverMock);
+    const { container } = render(<AttendanceLocationMapPicker latitude={27.7172} longitude={85.324} hasSelection={false} radiusMeters={60} onSelect={vi.fn()} />);
+
+    expect(container.firstElementChild).toHaveClass('isolate', 'z-0', 'min-w-0', 'overflow-hidden');
   });
 });

@@ -229,6 +229,16 @@ export default function DashboardPage() {
     }
   }, [router]);
 
+  useEffect(() => {
+    if (loading || window.location.hash !== '#workspaces') return;
+    requestAnimationFrame(() => {
+      document.getElementById('workspaces')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  }, [loading, workspaces.length]);
+
   const handleCreateWorkspace = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWorkspaceName.trim()) return;
@@ -592,7 +602,7 @@ export default function DashboardPage() {
 
         {/* Workspace Section Header */}
         <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="text-xl font-semibold">Your Workspaces</h3>
+          <h3 id="workspaces" className="scroll-mt-20 text-xl font-semibold">Your Workspaces</h3>
           <div className="grid w-full grid-cols-1 min-[420px]:grid-cols-2 gap-2 sm:w-auto">
             <Button className="w-full" variant="outline" onClick={() => { setShowInviteCodeModal(true); setRedeemError(null); setRedeemSuccess(null); setInviteCode(''); }}>
               <Key className="w-4 h-4 mr-2" />

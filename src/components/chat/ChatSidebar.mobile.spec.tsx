@@ -46,8 +46,8 @@ describe('ChatSidebar mobile group chat list', () => {
 
     expect(await screen.findByText('General')).toBeInTheDocument();
     expect(screen.getByText('Private Groups')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Group conversations' })).toBeInTheDocument();
-    expect(screen.getByText('Choose a channel to see messages')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Group conversations' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Choose a channel to see messages')).not.toBeInTheDocument();
     expect(screen.getByText('Team-wide updates')).toBeInTheDocument();
     expect(screen.getByText('A smaller team discussion')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create channel' })).toHaveClass('h-11', 'w-11');
