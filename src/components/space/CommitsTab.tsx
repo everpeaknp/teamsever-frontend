@@ -113,26 +113,26 @@ export function CommitsTab({ spaceId, workspaceId, spaceColor }: CommitsTabProps
     : commits.filter(c => c.metadata?.repoName === selectedRepo);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-col gap-3">
+      <div className="mb-1 flex min-w-0 items-center justify-between gap-2 sm:mb-2">
+        <div className="flex min-w-0 items-center gap-2">
           <Github className="w-5 h-5" style={{ color: spaceColor }} />
-          <h2 className="text-base font-semibold">GitHub Commits</h2>
+          <h2 className="truncate text-base font-semibold">GitHub Commits</h2>
           <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
             {filteredCommits.length}
           </span>
         </div>
-        <Button variant="ghost" size="sm" onClick={fetchCommits}>
+        <Button variant="ghost" size="icon" aria-label="Refresh commits" onClick={fetchCommits} className="min-h-10 min-w-10 shrink-0">
           <RefreshCw className="w-4 h-4" />
         </Button>
       </div>
 
       {/* Repo Filter Pills */}
       {repoNames.length > 1 && (
-        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1 no-scrollbar">
+        <div role="group" aria-label="Filter commits by repository" className="mb-1 flex min-w-0 flex-wrap items-center gap-2 sm:mb-2">
           <button
             onClick={() => setSelectedRepo('all')}
-            className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+            className={`min-h-9 max-w-full rounded-full border px-3 py-1.5 text-xs transition-all ${
               selectedRepo === 'all'
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
@@ -144,63 +144,63 @@ export function CommitsTab({ spaceId, workspaceId, spaceColor }: CommitsTabProps
             <button
               key={repo}
               onClick={() => setSelectedRepo(repo)}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-all whitespace-nowrap ${
+              className={`min-h-9 max-w-full rounded-full border px-3 py-1.5 text-xs transition-all ${
                 selectedRepo === repo
                   ? 'bg-primary text-primary-foreground border-primary'
                   : 'bg-background text-muted-foreground border-border hover:border-muted-foreground'
               }`}
             >
-              {repo}
+              <span className="block max-w-[65vw] truncate sm:max-w-none">{repo}</span>
             </button>
           ))}
         </div>
       )}
 
-      <div className="relative">
+      <div className="relative min-w-0">
         {/* Timeline line */}
-        <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
+        <div className="absolute bottom-0 left-3 top-0 w-px bg-border sm:left-5" />
 
         <div className="flex flex-col gap-0">
           {filteredCommits.map((commit, index) => {
             const meta = commit.metadata || {};
             return (
-              <div key={commit._id} className="relative flex items-start gap-4 pb-5 pl-12">
+              <div key={commit._id} className="relative flex min-w-0 items-start gap-3 pb-4 pl-8 sm:gap-4 sm:pb-5 sm:pl-12">
                 {/* Timeline dot */}
                 <div
-                  className="absolute left-3.5 top-2 w-3 h-3 rounded-full border-2 border-background"
+                  className="absolute left-1.5 top-2 h-3 w-3 rounded-full border-2 border-background sm:left-3.5"
                   style={{ backgroundColor: spaceColor }}
                 />
 
-                <div className="flex-1 bg-card border border-border rounded-xl p-4 hover:shadow-sm transition-shadow">
+                <div className="min-w-0 flex-1 rounded-xl border border-border bg-card p-3 transition-shadow hover:shadow-sm sm:p-4">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       {/* Commit message */}
-                      <p className="font-medium text-sm leading-snug truncate">
+                      <p className="line-clamp-2 break-words text-sm font-medium leading-snug">
                         {meta.commitMessage || commit.description}
                       </p>
 
                       {/* Meta info */}
-                      <div className="flex items-center gap-3 mt-2 flex-wrap">
+                      <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5 sm:gap-x-3">
                         {meta.author && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <span className="flex min-w-0 max-w-full items-center gap-1 text-xs text-muted-foreground">
                             <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-semibold uppercase">
                               {meta.author[0]}
                             </span>
-                            {meta.author}
+                            <span className="truncate">{meta.author}</span>
                           </span>
                         )}
                         {meta.branch && (
-                          <span className="flex items-center gap-1 text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                          <span className="flex max-w-full items-center gap-1 truncate rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                             <GitCommit className="w-3 h-3" />
                             {meta.branch}
                           </span>
                         )}
                         {meta.repoName && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="max-w-full truncate text-xs text-muted-foreground">
                             {meta.repoName}
                           </span>
                         )}
-                        <span className="text-xs text-muted-foreground ml-auto">
+                        <span className="ml-auto shrink-0 text-xs text-muted-foreground">
                           {formatDate(commit.createdAt)}
                         </span>
                       </div>
@@ -212,7 +212,7 @@ export function CommitsTab({ spaceId, workspaceId, spaceColor }: CommitsTabProps
                         href={meta.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-shrink-0 p-1.5 rounded-lg hover:bg-muted transition-colors"
+                        className="flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg p-1.5 transition-colors hover:bg-muted"
                         title="View on GitHub"
                       >
                         <ExternalLink className="w-4 h-4 text-muted-foreground" />

@@ -16,7 +16,7 @@ export default function QualityGuidebookPage() {
   const qualityPath = `/workspace/${workspaceId}/quality`;
   const scopeQuery = projectId ? `?projectId=${encodeURIComponent(projectId)}` : '';
 
-  return <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-8">
+  return <main className="mx-auto min-w-0 max-w-7xl space-y-6 px-4 py-6 sm:px-8">
     <div><Link href={`${qualityPath}${scopeQuery}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3.5 w-3.5" />Quality overview</Link></div>
     <header className="rounded-2xl border bg-card p-6 sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-5">

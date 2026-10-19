@@ -4,6 +4,8 @@ import { useCallback, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { SpaceDirectory } from '@/components/space/SpaceDirectory';
 import { useWorkspaceStore } from '@/store/useWorkspaceStore';
+import { useModalStore } from '@/store/useModalStore';
+import { usePermissions } from '@/store/useAuthStore';
 
 export default function SpacesPage() {
   const workspaceId = useParams().id as string;
@@ -11,6 +13,8 @@ export default function SpacesPage() {
   const loading = useWorkspaceStore((state) => state.loading);
   const error = useWorkspaceStore((state) => state.error);
   const fetchHierarchy = useWorkspaceStore((state) => state.fetchHierarchy);
+  const openModal = useModalStore((state) => state.openModal);
+  const { can } = usePermissions();
   const isCurrentWorkspace = hierarchy?.workspaceId === workspaceId;
 
   useEffect(() => {
@@ -31,6 +35,12 @@ export default function SpacesPage() {
       loading={!isCurrentWorkspace && (loading || !error)}
       error={!isCurrentWorkspace ? error : null}
       onRetry={retry}
+      canCreateSpace={can('create_space')}
+      onCreateSpace={() => {
+        if (isCurrentWorkspace && hierarchy) {
+          openModal('space', workspaceId, 'workspace', hierarchy.workspaceName);
+        }
+      }}
     />
   );
 }

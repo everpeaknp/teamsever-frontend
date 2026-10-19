@@ -266,28 +266,31 @@ export default function FolderHomePage() {
             <span className="text-foreground font-medium">{folder.name}</span>
           </div>
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3 min-w-0">
               <button
                 onClick={() => router.push(`/workspace/${workspaceId}/spaces/${spaceId}?folder=${folder._id}`)}
-                className="p-2 hover:bg-accent rounded-lg transition-colors"
+                aria-label="Back to space"
+                className="min-h-11 min-w-11 p-2 hover:bg-accent rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${folder.color || '#3b82f6'}20` }}>
                 <Folder className="w-5 h-5" style={{ color: folder.color || '#3b82f6' }} />
               </div>
-              <div className="min-w-0">
-                <h1 className="text-2xl font-bold truncate">{folder.name}</h1>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl font-bold truncate sm:text-2xl">{folder.name}</h1>
                 <p className="text-sm text-muted-foreground">{folderLists.length} lists</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex w-full items-center gap-2 sm:w-auto">
               {canManageWebhooks && (
                 <Button
                   variant="outline"
                   onClick={() => openModal('githubWebhook', folder._id, 'folder')}
                   title="GitHub Webhook"
+                  aria-label="GitHub Webhook"
+                  className="min-h-11 flex-1 sm:flex-none"
                 >
                   <Github className="w-4 h-4 mr-2" />
                   Webhook
@@ -296,7 +299,7 @@ export default function FolderHomePage() {
               {canManage && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline">
+                    <Button variant="outline" className="min-h-11 flex-1 sm:flex-none">
                       <Users className="w-4 h-4 mr-2" />
                       Members
                     </Button>

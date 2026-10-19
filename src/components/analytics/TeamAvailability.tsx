@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AppWindow } from 'lucide-react';
+import { DesktopAppIcon } from '@/components/attendance/DesktopAppIcon';
 import { Card, CardContent } from '@/components/ui/card';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +32,7 @@ export function TeamAvailability({ members, workspaceId }: TeamAvailabilityProps
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20">Clocked In</Badge>;
+        return <Badge className="bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40">Clocked In</Badge>;
       case 'break':
         return <Badge className="bg-amber-50 text-amber-600 dark:bg-amber-900/20">On Break</Badge>;
       default:
@@ -138,8 +138,8 @@ export function TeamAvailability({ members, workspaceId }: TeamAvailabilityProps
             const appLabel = presence?.appId ? formatAppLabel(presence.appId) : null;
             
             return (
-              <div key={member._id || user?._id || `${userName}-${index}`} className="flex min-w-0 items-center justify-between gap-2">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div key={member._id || user?._id || `${userName}-${index}`} className="flex min-w-0 flex-col items-stretch gap-2 min-[400px]:flex-row min-[400px]:items-center min-[400px]:justify-between">
+                <div className="flex w-full min-w-0 items-center gap-3 min-[400px]:flex-1">
                   <div className="relative">
                     <UserAvatar 
                       user={user} 
@@ -156,12 +156,15 @@ export function TeamAvailability({ members, workspaceId }: TeamAvailabilityProps
                   </div>
                 </div>
                 {appLabel && <div
-                  className="flex max-w-[42%] shrink-0 items-center gap-1.5 text-xs text-muted-foreground"
-                  title={`${appLabel}${presence?.presenceStatus === 'afk' ? ' · Away' : ''}`}
-                  aria-label={`Using ${appLabel}${presence?.presenceStatus === 'afk' ? ', away' : ''}`}
+                  className="flex w-full min-w-0 flex-col items-start gap-1 text-xs text-muted-foreground min-[400px]:w-[46%] min-[400px]:shrink-0 min-[400px]:items-end"
+                  title={'Currently using ' + appLabel + (presence?.presenceStatus === 'afk' ? ' · Away' : '')}
+                  aria-label={'Currently using ' + appLabel + (presence?.presenceStatus === 'afk' ? ', away' : '')}
                 >
-                  <AppWindow className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  <span className="truncate">{appLabel}{presence?.presenceStatus === 'afk' ? ' · Away' : ''}</span>
+                  <span className="text-[11px] leading-4">Currently using</span>
+                  <span className="flex min-w-0 max-w-full items-center justify-start gap-1.5 min-[400px]:justify-end">
+                    <DesktopAppIcon appId={presence!.appId} label={appLabel} className="h-5 w-5 shrink-0 border-0 bg-transparent shadow-none" />
+                    <span className="min-w-0 whitespace-normal break-words min-[400px]:text-right">{appLabel}{presence?.presenceStatus === 'afk' ? ' · Away' : ''}</span>
+                  </span>
                 </div>}
               </div>
             );

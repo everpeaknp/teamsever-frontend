@@ -51,6 +51,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { usePermission, SpacePermissionLevel } from '@/hooks/usePermission';
 import { toast } from 'sonner';
 import { CommitsTab } from '@/components/space/CommitsTab';
+import { SpaceTabNavigation } from '@/components/space/SpaceTabNavigation';
 
 // Lazy load heavy components
 const CustomTableView = dynamic(
@@ -726,7 +727,7 @@ export default function SpaceHomePage() {
             
             {/* Right side - Admin actions */}
             {shouldShowAdminButtons && (
-              <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="flex w-full flex-shrink-0 items-center justify-end gap-2 sm:w-auto">
                 {/* GitHub Webhook - Standalone button */}
                 <Button
                   variant="outline"
@@ -736,16 +737,18 @@ export default function SpaceHomePage() {
                     openModal('githubWebhook', spaceId, 'space');
                   }}
                   title="GitHub Webhook"
+                  aria-label="GitHub Webhook"
+                  className="min-h-11 flex-1 sm:flex-none"
                 >
                   <Github className="w-4 h-4" />
-                  <span className="ml-2 hidden sm:inline">Webhook</span>
+                  <span className="ml-2">Webhook</span>
                 </Button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="min-h-11 flex-1 sm:flex-none">
                       <MoreVertical className="w-4 h-4" />
-                      <span className="ml-2 hidden sm:inline">Actions</span>
+                      <span className="ml-2">Actions</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
@@ -836,20 +839,20 @@ export default function SpaceHomePage() {
         </div>
       )}
       
-      <main className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <main className="w-full min-w-0 px-4 py-4 sm:px-6 sm:py-8 lg:px-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          <Card>
-            <CardHeader className="pb-3">
+        <div className="mb-4 grid min-w-0 grid-cols-2 gap-3 sm:mb-8 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+          <Card className="col-span-2 min-w-0 sm:col-span-1">
+            <CardHeader className="px-4 pb-1 pt-4 sm:px-6 sm:pb-3 sm:pt-6">
               <CardTitle className="text-sm font-medium text-muted-foreground">Task Progress</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between mb-4">
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+              <div className="mb-2 flex items-center justify-between sm:mb-4">
                 <div>
-                  <div className="text-3xl font-bold" style={{ color: spaceColor }}>{stats.percentage}%</div>
+                  <div className="text-2xl font-bold sm:text-3xl" style={{ color: spaceColor }}>{stats.percentage}%</div>
                   <p className="text-xs text-muted-foreground mt-1">{stats.completedTasks} of {stats.totalTasks} tasks</p>
                 </div>
-                <div className="relative w-16 h-16 flex-shrink-0">
+                <div className="relative hidden h-16 w-16 flex-shrink-0 sm:block">
                   <svg className="w-16 h-16 transform -rotate-90">
                     <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" fill="none" className="text-muted" />
                     <circle cx="32" cy="32" r="28" stroke={spaceColor} strokeWidth="6" fill="none" strokeDasharray={`${stats.percentage * 1.76} 176`} className="transition-all duration-300" />
@@ -861,32 +864,32 @@ export default function SpaceHomePage() {
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="pb-3">
+          <Card className="min-w-0">
+            <CardHeader className="px-3 pb-1 pt-3 sm:px-6 sm:pb-3 sm:pt-6">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Folders</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-3xl font-bold">{accessibleFolders.length}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{accessibleLists.length} lists in this space</p>
+                  <div className="text-2xl font-bold sm:text-3xl">{accessibleFolders.length}</div>
+                  <p className="mt-1 text-xs text-muted-foreground">{accessibleLists.length} lists in this space</p>
                 </div>
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `${spaceColor}20` }}>
-                  <FileText className="w-6 h-6" style={{ color: spaceColor }} />
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12" style={{ backgroundColor: `${spaceColor}20` }}>
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: spaceColor }} />
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className="sm:col-span-2 lg:col-span-1">
-            <CardHeader className="pb-3">
+          <Card className="col-span-1 min-w-0 sm:col-span-2 lg:col-span-1">
+            <CardHeader className="px-3 pb-1 pt-3 sm:px-6 sm:pb-3 sm:pt-6">
               <CardTitle className="text-sm font-medium text-muted-foreground">Team Members</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-3xl font-bold">{currentSpace.members?.length || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Active members</p>
+                  <div className="text-2xl font-bold sm:text-3xl">{currentSpace.members?.length || 0}</div>
+                  <p className="mt-1 text-xs text-muted-foreground">Active members</p>
                 </div>
                 <div className="flex -space-x-2">
                   {currentSpace.members?.slice(0, 3).map((member: any, idx: number) => {
@@ -913,53 +916,7 @@ export default function SpaceHomePage() {
           </Card>
         </div>
 
-        {/* Tabs Navigation */}
-        <div className="flex items-center gap-4 mb-6 border-b border-border">
-          <button
-            onClick={() => setActiveTab('lists')}
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'lists'
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              <span>Lists & Folders</span>
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('tables')}
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'tables'
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <TableIcon className="w-4 h-4" />
-              <span>Tables</span>
-              {tables.length > 0 && (
-                <Badge variant="secondary" className="ml-1">
-                  {tables.length}
-                </Badge>
-              )}
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('commits')}
-            className={`px-4 py-2 font-medium transition-colors ${
-              activeTab === 'commits'
-                ? 'text-primary border-b-2 border-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Github className="w-4 h-4" />
-              <span>Commits</span>
-            </div>
-          </button>
-        </div>
+        <SpaceTabNavigation activeTab={activeTab} onChange={setActiveTab} tableCount={tables.length} />
 
         {/* Lists & Folders Section */}
         {activeTab === 'lists' && (
@@ -1080,7 +1037,7 @@ export default function SpaceHomePage() {
                   className={highlightedFolderId === folder._id ? 'animate-pulse ring-4 ring-blue-500 ring-opacity-50' : ''}
                 >
                   <CardContent className="p-0">
-                    <div className={`flex items-center justify-between p-4 border-b transition-colors duration-300 ${highlightedFolderId === folder._id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                    <div className={`flex flex-wrap items-center justify-between gap-2 p-3 border-b transition-colors duration-300 sm:flex-nowrap sm:p-4 ${highlightedFolderId === folder._id ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                       <div className="flex items-center gap-3 flex-1 min-w-0">
                         <button
                           onClick={() => toggleFolder(folder._id)}
@@ -1114,10 +1071,12 @@ export default function SpaceHomePage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            aria-label={`Add a list to ${folder.name}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenCreateListModal(folder._id);
                             }}
+                            className="min-h-11 min-w-11 flex-shrink-0"
                           >
                             <Plus className="w-4 h-4 sm:mr-1" />
                             <span className="hidden sm:inline">Add List</span>
@@ -1129,7 +1088,9 @@ export default function SpaceHomePage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
+                                aria-label={`Folder actions for ${folder.name}`}
                                 onClick={(e) => e.stopPropagation()}
+                                className="min-h-11 min-w-11"
                               >
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
@@ -1300,7 +1261,7 @@ export default function SpaceHomePage() {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3 flex-1">
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
                           <div
                             className="w-10 h-10 rounded-lg flex items-center justify-center"
                             style={{ backgroundColor: `${spaceColor}20` }}
@@ -1467,7 +1428,55 @@ function ListItem({ list, spaceColor, workspaceId, spaceId, canManage, isReadOnl
   const taskCount = list.taskCount || 0;
   const completedCount = list.completedCount || 0;
   const progress = taskCount > 0 ? Math.round((completedCount / taskCount) * 100) : 0;
-  return (<Card className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50" onClick={() => router.push(`/workspace/${workspaceId}/spaces/${spaceId}/lists/${list._id}`)}><CardContent className="p-4"><div className="flex items-center justify-between"><div className="flex items-center gap-3 flex-1"><div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${spaceColor}20` }}><FileText className="w-5 h-5" style={{ color: spaceColor }} /></div><div className="flex-1 min-w-0"><h4 className="font-semibold truncate">{list.name}</h4><div className="flex items-center gap-4 mt-1"><span className="text-sm text-muted-foreground">{completedCount}/{taskCount} tasks</span><div className="flex-1 max-w-[100px]"><Progress value={progress} className="h-1.5" /></div><span className="text-xs text-muted-foreground">{progress}%</span></div></div></div>{canManage && !isReadOnly && (<DropdownMenu><DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}><button className="p-1 hover:bg-accent rounded transition-colors"><MoreVertical className="w-4 h-4 text-muted-foreground" /></button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}><DropdownMenuItem onClick={(e) => { e.stopPropagation(); }}><Edit className="w-4 h-4 mr-2" />Edit List</DropdownMenuItem><DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={(e) => { e.stopPropagation(); onDelete(list._id, list.name); }}><Trash2 className="w-4 h-4 mr-2" />Delete List</DropdownMenuItem></DropdownMenuContent></DropdownMenu>)}</div></CardContent></Card>);
+  return (
+    <Card
+      className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
+      onClick={() => router.push(`/workspace/${workspaceId}/spaces/${spaceId}/lists/${list._id}`)}
+    >
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex min-w-0 items-start justify-between gap-2 sm:items-center sm:gap-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${spaceColor}20` }}>
+              <FileText className="h-5 w-5" style={{ color: spaceColor }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h4 className="truncate font-semibold">{list.name}</h4>
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 sm:gap-x-3">
+                <span className="text-xs text-muted-foreground sm:text-sm">{completedCount}/{taskCount} tasks</span>
+                <div className="w-16 sm:max-w-[100px] sm:flex-1">
+                  <Progress value={progress} className="h-1.5" />
+                </div>
+                <span className="text-xs text-muted-foreground">{progress}%</span>
+              </div>
+            </div>
+          </div>
+          {canManage && !isReadOnly && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <button
+                  aria-label={`Actions for ${list.name}`}
+                  className="-mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-accent"
+                >
+                  <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem onClick={(e) => e.stopPropagation()}>
+                  <Edit className="mr-2 h-4 w-4" />Edit List
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-red-600 focus:text-red-600"
+                  onClick={(e) => { e.stopPropagation(); onDelete(list._id, list.name); }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />Delete List
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 function LoadingSkeleton() {

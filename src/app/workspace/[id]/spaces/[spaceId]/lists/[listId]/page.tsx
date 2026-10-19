@@ -693,6 +693,7 @@ export default function ListView() {
               <div className="flex md:hidden items-center gap-1 bg-muted p-1 rounded-lg flex-1">
                 <button
                   onClick={() => setView('board')}
+                      aria-label="Board view"
                   className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 flex-1 justify-center ${
                     view === 'board' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
                   }`}
@@ -701,6 +702,7 @@ export default function ListView() {
                 </button>
                 <button
                   onClick={() => setView('list')}
+                      aria-label="List view"
                   className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 flex-1 justify-center ${
                     view === 'list' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
                   }`}
@@ -709,6 +711,7 @@ export default function ListView() {
                 </button>
                 <button
                   onClick={() => setView('activity')}
+                      aria-label="Activity view"
                   className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 flex-1 justify-center ${
                     view === 'activity' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
                   }`}
@@ -746,7 +749,7 @@ export default function ListView() {
                 <>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8 sm:h-9">
+                      <Button variant="outline" size="sm" className="min-h-11 sm:h-9">
                         <MoreHorizontal className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         <span className="ml-1.5 sm:ml-2 hidden sm:inline text-xs sm:text-sm">Actions</span>
                       </Button>

@@ -146,10 +146,92 @@ export function SpaceMemberManagement({
     }
   };
 
+  const renderPermissionSelect = (member: SpaceMember, triggerClassName: string) => {
+    const PermissionIcon = member.spacePermissionLevel
+      ? PERMISSION_ICONS[member.spacePermissionLevel]
+      : null;
+
+    return (
+      <Select
+        value={member.spacePermissionLevel || 'default'}
+        onValueChange={(value) => {
+          if (value === 'default') {
+            handleRemoveOverride(member._id);
+          } else {
+            handleUpdatePermission(member._id, value as SpacePermissionLevel);
+          }
+        }}
+        disabled={updating === member._id}
+      >
+        <SelectTrigger className={triggerClassName}>
+          <SelectValue>
+            {member.spacePermissionLevel ? (
+              <div className="flex min-w-0 items-center gap-2">
+                {PermissionIcon && <PermissionIcon className="h-4 w-4 shrink-0" />}
+                <span className="truncate text-sm">{member.spacePermissionLevel}</span>
+              </div>
+            ) : (
+              <span className="truncate text-muted-foreground">Use workspace role</span>
+            )}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="default">
+            <div className="flex flex-col items-start">
+              <span>Use Workspace Role</span>
+              <span className="text-xs text-muted-foreground">No override</span>
+            </div>
+          </SelectItem>
+          {Object.entries(PERMISSION_DESCRIPTIONS).map(([level, description]) => {
+            const Icon = PERMISSION_ICONS[level as SpacePermissionLevel];
+            return (
+              <SelectItem key={level} value={level}>
+                <div className="flex items-start gap-2">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="flex min-w-0 flex-col">
+                    <span className="font-medium">{level}</span>
+                    <span className="text-xs text-muted-foreground">{description}</span>
+                  </div>
+                </div>
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    );
+  };
+
+  const renderMemberActions = (member: SpaceMember) => (
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
+      {member.hasOverride && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleRemoveOverride(member._id)}
+          disabled={updating === member._id}
+          className="min-h-10 px-3 text-xs"
+        >
+          Reset
+        </Button>
+      )}
+      {(isOwner() || isAdmin()) && member.workspaceRole !== 'owner' && member._id !== currentUserId && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleRemoveMember(member._id, member.name)}
+          disabled={updating === member._id}
+          className="min-h-10 border-destructive/30 px-3 text-xs text-destructive hover:bg-destructive/10"
+        >
+          Remove
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[78vh] overflow-hidden flex flex-col rounded-2xl border border-border bg-background p-0 gap-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+      <DialogContent className="flex w-[calc(100vw-1rem)] max-h-[88dvh] max-w-3xl flex-col gap-0 overflow-hidden rounded-2xl border border-border bg-background p-0 sm:max-h-[80vh] sm:w-full">
+        <DialogHeader className="shrink-0 border-b border-border px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-6">
           <DialogTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
             Manage Space Permissions
@@ -159,7 +241,7 @@ export function SpaceMemberManagement({
           </DialogDescription>
         </DialogHeader>
 
-        <div role="region" aria-label="Space members and permissions" tabIndex={0} className="min-w-0 flex-1 overflow-auto overscroll-contain px-3 py-4 sm:px-6">
+        <div role="region" aria-label="Space members and permissions" tabIndex={0} className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain px-3 py-3 sm:px-6 sm:py-4">
           {loading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
@@ -173,8 +255,53 @@ export function SpaceMemberManagement({
                 </div>
               ))}
             </div>
+          ) : members.length === 0 ? (
+            <div className="rounded-xl border border-dashed px-4 py-10 text-center text-sm text-muted-foreground">
+              No members have access to this space yet.
+            </div>
           ) : (
-            <Table>
+            <>
+            <div className="space-y-3 md:hidden">
+              {members.map((member) => (
+                <article key={member._id} data-member-card className="min-w-0 rounded-xl border border-border bg-card p-3.5">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <UserAvatar user={member} className="h-11 w-11 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-semibold">{member.name}</p>
+                      <p className="break-all text-xs text-muted-foreground">{member.email}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        <Badge variant="secondary" className="w-fit capitalize">{member.workspaceRole}</Badge>
+                        {(member as any).customRole ? (
+                          <Badge
+                            variant="outline"
+                            className="h-5 w-fit px-1.5 py-0 text-[10px]"
+                            style={{
+                              backgroundColor: `${(member as any).customRole.color}20`,
+                              color: (member as any).customRole.color,
+                              borderColor: `${(member as any).customRole.color}40`,
+                            }}
+                          >
+                            {(member as any).customRole.label}
+                          </Badge>
+                        ) : (member as any).customRoleTitle ? (
+                          <Badge variant="outline" className="h-5 w-fit px-1.5 py-0 text-[10px]">{(member as any).customRoleTitle}</Badge>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="mb-1.5 text-xs font-medium text-muted-foreground">Space permission</p>
+                    {renderPermissionSelect(member, 'min-h-11 w-full')}
+                  </div>
+                  <div className="mt-2 flex min-h-10 items-center justify-end">
+                    {renderMemberActions(member)}
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="hidden md:block">
+            <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Member</TableHead>
@@ -185,10 +312,6 @@ export function SpaceMemberManagement({
               </TableHeader>
               <TableBody>
                 {members.map((member) => {
-                  const PermissionIcon = member.spacePermissionLevel
-                    ? PERMISSION_ICONS[member.spacePermissionLevel]
-                    : null;
-
                   return (
                     <TableRow key={member._id} className="hover:bg-muted/40">
                       <TableCell>
@@ -229,102 +352,21 @@ export function SpaceMemberManagement({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Select
-                          value={member.spacePermissionLevel || 'default'}
-                          onValueChange={(value) => {
-                            if (value === 'default') {
-                              handleRemoveOverride(member._id);
-                            } else {
-                              handleUpdatePermission(
-                                member._id,
-                                value as SpacePermissionLevel
-                              );
-                            }
-                          }}
-                          disabled={updating === member._id}
-                        >
-                          <SelectTrigger className="w-[170px] min-h-11">
-                            <SelectValue>
-                              {member.spacePermissionLevel ? (
-                                <div className="flex items-center gap-2">
-                                  {PermissionIcon && (
-                                    <PermissionIcon className="w-4 h-4" />
-                                  )}
-                                    <span className="text-sm">{member.spacePermissionLevel}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground">
-                                  Use workspace role
-                                </span>
-                              )}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="default">
-                              <div className="flex flex-col items-start">
-                                <span>Use Workspace Role</span>
-                                <span className="text-xs text-muted-foreground">
-                                  No override
-                                </span>
-                              </div>
-                            </SelectItem>
-                            {Object.entries(PERMISSION_DESCRIPTIONS).map(
-                              ([level, description]) => {
-                                const Icon = PERMISSION_ICONS[level as SpacePermissionLevel];
-                                return (
-                                  <SelectItem key={level} value={level}>
-                                    <div className="flex items-start gap-2">
-                                      <Icon className="w-4 h-4 mt-0.5" />
-                                      <div className="flex flex-col">
-                                        <span className="font-medium">{level}</span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {description}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </SelectItem>
-                                );
-                              }
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
+                      <TableCell>{renderPermissionSelect(member, 'min-h-11 w-[170px]')}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {member.hasOverride && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveOverride(member._id)}
-                              disabled={updating === member._id}
-                              className="min-h-11 px-2.5 text-xs"
-                            >
-                              Reset
-                            </Button>
-                          )}
-                          {(isOwner() || isAdmin()) && member.workspaceRole !== 'owner' && member._id !== currentUserId && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRemoveMember(member._id, member.name)}
-                              disabled={updating === member._id}
-                              className="min-h-11 px-2.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-                            >
-                              Remove
-                            </Button>
-                          )}
-                        </div>
+                        {renderMemberActions(member)}
                       </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
+            </div>
+            </>
           )}
         </div>
 
-        <div className="border-t border-border px-6 py-3 text-xs text-muted-foreground">
+        <div className="shrink-0 border-t border-border px-4 py-3 text-xs text-muted-foreground sm:px-6">
           Owner bypasses all checks. Then space override applies. Else workspace role fallback.
         </div>
       </DialogContent>

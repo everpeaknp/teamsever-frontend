@@ -21,8 +21,18 @@ describe('TeamAvailability desktop app presence', () => {
       { status: 'inactive', user: { _id: 'away-1', name: 'Clocked out member' } },
     ]} />);
 
-    expect(await screen.findByText('Google Chrome')).toBeInTheDocument();
-    expect(screen.getByLabelText('Using Visual Studio Code, away')).toBeInTheDocument();
+    expect(await screen.findAllByText('Currently using')).toHaveLength(2);
+    const mobilePresence = screen.getByLabelText('Currently using Google Chrome');
+    expect(mobilePresence.className).toContain('w-full');
+    expect(mobilePresence.parentElement?.className).toContain('min-[400px]:flex-row');
+    expect(screen.getByText('Google Chrome')).toBeInTheDocument();
+    expect(mobilePresence.querySelector('span:last-child span:last-child')?.className).toContain('break-words');
+    expect(screen.getByRole('img', { name: 'Google Chrome app icon' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Currently using Visual Studio Code, away')).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Currently using Visual Studio Code, away').textContent,
+    ).toContain('Visual Studio Code');
+    expect(screen.getAllByText('Clocked In')[0].className).toContain('hover:bg-emerald-100');
     expect(screen.getByText('Active member')).toBeInTheDocument();
     expect(screen.getByText('Untracked member')).toBeInTheDocument();
     expect(screen.queryByText('Not tracking')).not.toBeInTheDocument();
@@ -40,6 +50,6 @@ describe('TeamAvailability desktop app presence', () => {
     ]} />);
 
     await waitFor(() => expect(api.get).toHaveBeenCalled());
-    expect(screen.queryByText('Google Chrome')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Currently using Google Chrome')).not.toBeInTheDocument();
   });
 });

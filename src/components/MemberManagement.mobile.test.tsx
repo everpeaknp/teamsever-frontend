@@ -4,11 +4,22 @@ import { FolderMemberManagement } from './FolderMemberManagement';
 import { SpaceMemberManagement } from './SpaceMemberManagement';
 
 vi.mock('@/lib/axios', () => ({
-  api: { get: vi.fn().mockResolvedValue({ data: { data: [] } }) },
+  api: {
+    get: vi.fn().mockResolvedValue({ data: { data: [{
+      _id: 'member-1',
+      name: 'Workspace Member',
+      email: 'member@example.com',
+      workspaceRole: 'member',
+      spacePermissionLevel: null,
+      hasOverride: false,
+      addedBy: null,
+      addedAt: null,
+    }] } }),
+  },
 }));
 
 vi.mock('@/store/useAuthStore', () => ({
-  usePermissions: () => ({ isAdmin: true, isOwner: false }),
+  usePermissions: () => ({ isAdmin: () => true, isOwner: () => false }),
 }));
 
 describe('member management dialogs on phones', () => {

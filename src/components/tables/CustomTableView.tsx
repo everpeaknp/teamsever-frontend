@@ -343,7 +343,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({ tableId, space
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 max-w-full space-y-4">
       {/* ARIA live region for screen reader announcements */}
       <div
         ref={liveRegionRef}
@@ -429,8 +429,14 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({ tableId, space
       </div>
 
       {/* Table - Excel-like Design */}
-      <div className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm bg-white dark:bg-gray-900">
-        <div className="overflow-x-auto">
+      <div className="min-w-0 max-w-full overflow-hidden rounded-lg border border-gray-300 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+        <p className="px-3 pt-2 text-xs text-muted-foreground sm:hidden">Swipe horizontally to see all columns</p>
+        <div
+          role="region"
+          aria-label={`${table.name} table; scroll horizontally to see all columns`}
+          tabIndex={0}
+          className="max-w-full touch-pan-x overflow-x-auto overscroll-x-contain focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        >
           <table
             ref={tableRef}
             className="w-full border-collapse"
@@ -438,7 +444,7 @@ export const CustomTableView: React.FC<CustomTableViewProps> = ({ tableId, space
             aria-label={`${table.name} data table with ${table.rows.length} rows and ${table.columns.length} columns`}
             aria-rowcount={table.rows.length + 1}
             aria-colcount={table.columns.length + 1}
-            style={{ minWidth: '100%' }}
+            style={{ minWidth: '100%', width: 'max-content' }}
           >
             <thead>
               <tr role="row" aria-rowindex={1}>
