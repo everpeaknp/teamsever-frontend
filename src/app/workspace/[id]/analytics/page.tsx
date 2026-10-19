@@ -751,7 +751,7 @@ export default function AnalyticsPage() {
                         </>
                     ) : (
                         <>
-                            <TeamAvailability members={members} />
+                            <TeamAvailability workspaceId={workspaceId} members={members} />
                             <div id="your-assigned-work" ref={yourTasksRef} className="lg:col-span-2">
                                 <YourTasks
                                     tasks={isDelayedFocus ? delayedOpenTasks : tasks}

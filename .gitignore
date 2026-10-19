@@ -107,3 +107,4 @@ Thumbs.db
 !src/store/useNotificationStore.test.ts
 
 !src/lib/workspaceNavigation.test.ts
+!src/components/analytics/TeamAvailability.spec.tsx

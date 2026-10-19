@@ -1,17 +1,28 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AppWindow } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/axios';
+import { formatAppLabel } from '@/components/attendance/desktopAppUsage';
+
+type CurrentDesktopPresence = {
+  appId: string;
+  presenceStatus: 'active' | 'afk';
+};
 
 interface TeamAvailabilityProps {
   members: any[];
+  workspaceId: string;
 }
 
-export function TeamAvailability({ members }: TeamAvailabilityProps) {
+export function TeamAvailability({ members, workspaceId }: TeamAvailabilityProps) {
   const [expanded, setExpanded] = useState(false);
+  const [desktopPresence, setDesktopPresence] = useState<Record<string, CurrentDesktopPresence>>({});
+  const presenceRequest = useRef(0);
   const COLLAPSED_COUNT = 6;
 
   const getInitials = (name: string) => {
@@ -43,6 +54,70 @@ export function TeamAvailability({ members }: TeamAvailabilityProps) {
     ? sortedMembers
     : sortedMembers.slice(0, COLLAPSED_COUNT);
 
+  const activeUserIds = useMemo(() => Array.from(new Set(sortedMembers
+    .filter((member: any) => ['active', 'break', 'clocked in', 'on break'].includes(String(member?.status || '').toLowerCase()))
+    .map((member: any) => {
+      const user = typeof member.user === 'object' ? member.user : member;
+      return user?._id || user?.id || member?.userId;
+    })
+    .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0))), [sortedMembers]);
+  const activeUserIdsKey = activeUserIds.join(',');
+
+  useEffect(() => {
+    const requestId = ++presenceRequest.current;
+    if (!workspaceId || activeUserIds.length === 0) {
+      setDesktopPresence({});
+      return;
+    }
+
+    let cancelled = false;
+    let inFlight = false;
+    const refresh = async () => {
+      if (cancelled || inFlight || document.visibilityState !== 'visible') return;
+      inFlight = true;
+      try {
+        const query = new URLSearchParams({ userIds: activeUserIdsKey, pageSize: String(activeUserIds.length) });
+        const { data } = await api.get(`/attendance/workspace/${workspaceId}/desktop-presence/current?${query}`, {
+          headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+        });
+        if (cancelled || requestId !== presenceRequest.current) return;
+        const next: Record<string, CurrentDesktopPresence> = {};
+        const roster = data?.data?.members;
+        if (Array.isArray(roster)) {
+          for (const item of roster) {
+            const presence = item?.presence;
+            if (typeof item?.userId === 'string'
+              && typeof presence?.appId === 'string'
+              && presence.appId.trim()
+              && (presence.presenceStatus === 'active' || presence.presenceStatus === 'afk')) {
+              next[item.userId] = { appId: presence.appId, presenceStatus: presence.presenceStatus };
+            }
+          }
+        }
+        setDesktopPresence(next);
+      } catch {
+        // Desktop reporting is optional; clock-in state stays available.
+      } finally {
+        inFlight = false;
+      }
+    };
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void refresh();
+    };
+    refreshWhenVisible();
+    const poll = window.setInterval(refreshWhenVisible, 5_000);
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(poll);
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+      presenceRequest.current += 1;
+    };
+  }, [workspaceId, activeUserIdsKey, activeUserIds.length]);
+
   return (
     <Card className="flex flex-col">
       <div className="px-6 py-4 border-b flex justify-between items-center">
@@ -58,11 +133,13 @@ export function TeamAvailability({ members }: TeamAvailabilityProps) {
           displayMembers.map((member: any, index: number) => {
             const user = typeof member.user === 'object' ? member.user : member;
             const userName = user?.name || 'Unknown';
-            const userAvatar = user?.avatar;
+            const userId = user?._id || user?.id || member?.userId;
+            const presence = typeof userId === 'string' ? desktopPresence[userId] : undefined;
+            const appLabel = presence?.appId ? formatAppLabel(presence.appId) : null;
             
             return (
-              <div key={member._id || user?._id || `${userName}-${index}`} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              <div key={member._id || user?._id || `${userName}-${index}`} className="flex min-w-0 items-center justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
                   <div className="relative">
                     <UserAvatar 
                       user={user} 
@@ -73,11 +150,19 @@ export function TeamAvailability({ members }: TeamAvailabilityProps) {
                       member.status === 'break' ? 'bg-amber-500' : 'bg-slate-300'
                     }`}></div>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-bold">{userName}</p>
                     {getStatusBadge(member.status || 'inactive')}
                   </div>
                 </div>
+                {appLabel && <div
+                  className="flex max-w-[42%] shrink-0 items-center gap-1.5 text-xs text-muted-foreground"
+                  title={`${appLabel}${presence?.presenceStatus === 'afk' ? ' · Away' : ''}`}
+                  aria-label={`Using ${appLabel}${presence?.presenceStatus === 'afk' ? ', away' : ''}`}
+                >
+                  <AppWindow className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{appLabel}{presence?.presenceStatus === 'afk' ? ' · Away' : ''}</span>
+                </div>}
               </div>
             );
           })
