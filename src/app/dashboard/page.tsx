@@ -10,8 +10,6 @@ import {
   Loader2, 
   Users, 
   LogOut, 
-  Briefcase,
-  Layout,
   MoreHorizontal,
   Settings as SettingsIcon,
   Edit,
@@ -20,7 +18,6 @@ import {
   Bell,
   Zap,
   Clock,
-  CheckSquare,
   Key,
   CheckCircle2,
   XCircle
@@ -30,7 +27,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { Progress } from '@/components/ui/progress';
+import { WorkspacePlanSummary } from '@/components/dashboard/WorkspacePlanSummary';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -351,7 +348,8 @@ export default function DashboardPage() {
   const planName = plan?.name || "Free Plan";
   const daysRemaining = subscription?.daysRemaining || 0;
   const isActive = subscription?.status === 'active';
-  const isExpired = subscription?.status === 'expired';
+  const isExpired = subscription?.status === 'expired' || subscription?.subscriptionExpired === true;
+  const hasAssignedNonFreePlan = Boolean(plan?.name && !/free/i.test(plan.name));
   
   // Get usage limits (only show 4 key metrics)
   const maxWorkspaces = plan?.features.maxWorkspaces ?? 1;
@@ -507,110 +505,59 @@ export default function DashboardPage() {
           </Alert>
         )}
 
-        {/* Plan Overview Card (Compact) */}
-        <Card className="mb-8">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold">{planName}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {isPaid && isActive ? (
-                    <span className={
-                      daysRemaining <= 3 ? 'text-red-500 font-medium' :
-                      daysRemaining <= 7 ? 'text-orange-500 font-medium' :
-                      daysRemaining <= 14 ? 'text-yellow-600 font-medium' :
-                      'text-green-600 font-medium'
-                    }>
-                      {daysRemaining} days remaining
-                    </span>
-                  ) : isPaid && isExpired ? (
-                    <span className="text-red-500 font-medium">Expired</span>
-                  ) : (
-                    'Free plan'
-                  )}
-                </p>
-              </div>
-              {!isPaid && (
-                <Button
-                  onClick={() => {
-                    setUpgradeReason('workspace');
-                    setShowUpgradeModal(true);
-                  }}
-                >
-                  Upgrade
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {/* Workspaces */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Briefcase className="w-4 h-4" />
-                  <span className="text-sm">Workspaces</span>
-                </div>
-                <div className="text-2xl font-semibold">
-                  {workspaces.length} / {maxWorkspaces === -1 ? '∞' : maxWorkspaces}
-                </div>
-                {maxWorkspaces !== -1 && (
-                  <Progress value={workspacePercentage} className="h-1.5" />
-                )}
-              </div>
-
-              {/* Spaces */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Layout className="w-4 h-4" />
-                  <span className="text-sm">Spaces</span>
-                </div>
-                <div className="text-2xl font-semibold">
-                  {usage?.spaces || 0} / {maxSpaces === -1 ? '∞' : maxSpaces}
-                </div>
-                {maxSpaces !== -1 && (
-                  <Progress value={spacePercentage} className="h-1.5" />
-                )}
-              </div>
-
-              {/* Tasks */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <CheckSquare className="w-4 h-4" />
-                  <span className="text-sm">Tasks</span>
-                </div>
-                <div className="text-2xl font-semibold">
-                  {usage?.tasks || 0} / {maxTasks === -1 ? '∞' : maxTasks}
-                </div>
-                {maxTasks !== -1 && (
-                  <Progress value={taskPercentage} className="h-1.5" />
-                )}
-              </div>
-
-              {/* Members */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Users className="w-4 h-4" />
-                  <span className="text-sm">Members</span>
-                </div>
-                <div className="text-2xl font-semibold">
-                  {maxMembers === -1 ? 'Unlimited' : `Up to ${maxMembers}`}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <WorkspacePlanSummary
+          planName={planName}
+          planStatus={
+            isPaid && isActive ? (
+              <span className={
+                daysRemaining <= 3 ? 'text-red-500 font-medium' :
+                daysRemaining <= 7 ? 'text-orange-500 font-medium' :
+                daysRemaining <= 14 ? 'text-yellow-600 font-medium' :
+                'text-green-600 font-medium'
+              }>
+                {daysRemaining} days remaining
+              </span>
+            ) : isExpired ? (
+              <span className="text-red-500 font-medium">Expired</span>
+            ) : hasAssignedNonFreePlan ? (
+              <span className="text-muted-foreground">Plan assigned · inactive</span>
+            ) : (
+              'Free plan'
+            )
+          }
+          workspaces={{
+            value: `${workspaces.length} / ${maxWorkspaces === -1 ? '∞' : maxWorkspaces}`,
+            percentage: workspacePercentage,
+          }}
+          spaces={{
+            value: `${usage?.spaces || 0} / ${maxSpaces === -1 ? '∞' : maxSpaces}`,
+            percentage: spacePercentage,
+          }}
+          tasks={{
+            value: `${usage?.tasks || 0} / ${maxTasks === -1 ? '∞' : maxTasks}`,
+            percentage: taskPercentage,
+          }}
+          members={{ value: maxMembers === -1 ? 'Unlimited' : `Up to ${maxMembers}` }}
+          showUpgrade={!isPaid}
+          onUpgrade={() => {
+            setUpgradeReason('workspace');
+            setShowUpgradeModal(true);
+          }}
+        />
 
         {/* Workspace Section Header */}
-        <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 mb-5 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
           <h3 id="workspaces" className="scroll-mt-20 text-xl font-semibold">Your Workspaces</h3>
-          <div className="grid w-full grid-cols-1 min-[420px]:grid-cols-2 gap-2 sm:w-auto">
-            <Button className="w-full" variant="outline" onClick={() => { setShowInviteCodeModal(true); setRedeemError(null); setRedeemSuccess(null); setInviteCode(''); }}>
-              <Key className="w-4 h-4 mr-2" />
-              Join Workspace
+          <div className="grid w-full grid-cols-2 gap-2 sm:w-auto">
+            <Button className="h-10 w-full min-w-0 px-2 sm:px-4" variant="outline" onClick={() => { setShowInviteCodeModal(true); setRedeemError(null); setRedeemSuccess(null); setInviteCode(''); }}>
+              <Key className="mr-1 h-4 w-4 shrink-0 sm:mr-2" />
+              <span className="sm:hidden">Join</span>
+              <span className="hidden sm:inline">Join Workspace</span>
             </Button>
-            <Button className="w-full" onClick={() => setShowCreateModal(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Workspace
+            <Button className="h-10 w-full min-w-0 px-2 sm:px-4" onClick={() => setShowCreateModal(true)}>
+              <Plus className="mr-1 h-4 w-4 shrink-0 sm:mr-2" />
+              <span className="sm:hidden">New</span>
+              <span className="hidden sm:inline">New Workspace</span>
             </Button>
           </div>
         </div>
@@ -655,9 +602,9 @@ export default function DashboardPage() {
                   onMouseEnter={() => prefetchWorkspace(workspace._id)}
                   onClick={() => handleLaunchWorkspace(workspace._id)}
                 >
-                  <CardHeader>
+                  <CardHeader className="p-4 sm:p-6">
                     <div className="flex items-start gap-3">
-                      <div className={`w-12 h-12 ${colorScheme} rounded-xl flex items-center justify-center text-white font-semibold text-lg flex-shrink-0 overflow-hidden`}>
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 ${colorScheme} rounded-xl flex items-center justify-center text-white font-semibold text-base sm:text-lg flex-shrink-0 overflow-hidden`}>
                         {workspace.logo ? (
                           <img src={workspace.logo} alt={workspace.name} className="w-full h-full object-contain" />
                         ) : (
@@ -720,8 +667,8 @@ export default function DashboardPage() {
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
+                  <CardContent className="px-4 pb-4 pt-0 sm:p-6">
+                    <p className="hidden text-sm text-muted-foreground sm:block">
                       Click to open workspace
                     </p>
                   </CardContent>
