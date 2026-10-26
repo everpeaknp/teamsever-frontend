@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { api } from '@/lib/axios';
+import { readAnalyticsCacheForUser } from '@/lib/analyticsCache';
 import {
     TrendingUp, Users, CheckCircle2, Rocket, Loader2,
     BarChart3
@@ -160,17 +161,13 @@ export default function AnalyticsPage() {
             } else {
                 // Check if we have cached data in sessionStorage
                 const cachedData = sessionStorage.getItem(CACHE_KEY);
-                const now = Date.now();
-                
-                if (cachedData) {
-                    try {
-                const parsed = JSON.parse(cachedData);
-                        const cacheAge = now - parsed.timestamp;
-                        
-                        if (cacheAge < CACHE_DURATION) {
-                            const cachedMembers = Array.isArray(parsed.members) ? parsed.members : [];
-                            const hasUsableMembers = cachedMembers.length > 0;
-                            if (hasUsableMembers) {
+                const parsed = readAnalyticsCacheForUser(
+                    cachedData,
+                    localStorage.getItem('userId'),
+                    Date.now(),
+                    CACHE_DURATION,
+                );
+                if (parsed) {
                             setTasks(parsed.tasks || []);
                             setSpaces(parsed.spaces || []);
                             setMembers(parsed.members || []);
@@ -207,11 +204,8 @@ export default function AnalyticsPage() {
                                     }, 0);
                                 }
                             return;
-                            }
-                        }
-                    } catch (e) {
-                        sessionStorage.removeItem(CACHE_KEY);
-                    }
+                } else if (cachedData) {
+                    sessionStorage.removeItem(CACHE_KEY);
                 }
                 
                 setSummaryLoading(true);

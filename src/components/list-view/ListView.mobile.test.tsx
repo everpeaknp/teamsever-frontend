@@ -10,12 +10,22 @@ vi.mock("@/store/useTaskSidebarStore", () => ({
 
 const task = {
   _id: "task-1",
+  name: "A very long task title that should wrap on a phone instead of forcing the page wide",
   title: "A very long task title that should wrap on a phone instead of forcing the page wide",
   description: "Check responsive task handling",
-  status: "to do",
+  // This legacy list view receives display statuses rather than canonical task statuses.
+  status: "to do" as Task["status"],
   priority: "high",
   dueDate: "2026-11-01T00:00:00.000Z",
-} as Task;
+  list: "list-1",
+  space: "space-1",
+  workspace: "workspace-1",
+  order: 0,
+  isDeleted: false,
+  createdBy: { _id: "user-1", name: "Tester", email: "tester@example.com" },
+  createdAt: "2026-10-01T00:00:00.000Z",
+  updatedAt: "2026-10-01T00:00:00.000Z",
+} satisfies Task;
 
 describe("ListView mobile layout", () => {
   beforeEach(() => openTask.mockClear());

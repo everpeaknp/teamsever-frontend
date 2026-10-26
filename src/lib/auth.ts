@@ -1,6 +1,7 @@
 import { api } from './axios';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { clearAnalyticsCache } from './analyticsCache';
 
 /**
  * Standardized auth response handler
@@ -122,6 +123,7 @@ export function clearAuthData(): void {
   if (typeof window === 'undefined') return;
 
   useNotificationStore.getState().clearNotifications();
+  clearAnalyticsCache(sessionStorage);
   localStorage.removeItem('authToken');
   localStorage.removeItem('userId');
   localStorage.removeItem('userName');
@@ -160,7 +162,11 @@ export function getCurrentUser() {
  */
 export async function register(name: string, email: string, password: string): Promise<void> {
   try {
-    const response = await api.post('/auth/register', { name, email, password });
+    const response = await api.post('/auth/register', {
+      name,
+      email: email.trim().toLowerCase(),
+      password,
+    });
     const authData = normalizeAuthResponse(response.data);
     storeAuthData(authData);
   } catch (error: any) {
@@ -173,7 +179,10 @@ export async function register(name: string, email: string, password: string): P
  */
 export async function login(email: string, password: string): Promise<void> {
   try {
-    const response = await api.post('/auth/login', { email, password });
+    const response = await api.post('/auth/login', {
+      email: email.trim().toLowerCase(),
+      password,
+    });
     
     const authData = normalizeAuthResponse(response.data);
     

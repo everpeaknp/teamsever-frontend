@@ -32,14 +32,7 @@ type CurrentDesktopPresence = {
   reportedAt: string;
 };
 
-function ElapsedAttendanceDuration({ timer }: { timer: ActiveTimer }) {
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const ticker = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => window.clearInterval(ticker);
-  }, []);
-
+function ElapsedAttendanceDuration({ timer, now }: { timer: ActiveTimer; now: number }) {
   const seconds = Math.max(timer.currentDuration || 0, Math.floor((now - new Date(timer.startTime).getTime()) / 1000));
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -49,6 +42,7 @@ function ElapsedAttendanceDuration({ timer }: { timer: ActiveTimer }) {
 }
 
 export function LiveAttendanceTimers({ workspaceId }: { workspaceId: string }) {
+  const [now, setNow] = useState(Date.now());
   const [status, setStatus] = useState<ClockStatus | null>(null);
   const [desktopPresence, setDesktopPresence] = useState<Record<string, CurrentDesktopPresence>>({});
   const [error, setError] = useState('');
@@ -59,6 +53,18 @@ export function LiveAttendanceTimers({ workspaceId }: { workspaceId: string }) {
   const [stopping, setStopping] = useState(false);
   const [stopReason, setStopReason] = useState('');
   const openProfile = useProfileModalStore((state) => state.openProfile);
+
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState === 'visible') setNow(Date.now());
+    };
+    const ticker = window.setInterval(tick, 1_000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      window.clearInterval(ticker);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, []);
 
   const refreshDesktopPresence = useCallback(async (clockStatus: ClockStatus, showSpinner = false) => {
     if (presenceInFlight.current) return;
@@ -253,7 +259,7 @@ export function LiveAttendanceTimers({ workspaceId }: { workspaceId: string }) {
                 </div>
                 <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
                   <Badge variant="outline" className="gap-1.5 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />Clocked in</Badge>
-                  <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums"><Clock className="h-3.5 w-3.5 text-muted-foreground" /><ElapsedAttendanceDuration timer={timer} /></span>
+                  <span className="inline-flex items-center gap-1.5 font-mono text-sm tabular-nums"><Clock className="h-3.5 w-3.5 text-muted-foreground" /><ElapsedAttendanceDuration timer={timer} now={now} /></span>
                   {status.canManageTeam && <Button variant="outline" size="sm" className="min-h-11 gap-1.5 text-destructive" aria-label={`Clock out ${name}`} onClick={() => setSelectedTimer(timer)}><StopCircle className="h-4 w-4" />Clock out</Button>}
                 </div>
           </div>;

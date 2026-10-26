@@ -40,6 +40,12 @@ export function NotificationBell() {
   const [loadingMore, setLoadingMore] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const lastNetworkWarningAt = useRef(0);
+  const scopeGeneration = useRef(0);
+  const notificationRequestId = useRef(0);
+  const countRequestId = useRef(0);
+  const pollInFlight = useRef(false);
+  const isOpenRef = useRef(isOpen);
+  useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
   const workspaceMatch = pathname?.match(/\/workspace\/([^/]+)/);
   const scopedWorkspaceId = workspaceMatch?.[1];
 
@@ -66,20 +72,29 @@ export function NotificationBell() {
       if (!token || token === "undefined" || token === "null") return;
     }
 
+    ++scopeGeneration.current;
     setPage(1);
     setHasMore(false);
     replaceBellNotifications([]);
-    fetchNotifications();
-    fetchUnreadCount();
-
-    // Poll for new notifications every 10 seconds (always, not just when bell is open)
-    const interval = setInterval(() => {
-      fetchNotifications();
-      fetchUnreadCount();
-    }, 10000);
+    const refresh = async () => {
+      if (pollInFlight.current || document.visibilityState !== 'visible' || isOpenRef.current) return;
+      const generation = scopeGeneration.current;
+      pollInFlight.current = true;
+      try {
+        await Promise.all([fetchNotifications(), fetchUnreadCount()]);
+      } finally {
+        if (generation === scopeGeneration.current) pollInFlight.current = false;
+      }
+    };
+    void refresh();
+    const interval = setInterval(() => void refresh(), 10000);
 
     return () => {
       clearInterval(interval);
+      ++scopeGeneration.current;
+      ++notificationRequestId.current;
+      ++countRequestId.current;
+      pollInFlight.current = false;
     };
   }, [scopedWorkspaceId]);
 
@@ -104,6 +119,8 @@ export function NotificationBell() {
   }, [isOpen]);
 
   const fetchNotifications = async (requestedPage = 1, append = false) => {
+    const generation = scopeGeneration.current;
+    const requestId = ++notificationRequestId.current;
     try {
       // Check if user is authenticated
       if (typeof window !== "undefined") {
@@ -128,6 +145,7 @@ export function NotificationBell() {
       }
 
       const response = await api.get(url);
+      if (generation !== scopeGeneration.current || requestId !== notificationRequestId.current) return;
       const notifications = response.data.data || [];
       const current = useNotificationStore.getState().bellNotifications;
       const merged = append
@@ -138,26 +156,18 @@ export function NotificationBell() {
                 !current.some((old) => old._id === item._id)
             ),
           ]
-        : requestedPage === 1
-        ? [
-            ...notifications,
-            ...current.filter(
-              (old) =>
-                !notifications.some(
-                  (item: Notification) => item._id === old._id
-                )
-            ),
-          ]
         : notifications;
       replaceBellNotifications(merged);
       setHasMore(response.data.pagination?.hasMore === true);
       if (append) setPage(requestedPage);
-      else setPage((currentPage) => Math.max(currentPage, requestedPage));
+      else setPage(1);
     } catch (error: any) {
       reportNotificationRequestError("Failed to fetch notifications:", error);
     } finally {
-      if (append) setLoadingMore(false);
-      else setLoading(false);
+      if (generation === scopeGeneration.current && requestId === notificationRequestId.current) {
+        if (append) setLoadingMore(false);
+        else setLoading(false);
+      }
     }
   };
 
@@ -167,6 +177,8 @@ export function NotificationBell() {
   };
 
   const fetchUnreadCount = async () => {
+    const generation = scopeGeneration.current;
+    const requestId = ++countRequestId.current;
     try {
       // Check if user is authenticated
       if (typeof window !== "undefined") {
@@ -188,11 +200,18 @@ export function NotificationBell() {
       }
 
       const response = await api.get(url);
+      if (generation !== scopeGeneration.current || requestId !== countRequestId.current) return;
       setUnreadCount(response.data.data.unreadCount || 0);
     } catch (error: any) {
       reportNotificationRequestError("Failed to fetch unread count:", error);
     }
   };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void fetchNotifications();
+    void fetchUnreadCount();
+  }, [isOpen, scopedWorkspaceId]);
 
   const handleMarkAsRead = async (
     notificationId: string,

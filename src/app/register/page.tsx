@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { register, loginWithGoogle, loginWithApple } from '@/lib/auth';
-import { signInWithGoogle, signInWithApple } from '@/lib/firebase';
+import { register, loginWithGoogle, loginWithGithub, loginWithApple } from '@/lib/auth';
+import { signInWithGoogle, signInWithGithub, signInWithApple } from '@/lib/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UserPlus, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Loader2, Github } from 'lucide-react';
 import Image from 'next/image';
 
 export default function RegisterPage() {
@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -25,8 +26,9 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
 
+    const normalizedEmail = email.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(normalizedEmail)) {
       setError('Please enter a valid email address');
       setLoading(false);
       return;
@@ -39,7 +41,7 @@ export default function RegisterPage() {
     }
 
     try {
-      await register(name, email, password);
+      await register(name, normalizedEmail, password);
       const urlParams = new URLSearchParams(window.location.search);
       router.push(urlParams.get('redirect') || '/dashboard');
     } catch (err: any) {
@@ -82,6 +84,24 @@ export default function RegisterPage() {
       }
     } finally {
       setAppleLoading(false);
+    }
+  };
+
+  const handleGithubSignup = async () => {
+    setError('');
+    setGithubLoading(true);
+    try {
+      const result = await signInWithGithub();
+      const idToken = await result.user.getIdToken();
+      await loginWithGithub(idToken);
+      const urlParams = new URLSearchParams(window.location.search);
+      router.push(urlParams.get('redirect') || '/dashboard');
+    } catch (err: any) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message || 'GitHub Sign-Up failed');
+      }
+    } finally {
+      setGithubLoading(false);
     }
   };
 
@@ -192,11 +212,12 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mt-3">
+          <div className="grid grid-cols-3 gap-2 mt-3">
             <button
               onClick={handleGoogleSignup}
               disabled={googleLoading}
-              className="flex items-center justify-center gap-2 w-full h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 w-full h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
+              aria-label="Sign up with Google"
             >
               {googleLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
@@ -215,7 +236,8 @@ export default function RegisterPage() {
             <button
               onClick={handleAppleSignup}
               disabled={appleLoading}
-              className="flex items-center justify-center gap-2 w-full h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 w-full h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
+              aria-label="Sign up with Apple"
             >
               {appleLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-slate-600 dark:text-white" />
@@ -225,6 +247,21 @@ export default function RegisterPage() {
                     <path d="M16.365 1.43c0 1.14-.45 2.24-1.2 3.05-.82.9-2.18 1.6-3.32 1.5-.13-1.1.4-2.28 1.16-3.08.84-.88 2.28-1.54 3.36-1.47zM20.5 17.5c-.55 1.26-.83 1.8-1.55 2.9-1 1.53-2.41 3.43-4.15 3.44-1.55.02-1.96-1.02-4.06-1.01-2.1.01-2.55 1.03-4.11 1-1.75-.02-3.1-1.74-4.1-3.27-2.79-4.28-3.08-9.3-1.37-11.92 1.22-1.9 3.16-3.02 4.99-3.02 1.88 0 3.06 1.03 4.6 1.03 1.5 0 2.41-1.03 4.57-1.03 1.63 0 3.36.89 4.58 2.43-3.98 2.18-3.34 7.8.1 9.45z"/>
                   </svg>
                   <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Apple</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleGithubSignup}
+              disabled={githubLoading}
+              className="flex items-center justify-center gap-1.5 w-full h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
+              aria-label="Sign up with GitHub"
+            >
+              {githubLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-slate-600 dark:text-white" />
+              ) : (
+                <>
+                  <Github className="w-4 h-4 text-slate-800 dark:text-white" />
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">GitHub</span>
                 </>
               )}
             </button>

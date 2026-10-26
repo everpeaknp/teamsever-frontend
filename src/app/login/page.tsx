@@ -44,18 +44,19 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
+    const normalizedEmail = email.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(normalizedEmail)) {
       setError('Please enter a valid email address');
       setLoading(false);
       return;
     }
 
     try {
-      await login(email, password);
+      await login(normalizedEmail, password);
       
       if (rememberMe) {
-        localStorage.setItem('rememberedEmail', email);
+        localStorage.setItem('rememberedEmail', normalizedEmail);
       } else {
         localStorage.removeItem('rememberedEmail');
       }
@@ -132,20 +133,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FE] dark:bg-[#0B0E14] flex flex-col items-center justify-center p-4 relative overflow-hidden transition-colors duration-500">
+    <div className="min-h-[100dvh] bg-[#F8F9FE] dark:bg-[#0B0E14] flex flex-col items-center justify-start sm:justify-center px-5 pt-[max(env(safe-area-inset-top),28px)] pb-[max(env(safe-area-inset-bottom),24px)] relative transition-colors duration-300">
       {/* Lively Style Background Gradients */}
-      <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[#E0E7FF] dark:bg-[#1E1B4B]/20 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-normal animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#F3F0FF] dark:bg-[#2E1065]/10 blur-[100px] rounded-full" />
+      <div className="hidden sm:block absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-[#E0E7FF] dark:bg-[#1E1B4B]/20 blur-[120px] rounded-full mix-blend-multiply dark:mix-blend-normal animate-pulse" />
+      <div className="hidden sm:block absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[#F3F0FF] dark:bg-[#2E1065]/10 blur-[100px] rounded-full" />
 
       <motion.div 
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
-        className="w-full max-w-[360px] relative z-10"
+        className="w-full max-w-[420px] relative z-10"
       >
         {/* Compact Brand Header */}
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 mb-4 group decoration-transparent">
+        <div className="text-left mb-7">
+          <Link href="/" className="inline-flex items-center gap-2 mb-6 group decoration-transparent">
             <Image 
               src="/teamsever_logo.png" 
               alt="Teamsever Logo" 
@@ -157,17 +158,17 @@ export default function LoginPage() {
               Teamsever
             </span>
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Welcome back</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Please enter your details</p>
+          <h1 className="text-[28px] leading-tight font-bold text-slate-900 dark:text-white tracking-tight">Welcome back</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Sign in to continue to your workspace.</p>
         </div>
 
         {/* Compact Lively Glass Card */}
-        <div className="bg-white/60 dark:bg-white/[0.03] backdrop-blur-2xl border border-white/80 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.05)] dark:shadow-none rounded-[32px] p-7 transition-all">
+        <div className="bg-transparent border-0 shadow-none rounded-none p-0 sm:bg-white/60 sm:dark:bg-white/[0.03] sm:backdrop-blur-2xl sm:border sm:border-white/80 sm:dark:border-white/10 sm:shadow-[0_20px_50px_rgba(0,0,0,0.05)] sm:dark:shadow-none sm:rounded-[28px] sm:p-7 transition-all">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
               <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300 ml-1">Email</label>
               <input
-                className="w-full h-11 px-4 rounded-2xl bg-slate-100/50 dark:bg-white/[0.05] border-transparent focus:bg-white dark:focus:bg-white/[0.08] border-none focus:ring-2 focus:ring-[#7C3AED]/20 dark:focus:ring-white/10 transition-all outline-none text-sm dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                className="w-full h-12 px-4 rounded-xl bg-slate-100 dark:bg-white/[0.06] border-transparent focus:bg-white dark:focus:bg-white/[0.08] border-none focus:ring-2 focus:ring-[#2563EB]/25 transition-all outline-none text-base dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500"
                 placeholder="email@example.com"
                 required
                 type="email"
@@ -180,13 +181,13 @@ export default function LoginPage() {
             <div className="space-y-1.5">
               <div className="flex justify-between items-center ml-1">
                 <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">Password</label>
-                <Link href="/auth/forgot-password" title="reset password" className="text-[12px] font-medium text-[#7C3AED] dark:text-[#A78BFA] hover:opacity-80 decoration-transparent">
+                <Link href="/auth/forgot-password" title="reset password" className="text-[13px] font-semibold text-[#2563EB] dark:text-[#60A5FA] hover:opacity-80 decoration-transparent">
                   Forgot?
                 </Link>
               </div>
               <div className="relative">
                 <input
-                  className="w-full h-11 px-4 pr-11 rounded-2xl bg-slate-100/50 dark:bg-white/[0.05] border-transparent focus:bg-white dark:focus:bg-white/[0.08] border-none focus:ring-2 focus:ring-[#7C3AED]/20 dark:focus:ring-white/10 transition-all outline-none text-sm dark:text-white"
+                  className="w-full h-12 px-4 pr-11 rounded-xl bg-slate-100 dark:bg-white/[0.06] border-transparent focus:bg-white dark:focus:bg-white/[0.08] border-none focus:ring-2 focus:ring-[#2563EB]/25 transition-all outline-none text-base dark:text-white"
                   placeholder="••••••••"
                   required
                   type={showPassword ? 'text' : 'password'}
@@ -208,13 +209,13 @@ export default function LoginPage() {
               <label className="flex items-center gap-2 cursor-pointer group">
                 <div className="relative flex items-center">
                   <input
-                    className="appearance-none w-4 h-4 rounded border-[#7C3AED]/20 dark:border-white/10 checked:bg-[#7C3AED] focus:ring-4 focus:ring-[#7C3AED]/10 transition-all cursor-pointer"
+                    className="appearance-none w-5 h-5 rounded-md border border-slate-300 dark:border-white/20 checked:bg-[#2563EB] checked:border-[#2563EB] focus:ring-4 focus:ring-[#2563EB]/10 transition-all cursor-pointer"
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   />
                   {rememberMe && (
-                    <svg className="absolute w-3 h-3 text-white pointer-events-none left-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                  <svg className="absolute w-3 h-3 text-white pointer-events-none left-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
@@ -224,7 +225,7 @@ export default function LoginPage() {
             </div>
 
             <button
-              className="w-full h-11 bg-slate-900 dark:bg-white dark:text-slate-950 text-white font-bold rounded-2xl shadow-lg shadow-slate-200/50 dark:shadow-none hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2 text-sm"
+              className="w-full h-12 bg-[#2563EB] text-white font-semibold rounded-xl shadow-none hover:bg-[#1D4ED8] active:scale-[0.99] transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2 text-base"
               type="submit"
               disabled={loading}
             >
@@ -239,7 +240,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="relative my-7">
+          <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-100 dark:border-white/5"></div>
             </div>
@@ -248,49 +249,57 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2.5">
             <button
               onClick={handleGoogleLogin}
               disabled={googleLoading || !isFirebaseConfigured}
               title={!isFirebaseConfigured ? 'Configure Firebase to enable social sign-in' : 'Continue with Google'}
-              className="flex items-center justify-center gap-2 h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 h-12 bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-[0.98] disabled:opacity-50 text-xs font-semibold text-slate-700 dark:text-slate-200"
+              aria-label="Continue with Google"
             >
               {googleLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
               ) : (
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
+                <>
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  <span>Google</span>
+                </>
               )}
             </button>
             <button 
               onClick={handleGithubLogin}
               disabled={githubLoading || !isFirebaseConfigured}
               title={!isFirebaseConfigured ? 'Configure Firebase to enable social sign-in' : 'Continue with GitHub'}
-              className="flex items-center justify-center gap-2 h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 h-12 bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-[0.98] disabled:opacity-50 text-xs font-semibold text-slate-700 dark:text-slate-200"
+              aria-label="Continue with GitHub"
             >
               {githubLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-slate-600 dark:text-white" />
               ) : (
-                <Github className="w-4 h-4 dark:text-white" />
+                <><Github className="w-4 h-4 dark:text-white" /><span>GitHub</span></>
               )}
             </button>
             <button
               onClick={handleAppleLogin}
               disabled={appleLoading || !isFirebaseConfigured}
               title={!isFirebaseConfigured ? 'Configure Firebase to enable social sign-in' : 'Continue with Apple'}
-              className="flex items-center justify-center gap-2 h-11 bg-white dark:bg-white/[0.05] border border-slate-100 dark:border-white/10 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-95 disabled:opacity-50"
+              className="flex items-center justify-center gap-1.5 h-12 bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-50 dark:hover:bg-white/[0.08] transition-all active:scale-[0.98] disabled:opacity-50 text-xs font-semibold text-slate-700 dark:text-slate-200"
               aria-label="Continue with Apple"
             >
               {appleLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-slate-600 dark:text-white" />
               ) : (
-                <svg className="w-4 h-4 dark:fill-white fill-black" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M16.365 1.43c0 1.14-.45 2.24-1.2 3.05-.82.9-2.18 1.6-3.32 1.5-.13-1.1.4-2.28 1.16-3.08.84-.88 2.28-1.54 3.36-1.47zM20.5 17.5c-.55 1.26-.83 1.8-1.55 2.9-1 1.53-2.41 3.43-4.15 3.44-1.55.02-1.96-1.02-4.06-1.01-2.1.01-2.55 1.03-4.11 1-1.75-.02-3.1-1.74-4.1-3.27-2.79-4.28-3.08-9.3-1.37-11.92 1.22-1.9 3.16-3.02 4.99-3.02 1.88 0 3.06 1.03 4.6 1.03 1.5 0 2.41-1.03 4.57-1.03 1.63 0 3.36.89 4.58 2.43-3.98 2.18-3.34 7.8.1 9.45z"/>
-                </svg>
+                <>
+                  <svg className="w-4 h-4 dark:fill-white fill-black" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M16.365 1.43c0 1.14-.45 2.24-1.2 3.05-.82.9-2.18 1.6-3.32 1.5-.13-1.1.4-2.28 1.16-3.08.84-.88 2.28-1.54 3.36-1.47zM20.5 17.5c-.55 1.26-.83 1.8-1.55 2.9-1 1.53-2.41 3.43-4.15 3.44-1.55.02-1.96-1.02-4.06-1.01-2.1.01-2.55 1.03-4.11 1-1.75-.02-3.1-1.74-4.1-3.27-2.79-4.28-3.08-9.3-1.37-11.92 1.22-1.9 3.16-3.02 4.99-3.02 1.88 0 3.06 1.03 4.6 1.03 1.5 0 2.41-1.03 4.57-1.03 1.63 0 3.36.89 4.58 2.43-3.98 2.18-3.34 7.8.1 9.45z"/>
+                  </svg>
+                  <span>Apple</span>
+                </>
               )}
             </button>
           </div>
@@ -302,10 +311,10 @@ export default function LoginPage() {
         </div>
 
         {/* Compact Footer */}
-        <div className="mt-8 text-center space-y-4">
+        <div className="mt-7 text-center space-y-4">
           <p className="text-[13px] text-slate-500 dark:text-slate-400 font-medium tracking-tight">
             New to Teamsever?{' '}
-            <Link href="/register" className="text-[#7C3AED] dark:text-[#A78BFA] font-bold hover:opacity-80 transition-opacity decoration-transparent">
+            <Link href="/register" className="text-[#2563EB] dark:text-[#60A5FA] font-bold hover:opacity-80 transition-opacity decoration-transparent">
               Create account
             </Link>
           </p>
@@ -333,7 +342,8 @@ export default function LoginPage() {
             initial={{ opacity: 0, y: -20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="fixed top-8 right-8 z-[100] py-3 px-5 bg-red-500/90 dark:bg-red-500/20 backdrop-blur-md border border-red-200 dark:border-red-500/30 text-white dark:text-red-400 rounded-2xl shadow-[0_20px_40px_rgba(239,68,68,0.2)] flex items-center gap-3 min-w-[300px]"
+            role="alert"
+            className="fixed inset-x-4 bottom-4 sm:inset-x-auto sm:bottom-auto sm:top-8 sm:right-8 z-[100] py-3 px-4 bg-red-600 dark:bg-red-950/90 border border-red-300 dark:border-red-500/40 text-white dark:text-red-200 rounded-xl shadow-lg flex items-center gap-3 sm:min-w-[300px]"
           >
             <div className="w-2 h-2 rounded-full bg-white dark:bg-red-500 animate-pulse" />
             <p className="text-sm font-bold tracking-tight">{error}</p>

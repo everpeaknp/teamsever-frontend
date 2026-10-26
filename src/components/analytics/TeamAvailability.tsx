@@ -94,7 +94,15 @@ export function TeamAvailability({ members, workspaceId }: TeamAvailabilityProps
             }
           }
         }
-        setDesktopPresence(next);
+        setDesktopPresence((current) => {
+          const currentIds = Object.keys(current);
+          const nextIds = Object.keys(next);
+          if (currentIds.length === nextIds.length && nextIds.every((id) =>
+            current[id]?.appId === next[id].appId &&
+            current[id]?.presenceStatus === next[id].presenceStatus
+          )) return current;
+          return next;
+        });
       } catch {
         // Desktop reporting is optional; clock-in state stays available.
       } finally {
