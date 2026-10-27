@@ -67,7 +67,7 @@ function DashboardSkeleton() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Skeleton */}
-      <header className="sticky top-0 z-40 bg-card/95 border-b backdrop-blur supports-[backdrop-filter]:bg-card/85">
+      <header className="fixed inset-x-0 top-0 z-50 border-b bg-card/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-card/85">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -85,6 +85,7 @@ function DashboardSkeleton() {
       </header>
 
       {/* Main Content Skeleton */}
+      <div aria-hidden="true" className="h-[calc(6rem+env(safe-area-inset-top))] sm:h-[calc(4rem+env(safe-area-inset-top))]" />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Page Header */}
         <div className="mb-6 sm:mb-8">
@@ -372,7 +373,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-card/95 border-b backdrop-blur supports-[backdrop-filter]:bg-card/85">
+      <header className="fixed inset-x-0 top-0 z-50 border-b bg-card/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-card/85">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
@@ -443,6 +444,7 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
+      <div aria-hidden="true" className="h-[calc(6rem+env(safe-area-inset-top))] sm:h-[calc(4rem+env(safe-area-inset-top))]" />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Page Header */}
         <div className="mb-6 sm:mb-8">

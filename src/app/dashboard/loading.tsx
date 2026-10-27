@@ -4,7 +4,7 @@ export default function DashboardLoading() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-card/95 border-b backdrop-blur supports-[backdrop-filter]:bg-card/85">
+      <header className="fixed inset-x-0 top-0 z-50 border-b bg-card/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-card/85">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -21,6 +21,7 @@ export default function DashboardLoading() {
         </div>
       </header>
 
+      <div aria-hidden="true" className="h-[calc(6rem+env(safe-area-inset-top))] sm:h-[calc(4rem+env(safe-area-inset-top))]" />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="mb-8">
           <Skeleton className="h-9 w-44 mb-2" />
