@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Folder, Layers3, MessageCircle, Menu } from 'lucide-react';
+import { BarChart3, Folder, Layers3, MessageCircle, Wrench } from 'lucide-react';
 import { matchesSidebarRoute } from '@/components/sidebar/sidebarRouteMatch';
 
 const tabs = [
@@ -21,7 +21,7 @@ export function MobileWorkspaceTabBar({
   const isMessageRoute =
     matchesSidebarRoute(pathname, `/workspace/${workspaceId}/inbox`) ||
     matchesSidebarRoute(pathname, `/workspace/${workspaceId}/chat`);
-  const isMoreRoute = ![
+  const isToolsRoute = ![
     'analytics',
     'spaces',
     'inbox',
@@ -57,12 +57,12 @@ export function MobileWorkspaceTabBar({
         })}
         <Link
           href={`/workspace/${workspaceId}/more`}
-          aria-current={matchesSidebarRoute(pathname, `/workspace/${workspaceId}/more`) || isMoreRoute ? 'page' : undefined}
-          aria-label="More"
-          className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-medium transition-colors ${isMoreRoute ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'}`}
+          aria-current={matchesSidebarRoute(pathname, `/workspace/${workspaceId}/more`) || isToolsRoute ? 'page' : undefined}
+          aria-label="Tools"
+          className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-medium transition-colors ${isToolsRoute ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'}`}
         >
-          <Menu className="h-5 w-5" aria-hidden="true" />
-          <span>More</span>
+          <Wrench className="h-5 w-5" aria-hidden="true" />
+          <span>Tools</span>
         </Link>
       </div>
     </nav>

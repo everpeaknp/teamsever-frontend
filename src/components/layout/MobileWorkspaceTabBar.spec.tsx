@@ -36,14 +36,16 @@ describe('MobileWorkspaceTabBar', () => {
 
     expect(screen.getByRole('link', { name: 'Spaces' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Spaces' })).toHaveAttribute('href', '/workspace/ws1/spaces');
-    expect(screen.getByRole('link', { name: 'More' })).not.toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Tools' })).not.toHaveAttribute('aria-current', 'page');
   });
 
-  it('keeps More selected for destinations outside the primary tabs', () => {
+  it('uses a tool-shaped icon and stays selected for destinations outside the primary tabs', () => {
     navigation.pathname = '/workspace/ws1/quality/cases';
     render(<MobileWorkspaceTabBar workspaceId="ws1" />);
 
-    expect(screen.getByRole('link', { name: 'More' })).toHaveAttribute('aria-current', 'page');
+    const toolsLink = screen.getByRole('link', { name: 'Tools' });
+    expect(toolsLink).toHaveAttribute('aria-current', 'page');
+    expect(toolsLink.querySelector('svg')).toHaveClass('lucide-wrench');
     expect(screen.getByRole('link', { name: 'Spaces' })).not.toHaveAttribute('aria-current', 'page');
   });
 
@@ -54,9 +56,9 @@ describe('MobileWorkspaceTabBar', () => {
     expect(screen.getByRole('link', { name: 'Messages' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('links More to a compact tools page instead of opening the sidebar', () => {
+  it('links Tools to a compact tools page instead of opening the sidebar', () => {
     render(<MobileWorkspaceTabBar workspaceId="ws1" />);
 
-    expect(screen.getByRole('link', { name: 'More' })).toHaveAttribute('href', '/workspace/ws1/more');
+    expect(screen.getByRole('link', { name: 'Tools' })).toHaveAttribute('href', '/workspace/ws1/more');
   });
 });
