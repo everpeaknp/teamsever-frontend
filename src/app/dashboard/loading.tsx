@@ -4,7 +4,7 @@ export default function DashboardLoading() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b">
+      <header className="sticky top-0 z-40 bg-card/95 border-b backdrop-blur supports-[backdrop-filter]:bg-card/85">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>

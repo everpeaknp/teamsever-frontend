@@ -67,7 +67,7 @@ function DashboardSkeleton() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header Skeleton */}
-      <header className="bg-card border-b">
+      <header className="sticky top-0 z-40 bg-card/95 border-b backdrop-blur supports-[backdrop-filter]:bg-card/85">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -372,7 +372,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b">
+      <header className="sticky top-0 z-40 bg-card/95 border-b backdrop-blur supports-[backdrop-filter]:bg-card/85">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
