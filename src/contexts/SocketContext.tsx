@@ -6,6 +6,7 @@ import { initializeSocket, disconnectSocket, getSocket } from '@/lib/socket';
 import { api } from '@/lib/axios';
 import { useChatStore } from '@/store/useChatStore';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { getChatNotificationPreview } from '@/lib/chat/chatImages';
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
 
@@ -226,7 +227,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           allowCommitChatNotification
         ) {
           toast.info(`${senderName} to ${groupName}`, {
-            description: data?.message?.content || 'Message',
+            description: getChatNotificationPreview(data?.message?.content || '', data?.message?.attachments?.length || 0),
             duration: 3500,
           });
         }
@@ -245,7 +246,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             typeof data?.message?.channel === 'string'
               ? data.message.channel
               : data?.message?.channel?._id?.toString?.() || data?.message?.channel?.toString?.();
-          showBrowserNotification(`${senderName} to ${groupName}`, data?.message?.content || 'Message', {
+          showBrowserNotification(`${senderName} to ${groupName}`, getChatNotificationPreview(data?.message?.content || '', data?.message?.attachments?.length || 0), {
             workspaceId,
             channelId: channelIdForNotification,
             resourceType: 'chat',
@@ -327,10 +328,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           !isMuted
         ) {
           const senderName = data?.message?.sender?.name || 'Someone';
-          showBrowserNotification(senderName, data?.message?.content || 'Message', {
+          showBrowserNotification(senderName, getChatNotificationPreview(data?.message?.content || '', data?.message?.attachments?.length || 0), {
             workspaceId: conversationWorkspaceId,
             conversationId: roomId,
             resourceType: 'dm',
+            notificationId: messageId,
           });
         }
       };

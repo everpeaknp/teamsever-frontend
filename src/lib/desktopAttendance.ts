@@ -9,6 +9,16 @@ export function ensureTrustedDesktopDevice() {
   return ensurePromise;
 }
 
+export async function getDesktopPresencePreference(): Promise<boolean> {
+  const response = await api.get('/attendance/desktop-presence-preference');
+  return response.data?.data?.enabled !== false;
+}
+
+export async function setDesktopPresencePreference(enabled: boolean): Promise<boolean> {
+  const response = await api.patch('/attendance/desktop-presence-preference', { enabled });
+  return response.data?.data?.enabled !== false;
+}
+
 async function provision() {
   const bridge = window.teamseverDesktop;
   if (!bridge) return null;

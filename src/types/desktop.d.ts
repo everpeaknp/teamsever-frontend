@@ -17,7 +17,7 @@ declare global {
       forgetCredential: () => Promise<{ forgotten: boolean }>;
       setMonitoringEnabled: (enabled: boolean) => Promise<{ enabled: boolean }>;
       respondToMobileShift: (timeEntryId: string, action: 'sync_once' | 'always' | 'not_now') => Promise<{ synced: boolean; alwaysSync?: boolean }>;
-      getStatus: () => Promise<{  clockedIn: boolean; clockedInOnThisDevice: boolean; presenceTrackingActive: boolean; clockInSource?: 'web' | 'desktop' | 'mobile' | null; workspaceId: string | null; timeEntryId: string | null; startTime: string | null; activityMonitoringEnabled: boolean; pendingMobileShift?: { timeEntryId: string; workspaceId: string; startTime: string } | null }>;
+      getStatus: () => Promise<{ clockedIn: boolean; clockedInOnThisDevice: boolean; presenceTrackingActive: boolean; desktopPresenceEnabled?: boolean; clockInSource?: 'web' | 'desktop' | 'mobile' | null; workspaceId: string | null; timeEntryId: string | null; startTime: string | null; activityMonitoringEnabled: boolean; pendingMobileShift?: { timeEntryId: string; workspaceId: string; startTime: string } | null }>;
       pairMobileCode: (code: string) => Promise<{ synced: boolean }>;
       getCurrentPresence: () => Promise<{ appId: string | null; presenceStatus: 'active' | 'afk' | 'unavailable'; startedAt: string } | null>;
       getPresenceDiagnostics?: () => Promise<{ running: boolean; lastError: string | null; lastSuccessfulHeartbeatAt: string | null }>;

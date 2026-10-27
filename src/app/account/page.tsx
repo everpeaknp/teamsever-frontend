@@ -34,6 +34,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { clearAuthData } from '@/lib/auth';
+import { DesktopPresencePreference } from '@/components/account/DesktopPresencePreference';
 
 // Validation schemas
 const profileSchema = z.object({
@@ -776,6 +777,7 @@ export default function AccountSettingsPage() {
                   </form>
                 </section>
 
+                <DesktopPresencePreference />
                 <ContributionHeatmap userId="me" />
               </>
             )}

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Notification, powerMonitor, safeStorage, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Notification, powerMonitor, safeStorage, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import fs from 'node:fs/promises';
 import { foregroundAppSupport, getForegroundProcessName } from './foregroundProcess';
@@ -8,6 +8,7 @@ import { isAllowedWebUrl, isFirebaseAuthPopupUrl, isSafeExternalUrl, isSameOrigi
 import { detectPresenceCapabilities, isWaylandSession } from './tracker';
 import { DesktopPresenceSession, type DesktopPresenceAuthorization } from './desktopPresenceSession';
 import { DesktopUpdaterController } from './desktopUpdater';
+import { createGeolocationPermissionHandler } from './desktopPermissions';
 import type { DesktopUpdateState } from '../../../src/types/desktop';
 
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -333,15 +334,21 @@ function createWindow(): BrowserWindow {
     }
   });
 
-  window.webContents.session.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    let requestingOrigin = '';
-    try {
-      requestingOrigin = new URL(details.requestingUrl).origin;
-    } catch {
-      callback(false);
-      return;
-    }
-    callback(permission === 'geolocation' && requestingOrigin === appOrigin);
+  const handlePermissionRequest = createGeolocationPermissionHandler(appOrigin, async () => {
+    const result = await dialog.showMessageBox({
+      type: 'question',
+      title: 'Allow attendance location?',
+      message: 'TeamsEver needs your location for attendance verification when your workspace requires it.',
+      detail: 'Location is used only to verify an attendance clock action. You can deny access and continue using other parts of TeamsEver.',
+      buttons: ['Allow', 'Don’t allow'],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+    });
+    return result.response === 0;
+  });
+  window.webContents.session.setPermissionRequestHandler((_webContents, permission, callback, details) => {
+    handlePermissionRequest({ requestingUrl: details.requestingUrl, permission }, callback);
   });
 
   window.once('ready-to-show', () => window.show());

@@ -31,6 +31,26 @@ describe('reconcileChatMessages', () => {
     expect(reconcileChatMessages([confirmed], [optimistic])).toEqual([confirmed]);
   });
 
+  it('reconciles image-only messages sent to the General channel alias', () => {
+    const optimistic = message({
+      _id: 'temp-image',
+      tempId: 'temp-image',
+      content: '',
+      attachments: ['https://images.example/photo.jpg'],
+      channel: 'general',
+      conversation: undefined,
+    });
+    const confirmed = message({
+      _id: 'server-image',
+      content: '',
+      attachments: ['https://images.example/photo.jpg'],
+      channel: 'resolved-general-channel-id',
+      conversation: undefined,
+    });
+
+    expect(reconcileChatMessages([confirmed], [optimistic])).toEqual([confirmed]);
+  });
+
   it('keeps separate rapid messages with identical text when only one echo has arrived', () => {
     const optimisticA = message({ _id: 'temp-a', tempId: 'temp-a', sending: true });
     const optimisticB = message({ _id: 'temp-b', tempId: 'temp-b', sending: true, createdAt: new Date(baseTime + 1000).toISOString() });

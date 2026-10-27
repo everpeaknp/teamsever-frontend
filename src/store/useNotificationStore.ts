@@ -201,7 +201,7 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
           icon: '/teamsever_logo.png', // Corrected path to logo
           badge: '/teamsever_logo.png',
           tag: data?.notificationId || data?._id || data?.resourceId || data?.conversationId || 'default',
-          renotify: true,
+          renotify: false,
           vibrate: [200, 100, 200],
           data: data,
           requireInteraction: true, // Keep it visible until user interacts

@@ -54,6 +54,8 @@ messaging.onBackgroundMessage((payload) => {
     body: notificationBody,
     icon: '/teamsever_logo.png',
     badge: '/teamsever_logo.png',
+    tag: data?.notificationId || data?.messageId || data?.resourceId || data?.conversationId || 'teamsever-notification',
+    renotify: false,
     data,
   };
 

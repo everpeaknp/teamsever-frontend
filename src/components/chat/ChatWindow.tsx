@@ -50,11 +50,14 @@ function ReplyPreview({ reply }: { reply: NonNullable<ChatMessage['replyTo']> })
   return <div className="mb-1 rounded-md border-l-2 border-primary/70 bg-background/30 px-2 py-1 text-xs"><div className="font-semibold opacity-80">{item.sender?.name || 'Reply'}</div><div className="line-clamp-2 opacity-75">{item.isDeleted ? 'This message was deleted' : item.content}</div></div>;
 }
 
-function ChatImageGrid({ images, onOpen }: { images: string[]; onOpen: (index: number) => void }) {
+function ChatImageGrid({ images, onOpen, className }: { images: string[]; onOpen: (index: number) => void; className?: string }) {
   if (!images.length) return null;
-  return <div className={cn('mt-1 grid w-[min(72vw,24rem)] gap-1 overflow-hidden rounded-xl', images.length === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
-    {images.map((src, index) => <button key={`${src}-${index}`} type="button" onClick={() => onOpen(index)} aria-label={`Open image ${index + 1} of ${images.length}`} className={cn('overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', images.length === 1 ? 'aspect-[4/3] max-h-[22rem]' : 'h-28')}>
-      <img src={src} alt={`Shared image ${index + 1}`} className="block h-full w-full object-cover" />
+  if (images.length === 1) return <button type="button" onClick={() => onOpen(0)} aria-label="Open image 1 of 1" className={cn('block max-w-full overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', className)} style={{ maxWidth: 'min(72vw, 24rem)' }}>
+    <img src={images[0]} alt="Shared image 1" className="block h-auto w-auto object-contain" style={{ maxWidth: 'min(72vw, 24rem)', maxHeight: 'min(60vh, 22rem)' }} />
+  </button>;
+  return <div className={cn('grid w-[min(72vw,24rem)] grid-cols-2 gap-1 overflow-hidden rounded-xl', className)}>
+    {images.map((src, index) => <button key={`${src}-${index}`} type="button" onClick={() => onOpen(index)} aria-label={`Open image ${index + 1} of ${images.length}`} className="h-28 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+      <img src={src} alt={`Shared image ${index + 1}`} className="block h-full w-full object-contain" />
     </button>)}
   </div>;
 }
@@ -1224,6 +1227,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
             const groupedWithNext = isSameMessageGroup(message, localMessages[index + 1]);
             const isSystemMessage = message.type === 'system';
             const isOwnMessage = message.sender._id === currentUserId;
+            const hasVisibleText = shouldRenderChatMessageText(message.content, message.attachments?.length || 0);
             const readers = (message.readBy || [])
               .map(reader => typeof reader === 'string' ? null : reader)
               .filter((reader): reader is NonNullable<typeof reader> => Boolean(reader && reader._id !== currentUserId));
@@ -1431,15 +1435,16 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                     <div className="group/bubble relative">
                     {message.replyTo && <ReplyPreview reply={message.replyTo} />}
                     <div className={cn(
-                      "w-fit min-w-[40px] max-w-full whitespace-pre-wrap break-words rounded-[18px] px-4 py-2 text-sm",
-                      groupedWithPrevious && 'rounded-tr-md',
-                      groupedWithNext && 'rounded-br-md',
-                      message.failed 
+                      'w-fit max-w-full whitespace-pre-wrap break-words',
+                      hasVisibleText && 'min-w-[40px] rounded-[18px] px-4 py-2 text-sm',
+                      hasVisibleText && groupedWithPrevious && 'rounded-tr-md',
+                      hasVisibleText && groupedWithNext && 'rounded-br-md',
+                      hasVisibleText && message.failed
                         ? "bg-destructive/20 text-destructive border border-destructive" 
-                        : "bg-primary text-primary-foreground"
+                        : hasVisibleText ? "bg-primary text-primary-foreground" : 'bg-transparent p-0'
                     )}>
                       {renderMessageContent(message, true)}
-                      <ChatImageGrid images={message.attachments || []} onOpen={(index) => setImageViewer({ images: message.attachments || [], index })} />
+                      <ChatImageGrid className={hasVisibleText ? 'mt-1' : undefined} images={message.attachments || []} onOpen={(index) => setImageViewer({ images: message.attachments || [], index })} />
                       
                       {/* Status indicators */}
                       <div className="flex items-center gap-1 mt-1 justify-end text-xs opacity-70">
@@ -1522,12 +1527,14 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                   <div className="group/bubble relative">
                   {message.replyTo && <ReplyPreview reply={message.replyTo} />}
                   <div className={cn(
-                    'w-fit min-w-[40px] max-w-full whitespace-pre-wrap break-words rounded-[18px] bg-muted px-4 py-2 text-sm text-foreground',
-                    groupedWithPrevious && 'rounded-tl-md',
-                    groupedWithNext && 'rounded-bl-md'
+                    'w-fit max-w-full whitespace-pre-wrap break-words',
+                    hasVisibleText && 'min-w-[40px] rounded-[18px] bg-muted px-4 py-2 text-sm text-foreground',
+                    !hasVisibleText && 'bg-transparent p-0',
+                    hasVisibleText && groupedWithPrevious && 'rounded-tl-md',
+                    hasVisibleText && groupedWithNext && 'rounded-bl-md'
                   )}>
                     {renderMessageContent(message)}
-                    <ChatImageGrid images={message.attachments || []} onOpen={(index) => setImageViewer({ images: message.attachments || [], index })} />
+                    <ChatImageGrid className={hasVisibleText ? 'mt-1' : undefined} images={message.attachments || []} onOpen={(index) => setImageViewer({ images: message.attachments || [], index })} />
                   </div>
                   </div>
 
@@ -1556,7 +1563,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           {replyTarget && <div className="mx-auto mb-2 flex max-w-4xl items-center gap-2 rounded-lg border-l-2 border-primary bg-muted/50 px-3 py-2 text-sm"><Reply className="h-4 w-4 shrink-0 text-primary" /><div className="min-w-0 flex-1"><div className="font-medium">Replying to {replyTarget.sender.name}</div><div className="truncate text-xs text-muted-foreground">{replyTarget.content}</div></div><button type="button" aria-label="Cancel reply" onClick={() => setReplyTarget(null)}><X className="h-4 w-4" /></button></div>}
           {selectedImages.length > 0 && <div className="mx-auto mb-2 flex max-w-4xl items-center gap-2 overflow-x-auto">
             {pendingImageUrls.map((url, index) => <div key={`${url}-${index}`} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border">
-              <img src={url} alt={`Image to send ${index + 1}`} className="h-full w-full object-cover" />
+              <img src={url} alt={`Image to send ${index + 1}`} className="h-full w-full object-contain" />
               <button type="button" aria-label={`Remove image ${index + 1}`} disabled={uploadingImages} onClick={() => setSelectedImages((images) => images.filter((_, itemIndex) => itemIndex !== index))} className="absolute right-0.5 top-0.5 rounded-full bg-black/70 p-0.5 text-white"><X className="h-3.5 w-3.5" /></button>
             </div>)}
             <span className="text-xs text-muted-foreground">{uploadingImages ? 'Uploading images…' : `${selectedImages.length} image${selectedImages.length === 1 ? '' : 's'}`}</span>

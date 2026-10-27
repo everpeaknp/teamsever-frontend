@@ -38,7 +38,19 @@ export function reconcileChatMessages(
         if (!senderId || senderId !== optimisticSenderId) return false;
 
         if (optimistic.conversation && entityId(server.conversation) !== entityId(optimistic.conversation)) return false;
-        if (optimistic.channel && server.channel && entityId(server.channel) !== entityId(optimistic.channel)) return false;
+        if (
+          optimistic.channel &&
+          optimistic.channel !== 'general' &&
+          server.channel &&
+          entityId(server.channel) !== entityId(optimistic.channel)
+        ) return false;
+
+        const optimisticAttachments = optimistic.attachments || [];
+        const serverAttachments = server.attachments || [];
+        if (
+          optimisticAttachments.length !== serverAttachments.length ||
+          optimisticAttachments.some((attachment, index) => attachment !== serverAttachments[index])
+        ) return false;
 
         const timeDifference = new Date(server.createdAt).getTime() - optimisticTime;
         return timeDifference >= -ALLOWED_CLOCK_SKEW_MS && timeDifference <= MAX_ECHO_TIME_DIFFERENCE_MS;

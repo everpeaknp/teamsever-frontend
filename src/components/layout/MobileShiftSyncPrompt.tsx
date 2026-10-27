@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { getDesktopPresencePreference, ensureTrustedDesktopDevice } from '@/lib/desktopAttendance';
 import {
   Dialog,
   DialogContent,
@@ -32,19 +33,42 @@ export function MobileShiftSyncPrompt() {
     } catch {
       dismissedShiftId.current = null;
     }
+    let refreshInFlight = false;
     const refresh = async () => {
+      if (refreshInFlight || document.visibilityState === 'hidden') return;
+      refreshInFlight = true;
       try {
+        const enabled = await getDesktopPresencePreference();
+        if (!active) return;
+        if (!enabled) {
+          setPending(null);
+          await bridge.setMonitoringEnabled(false).catch(() => undefined);
+          return;
+        }
+        // Registration establishes the device credential before the main
+        // process can poll status. Provisioning never starts presence tracking;
+        // status + per-shift consent remain the only activation path.
+        await ensureTrustedDesktopDevice();
         const status = await bridge.getStatus();
         if (!active) return;
         const nextPending = status.pendingMobileShift || null;
         setPending(nextPending?.timeEntryId === dismissedShiftId.current ? null : nextPending);
       } catch {
-        // The desktop may not be paired yet; keep checking while the app is open.
+        // Keep bounded polling so a network/auth recovery can provision and retry.
+      } finally {
+        refreshInFlight = false;
       }
     };
     void refresh();
     const timer = window.setInterval(() => void refresh(), 15_000);
-    return () => { active = false; window.clearInterval(timer); };
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('teamsever:desktop-presence-preference-changed', refresh);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('teamsever:desktop-presence-preference-changed', refresh);
+    };
   }, []);
 
   const respond = useCallback(async (action: SyncAction) => {
