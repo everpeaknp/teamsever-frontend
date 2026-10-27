@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays, Phone, Video, X, Reply, ImagePlus, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays, Phone, Video, X, Reply, ImagePlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { reconcileChatMessages } from '@/lib/chat/reconcileMessages';
@@ -23,6 +23,7 @@ import { Calendar as UICalendar } from '@/components/ui/calendar';
 import type { UserPresence } from '@/hooks/usePresence';
 import { ChatConversationIdentity } from './ChatConversationIdentity';
 import { getChatMessageContent, MAX_CHAT_IMAGES, shouldRenderChatMessageText, validateChatImageSelection } from '@/lib/chat/chatImages';
+import { ChatImageGrid, ChatImageViewer } from './ChatImages';
 
 interface ChatWindowProps {
   workspaceId?: string;
@@ -48,18 +49,6 @@ function ReplyPreview({ reply }: { reply: NonNullable<ChatMessage['replyTo']> })
   const item = typeof reply === 'string' ? null : reply;
   if (!item) return null;
   return <div className="mb-1 rounded-md border-l-2 border-primary/70 bg-background/30 px-2 py-1 text-xs"><div className="font-semibold opacity-80">{item.sender?.name || 'Reply'}</div><div className="line-clamp-2 opacity-75">{item.isDeleted ? 'This message was deleted' : item.content}</div></div>;
-}
-
-function ChatImageGrid({ images, onOpen, className }: { images: string[]; onOpen: (index: number) => void; className?: string }) {
-  if (!images.length) return null;
-  if (images.length === 1) return <button type="button" onClick={() => onOpen(0)} aria-label="Open image 1 of 1" className={cn('block max-w-full overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', className)} style={{ maxWidth: 'min(72vw, 24rem)' }}>
-    <img src={images[0]} alt="Shared image 1" className="block h-auto w-auto object-contain" style={{ maxWidth: 'min(72vw, 24rem)', maxHeight: 'min(60vh, 22rem)' }} />
-  </button>;
-  return <div className={cn('grid w-[min(72vw,24rem)] grid-cols-2 gap-1 overflow-hidden rounded-xl', className)}>
-    {images.map((src, index) => <button key={`${src}-${index}`} type="button" onClick={() => onOpen(index)} aria-label={`Open image ${index + 1} of ${images.length}`} className="h-28 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-      <img src={src} alt={`Shared image ${index + 1}`} className="block h-full w-full object-contain" />
-    </button>)}
-  </div>;
 }
 
 export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, profileUser, presence, isAdmin, onMenuClick }: ChatWindowProps) => {
@@ -178,7 +167,6 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const [uploadingImages, setUploadingImages] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const lastImageBatchSentAt = useRef(0);
-  const imageTouchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     const urls = selectedImages.map((file) => URL.createObjectURL(file));
@@ -1638,26 +1626,13 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         </div>
       )}
 
-      {imageViewer && (
-        <div role="dialog" aria-modal="true" aria-label="Image preview" className="fixed inset-0 z-[100] flex flex-col bg-black/95 text-white" onClick={() => setImageViewer(null)} onTouchStart={(event) => { imageTouchStartX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => {
-          const start = imageTouchStartX.current;
-          const end = event.changedTouches[0]?.clientX;
-          imageTouchStartX.current = null;
-          if (start === null || end === undefined || Math.abs(end - start) < 45) return;
-          setImageViewer((current) => current ? { ...current, index: Math.max(0, Math.min(current.images.length - 1, current.index + (end < start ? 1 : -1))) } : current);
-        }}>
-          <div className="flex h-14 shrink-0 items-center justify-between px-4" onClick={(event) => event.stopPropagation()}>
-            <button type="button" aria-label="Close image preview" onClick={() => setImageViewer(null)} className="rounded-full p-2 hover:bg-white/10"><X className="h-5 w-5" /></button>
-            <span className="text-sm text-white/80">{imageViewer.index + 1} / {imageViewer.images.length}</span>
-            <button type="button" aria-label="Save image to device" onClick={() => void saveChatImage(imageViewer.images[imageViewer.index])} className="rounded-full p-2 hover:bg-white/10"><Download className="h-5 w-5" /></button>
-          </div>
-          <div className="relative flex min-h-0 flex-1 items-center justify-center px-3 pb-4" onClick={(event) => event.stopPropagation()}>
-            {imageViewer.index > 0 && <button type="button" aria-label="Previous image" onClick={() => setImageViewer((current) => current ? { ...current, index: current.index - 1 } : current)} className="absolute left-3 z-10 rounded-full bg-black/45 p-2 hover:bg-black/70"><ChevronLeft className="h-6 w-6" /></button>}
-            <img src={imageViewer.images[imageViewer.index]} alt={`Image ${imageViewer.index + 1} of ${imageViewer.images.length}`} className="h-auto w-auto max-h-[calc(100dvh-5rem)] max-w-[min(92vw,90rem)] select-none object-contain" />
-            {imageViewer.index < imageViewer.images.length - 1 && <button type="button" aria-label="Next image" onClick={() => setImageViewer((current) => current ? { ...current, index: current.index + 1 } : current)} className="absolute right-3 z-10 rounded-full bg-black/45 p-2 hover:bg-black/70"><ChevronRight className="h-6 w-6" /></button>}
-          </div>
-        </div>
-      )}
+      {imageViewer && <ChatImageViewer
+        images={imageViewer.images}
+        index={imageViewer.index}
+        onClose={() => setImageViewer(null)}
+        onIndexChange={(index) => setImageViewer((current) => current ? { ...current, index } : current)}
+        onDownload={(url) => void saveChatImage(url)}
+      />}
 
       {/* Request Leave Modal in DMs */}
       {type === 'direct' && userId && workspaceId && (
