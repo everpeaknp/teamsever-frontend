@@ -18,6 +18,11 @@ export interface ChatMessage {
     profilePicture?: string;
   };
   content: string;
+  attachments?: string[];
+  replyTo?: { _id: string; content: string; sender?: { _id: string; name?: string }; isDeleted?: boolean } | string;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
   type?: 'text' | 'system' | 'github_commit' | 'leave_request';
   reactions?: Array<{
     emoji: string;
@@ -36,7 +41,7 @@ export interface ChatMessage {
     [key: string]: any;
   };
   mentions?: string[];
-  readBy?: string[];
+  readBy?: Array<string | { _id: string; name?: string; avatar?: string; profilePicture?: string }>;
   createdAt: string;
   updatedAt: string;
   // Optimistic update fields
@@ -44,6 +49,16 @@ export interface ChatMessage {
   failed?: boolean;
   tempId?: string;
 }
+
+const getEntityId = (value: unknown): string | undefined => {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object') {
+    const entity = value as { _id?: unknown; id?: unknown };
+    if (typeof entity._id === 'string') return entity._id;
+    if (typeof entity.id === 'string') return entity.id;
+  }
+  return undefined;
+};
 
 interface UseChatOptions {
   workspaceId?: string;
@@ -62,18 +77,32 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [sending, setSending] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+  const [typingUsers, setTypingUsers] = useState<Map<string, string>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(1);
   
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingUserTimeoutsRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const liveMessagesRef = useRef(new Map<string, ChatMessage>());
   const onInitialLoadRef = useRef(onInitialLoad);
   // Read the socket from React context so a chat mounted before socket
   // initialization re-subscribes as soon as the provider publishes it.
   const { socket } = useSocket();
   const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+  const typingRoomKey = `${type}:${channelId || conversationId || workspaceId || ''}`;
+  const previousTypingRoomKeyRef = useRef(typingRoomKey);
+
+  useEffect(() => {
+    if (previousTypingRoomKeyRef.current !== typingRoomKey) {
+      previousTypingRoomKeyRef.current = typingRoomKey;
+      setTypingUsers(new Map());
+    }
+    return () => {
+      typingUserTimeoutsRef.current.forEach(timeout => clearTimeout(timeout));
+      typingUserTimeoutsRef.current.clear();
+    };
+  }, [typingRoomKey]);
   
   // Update ref when callback changes
   useEffect(() => {
@@ -81,7 +110,20 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
   }, [onInitialLoad]);
   
   // Get Zustand store actions
-  const { addMessage: addMessageToStore } = useChatStore();
+  const { addMessage: addMessageToStore, updateMessage: updateMessageInStore } = useChatStore();
+
+  const updateMessageReactions = useCallback((messageId: string, reactions: ChatMessage['reactions']) => {
+    const previous = liveMessagesRef.current.get(messageId);
+    const updated = previous ? { ...previous, reactions: reactions || [] } : undefined;
+    if (updated) liveMessagesRef.current.set(messageId, updated);
+    setMessages(current => current.map(message => message._id === messageId
+      ? { ...message, reactions: reactions || [] }
+      : message));
+    const roomId = type === 'direct'
+      ? conversationId
+      : (channelId ? `channel_${channelId}` : (workspaceId ? `workspace_${workspaceId}` : undefined));
+    if (roomId && updated) updateMessageInStore(roomId, messageId, updated);
+  }, [type, conversationId, channelId, workspaceId, updateMessageInStore]);
 
   // Fetch initial messages
   const fetchMessages = useCallback(async (pageNum: number = 1, append: boolean = false) => {
@@ -156,8 +198,8 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
   }, [workspaceId, channelId, conversationId, type, filterUserId, filterFolderId]);
 
   // Send message
-  const sendMessage = useCallback(async (content: string, mentions: string[] = []) => {
-    if (!content.trim()) return;
+  const sendMessage = useCallback(async (content: string, mentions: string[] = [], replyToMessageId?: string, attachments: string[] = []) => {
+    if (!content.trim() && attachments.length === 0) return;
 
     try {
       setSending(true);
@@ -167,10 +209,12 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
           workspaceId,
           channelId: channelId === 'general' ? undefined : channelId,
           content: content.trim(),
-          mentions
+          mentions,
+          replyToMessageId,
+          ...(attachments.length ? { attachments } : {}),
         });
       } else if (type === 'direct' && userId && workspaceId) {
-        await api.post(`/dm/${userId}/message`, { content: content.trim(), workspaceId });
+        await api.post(`/dm/${userId}/message`, { content: content.trim(), workspaceId, replyToMessageId, ...(attachments.length ? { attachments } : {}) });
       } else if (type === 'direct' && userId && !workspaceId) {
         throw new Error('workspaceId is required for direct messages');
       }
@@ -185,16 +229,21 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
 
   // Typing indicator
   const sendTypingIndicator = useCallback(() => {
-    if (type === 'workspace' && channelId) {
-      socket?.emit('chat:typing', { channelId });
+    const target = type === 'workspace' && channelId
+      ? { channelId }
+      : type === 'direct' && conversationId
+        ? { conversationId }
+        : null;
+    if (target) {
+      socket?.emit('chat:typing', target);
       
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       
       typingTimeoutRef.current = setTimeout(() => {
-        socket?.emit('chat:stop_typing', { channelId });
+        socket?.emit('chat:stop_typing', target);
       }, 3000);
     }
-  }, [channelId, type, socket]);
+  }, [channelId, conversationId, type, socket]);
 
   // Socket event listeners
   useEffect(() => {
@@ -210,7 +259,8 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
     const handleNewMessage = (data: { message: ChatMessage }) => {
       const msg = data.message;
       const isTargetChannel = type === 'workspace' && isMessageForChatRoom(channelId, msg);
-      const isTargetDM = type === 'direct' && conversationId && msg.conversation === conversationId;
+      const messageConversationId = getEntityId(msg.conversation);
+      const isTargetDM = type === 'direct' && conversationId && messageConversationId === conversationId;
 
       if (isTargetChannel || isTargetDM) {
         liveMessagesRef.current.set(msg._id, msg);
@@ -229,8 +279,10 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
         const senderId = typeof msg.sender === 'object' ? msg.sender._id : undefined;
         if (senderId && currentUserId && senderId !== currentUserId) {
           if (type === 'workspace' && workspaceId) {
-            api.patch(`/workspaces/${workspaceId}/chat/read`).catch((err) => {
-            });
+            const markChannelRead = channelId && channelId !== 'general'
+              ? api.patch(`/chat/channels/${channelId}/read`)
+              : api.patch(`/workspaces/${workspaceId}/chat/read`);
+            markChannelRead.catch(() => undefined);
           } else if (type === 'direct' && conversationId && workspaceId) {
             api.patch(`/dm/${conversationId}/read?workspaceId=${workspaceId}`).catch((err) => {
             });
@@ -239,28 +291,42 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       }
     };
 
-    const handleUserTyping = (data: { channelId?: string; conversationId?: string; userName: string }) => {
-      if ((data.channelId && data.channelId === channelId) || (data.conversationId && data.conversationId === conversationId)) {
-        setTypingUsers(prev => new Set(prev).add(data.userName));
-      }
+    const handleUserTyping = (data: { channelId?: string; conversationId?: string; userId?: string; userName: string }) => {
+      if (!((data.channelId && data.channelId === channelId) || (data.conversationId && data.conversationId === conversationId))) return;
+      if (currentUserId && data.userId === currentUserId) return;
+      const key = data.userId || data.userName;
+      const existingTimeout = typingUserTimeoutsRef.current.get(key);
+      if (existingTimeout) clearTimeout(existingTimeout);
+      setTypingUsers(prev => new Map(prev).set(key, data.userName));
+      typingUserTimeoutsRef.current.set(key, setTimeout(() => {
+        typingUserTimeoutsRef.current.delete(key);
+        setTypingUsers(prev => {
+          const next = new Map(prev);
+          next.delete(key);
+          return next;
+        });
+      }, 5_000));
     };
 
-    const handleUserStopTyping = (data: { channelId?: string; conversationId?: string; userName: string }) => {
+    const handleUserStopTyping = (data: { channelId?: string; conversationId?: string; userId?: string; userName: string }) => {
+      if (!((data.channelId && data.channelId === channelId) || (data.conversationId && data.conversationId === conversationId))) return;
+      const key = data.userId || data.userName;
+      const timeout = typingUserTimeoutsRef.current.get(key);
+      if (timeout) clearTimeout(timeout);
+      typingUserTimeoutsRef.current.delete(key);
       setTypingUsers(prev => {
-        const next = new Set(prev);
-        next.delete(data.userName);
+        const next = new Map(prev);
+        next.delete(key);
         return next;
       });
     };
 
     const handleReaction = (data: { messageId: string; reactions: any[] }) => {
-      setMessages(prev =>
-        prev.map(m => (m._id === data.messageId ? { ...m, reactions: data.reactions } : m))
-      );
+      updateMessageReactions(data.messageId, data.reactions);
     };
 
     const handleDMUpdated = (data: { message: ChatMessage }) => {
-      if (data.message) {
+      if (data.message && type === 'direct' && getEntityId(data.message.conversation) === conversationId) {
         const previous = liveMessagesRef.current.get(data.message._id);
         const updated = previous
           ? { ...previous, ...data.message, metadata: { ...previous.metadata, ...data.message.metadata } }
@@ -271,7 +337,37 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
             ? { ...m, ...data.message, metadata: { ...m.metadata, ...data.message.metadata } }
             : m))
         );
+        const updateRoomId = conversationId || '';
+        if (updateRoomId) updateMessageInStore(updateRoomId, data.message._id, updated);
       }
+    };
+
+    const handleChatUpdated = (data: { message: ChatMessage }) => {
+      if (!data.message || type !== 'workspace' || !isMessageForChatRoom(channelId, data.message)) return;
+      const updated = data.message;
+      liveMessagesRef.current.set(updated._id, updated);
+      setMessages(prev => prev.map(message => message._id === updated._id ? { ...message, ...updated } : message));
+      const updateRoomId = channelId ? `channel_${channelId}` : `workspace_${workspaceId}`;
+      updateMessageInStore(updateRoomId, updated._id, updated);
+    };
+
+    const handleReadReceipt = (receipt: { conversationId?: string; channelId?: string; channelName?: string; messageIds?: Array<string | { _id: string }>; reader?: ChatMessage['sender'] }) => {
+      const matchesRoom = type === 'direct'
+        ? getEntityId(receipt.conversationId) === conversationId
+        : isMessageForChatRoom(channelId, { channel: receipt.channelId, channelName: receipt.channelName });
+      if (!matchesRoom || !receipt.reader?._id) return;
+      const messageIds = new Set((receipt.messageIds || []).map(id => typeof id === 'string' ? id : id._id));
+      const apply = (message: ChatMessage): ChatMessage => messageIds.has(message._id)
+        ? { ...message, readBy: [...(message.readBy || []).filter(reader => typeof reader === 'string' ? reader !== receipt.reader!._id : reader._id !== receipt.reader!._id), receipt.reader!] }
+        : message;
+      liveMessagesRef.current.forEach((message, id) => liveMessagesRef.current.set(id, apply(message)));
+      setMessages(prev => prev.map(apply));
+      const updateRoomId = type === 'direct' ? conversationId! : (channelId ? `channel_${channelId}` : `workspace_${workspaceId}`);
+      const room = useChatStore.getState().getRoom(updateRoomId);
+      messageIds.forEach(messageId => {
+        const stored = room?.messages.find(message => message._id === messageId);
+        if (stored) updateMessageInStore(updateRoomId, messageId, apply(stored as unknown as ChatMessage));
+      });
     };
 
     socket.on('chat:new', handleNewMessage);
@@ -279,6 +375,9 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
     socket.on('chat:reaction', handleReaction);
     socket.on('dm:reaction', handleReaction);
     socket.on('dm:updated', handleDMUpdated);
+    socket.on('chat:updated', handleChatUpdated);
+    socket.on('dm:read', handleReadReceipt);
+    socket.on('chat:read', handleReadReceipt);
     socket.on('chat:user_typing', handleUserTyping);
     socket.on('chat:user_stop_typing', handleUserStopTyping);
 
@@ -293,10 +392,13 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
       socket.off('chat:reaction', handleReaction);
       socket.off('dm:reaction', handleReaction);
       socket.off('dm:updated', handleDMUpdated);
+      socket.off('chat:updated', handleChatUpdated);
+      socket.off('dm:read', handleReadReceipt);
+      socket.off('chat:read', handleReadReceipt);
       socket.off('chat:user_typing', handleUserTyping);
       socket.off('chat:user_stop_typing', handleUserStopTyping);
     };
-  }, [socket, type, workspaceId, channelId, conversationId, addMessageToStore, currentUserId, userId]);
+  }, [socket, type, workspaceId, channelId, conversationId, addMessageToStore, updateMessageInStore, updateMessageReactions, currentUserId, userId]);
 
   // Load messages on mount/change
   useEffect(() => {
@@ -314,8 +416,21 @@ export const useChat = ({ workspaceId, channelId, conversationId, userId, type, 
     sending,
     error,
     hasMore,
-    typingUsers: Array.from(typingUsers),
+    typingUsers: Array.from(typingUsers.values()),
     sendMessage,
+    updateMessageReactions,
+    deleteMessage: async (messageId: string) => {
+      if (type === 'direct' && !conversationId) throw new Error('Direct conversation is required');
+      if (type === 'workspace' && !channelId) throw new Error('Channel is required');
+      const response = await api.delete(type === 'direct' ? `/dm/messages/${messageId}` : `/chat/${messageId}`);
+      const deleted = response.data?.data as ChatMessage | undefined;
+      const updated = deleted?._id ? deleted : (response.data?.message ? { _id: messageId, isDeleted: true, content: 'This message was deleted' } as ChatMessage : undefined);
+      if (!updated?._id) throw new Error('Message deletion was not confirmed by the server');
+      Object.assign(updated, type === 'direct' ? { conversation: updated.conversation || conversationId } : { channel: updated.channel || channelId });
+      liveMessagesRef.current.set(messageId, updated);
+      setMessages(prev => prev.map(message => message._id === messageId ? updated : message));
+      updateMessageInStore(type === 'direct' ? conversationId! : `channel_${channelId}`, messageId, updated);
+    },
     sendTypingIndicator,
     loadMore: () => fetchMessages(page + 1, true),
     refetch: fetchMessages

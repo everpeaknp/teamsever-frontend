@@ -2,15 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, CalendarCheck2, Layers3, MessageCircle } from 'lucide-react';
-import { MobileSidebar } from '@/components/sidebar/MobileSidebar';
+import { BarChart3, Folder, Layers3, MessageCircle, Menu } from 'lucide-react';
 import { matchesSidebarRoute } from '@/components/sidebar/sidebarRouteMatch';
 
 const tabs = [
   { label: 'Dashboard', path: 'analytics', Icon: BarChart3 },
   { label: 'Spaces', path: 'spaces', Icon: Layers3 },
   { label: 'Messages', path: 'inbox', Icon: MessageCircle },
-  { label: 'Attendance', path: 'attendance', Icon: CalendarCheck2 },
+  { label: 'Files', path: 'files', Icon: Folder },
 ] as const;
 
 export function MobileWorkspaceTabBar({
@@ -27,7 +26,7 @@ export function MobileWorkspaceTabBar({
     'spaces',
     'inbox',
     'chat',
-    'attendance',
+    'files',
   ].some(path => matchesSidebarRoute(pathname, `/workspace/${workspaceId}/${path}`));
 
   return (
@@ -56,10 +55,15 @@ export function MobileWorkspaceTabBar({
             </Link>
           );
         })}
-        <MobileSidebar
-          variant="bottom"
-          active={isMoreRoute}
-        />
+        <Link
+          href={`/workspace/${workspaceId}/more`}
+          aria-current={matchesSidebarRoute(pathname, `/workspace/${workspaceId}/more`) || isMoreRoute ? 'page' : undefined}
+          aria-label="More"
+          className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-medium transition-colors ${isMoreRoute ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'}`}
+        >
+          <Menu className="h-5 w-5" aria-hidden="true" />
+          <span>More</span>
+        </Link>
       </div>
     </nav>
   );

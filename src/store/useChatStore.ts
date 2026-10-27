@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export interface ChatMessage {
   _id: string;
@@ -9,6 +10,9 @@ export interface ChatMessage {
     email: string;
   };
   content: string;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
   createdAt: string;
   conversation?: string;
   workspace?: string;
@@ -30,7 +34,7 @@ export interface ChatMessage {
     [key: string]: any;
   };
   mentions?: string[];
-  readBy?: string[];
+  readBy?: Array<string | { _id: string; name?: string; avatar?: string; profilePicture?: string }>;
   // Optimistic update fields
   sending?: boolean;  // True while message is being sent
   failed?: boolean;   // True if message failed to send
@@ -175,11 +179,14 @@ export const useChatStore = create<ChatStore>()(
 
         if (!wasInserted) return;
 
-        const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+        const currentUserId = useAuthStore.getState().userId ||
+          (typeof window !== 'undefined' ? localStorage.getItem('userId') : null);
         
         // Handle sender being an object or just a string ID
         const senderId = typeof message.sender === 'object' ? message.sender._id : message.sender;
-        const isFromOthers = senderId !== currentUserId;
+        // If identity is still loading, do not classify our own echo (or an
+        // unidentifiable event) as unread. Only count a known other sender.
+        const isFromOthers = !!senderId && !!currentUserId && senderId !== currentUserId;
         
         if (isFromOthers) {
           const activeRoomId = get().activeRoomId;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays, Phone, Video } from 'lucide-react';
+import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays, Phone, Video, X, Reply, ImagePlus, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { reconcileChatMessages } from '@/lib/chat/reconcileMessages';
@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as UICalendar } from '@/components/ui/calendar';
 import type { UserPresence } from '@/hooks/usePresence';
 import { ChatConversationIdentity } from './ChatConversationIdentity';
+import { getChatMessageContent, MAX_CHAT_IMAGES, shouldRenderChatMessageText, validateChatImageSelection } from '@/lib/chat/chatImages';
 
 interface ChatWindowProps {
   workspaceId?: string;
@@ -40,6 +41,23 @@ import { EditChannelModal } from './EditChannelModal';
 import { LeaveCard } from './LeaveCard';
 import { RequestLeaveModal } from './RequestLeaveModal';
 import { MessageReactionsBar, InputEmojiPicker } from './MessageReactionsBar';
+import { MessageActionMenu } from './MessageActionMenu';
+
+
+function ReplyPreview({ reply }: { reply: NonNullable<ChatMessage['replyTo']> }) {
+  const item = typeof reply === 'string' ? null : reply;
+  if (!item) return null;
+  return <div className="mb-1 rounded-md border-l-2 border-primary/70 bg-background/30 px-2 py-1 text-xs"><div className="font-semibold opacity-80">{item.sender?.name || 'Reply'}</div><div className="line-clamp-2 opacity-75">{item.isDeleted ? 'This message was deleted' : item.content}</div></div>;
+}
+
+function ChatImageGrid({ images, onOpen }: { images: string[]; onOpen: (index: number) => void }) {
+  if (!images.length) return null;
+  return <div className={cn('mt-1 grid w-[min(72vw,24rem)] gap-1 overflow-hidden rounded-xl', images.length === 1 ? 'grid-cols-1' : 'grid-cols-2')}>
+    {images.map((src, index) => <button key={`${src}-${index}`} type="button" onClick={() => onOpen(index)} aria-label={`Open image ${index + 1} of ${images.length}`} className={cn('overflow-hidden bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', images.length === 1 ? 'aspect-[4/3] max-h-[22rem]' : 'h-28')}>
+      <img src={src} alt={`Shared image ${index + 1}`} className="block h-full w-full object-cover" />
+    </button>)}
+  </div>;
+}
 
 export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, profileUser, presence, isAdmin, onMenuClick }: ChatWindowProps) => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -150,6 +168,31 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const [inputValue, setInputValue] = useState(draft);
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
+  const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [pendingImageUrls, setPendingImageUrls] = useState<string[]>([]);
+  const [imageViewer, setImageViewer] = useState<{ images: string[]; index: number } | null>(null);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const lastImageBatchSentAt = useRef(0);
+  const imageTouchStartX = useRef<number | null>(null);
+
+  useEffect(() => {
+    const urls = selectedImages.map((file) => URL.createObjectURL(file));
+    setPendingImageUrls(urls);
+    return () => urls.forEach((url) => URL.revokeObjectURL(url));
+  }, [selectedImages]);
+
+  useEffect(() => {
+    if (!imageViewer) return;
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') setImageViewer(null);
+      if (event.key === 'ArrowRight') setImageViewer((current) => current ? { ...current, index: Math.min(current.index + 1, current.images.length - 1) } : current);
+      if (event.key === 'ArrowLeft') setImageViewer((current) => current ? { ...current, index: Math.max(current.index - 1, 0) } : current);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [imageViewer]);
 
   // Fetch only people who can access this channel before offering @mentions.
   const fetchChannelMembers = useCallback(async () => {
@@ -204,6 +247,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     hasMore,
     typingUsers,
     sendMessage,
+    deleteMessage,
+    updateMessageReactions,
     sendTypingIndicator,
     loadMore,
     refetch: refreshMessages
@@ -218,6 +263,17 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     filterSpaceName: filterSpaceName === 'all' ? undefined : filterSpaceName,
     onInitialLoad: handleInitialLoad
   });
+
+  const handleDeleteMessage = useCallback(async (message: ChatMessage) => {
+    if ((message.type && message.type !== 'text') || message.isDeleted) return;
+    if (!window.confirm('Unsend this message for everyone?')) return;
+    try {
+      await deleteMessage(message._id);
+      toast.success('Message unsent');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || error?.message || 'Could not delete message');
+    }
+  }, [type, deleteMessage]);
 
   const getCommitRows = useCallback(() => {
     const rows: Array<{
@@ -463,12 +519,37 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
   // Handle send message with optimistic update
   const handleSend = async () => {
-    if (!inputValue.trim() || sending || !currentUserId || !currentUserName) return;
+    if ((!inputValue.trim() && selectedImages.length === 0) || sending || uploadingImages || !currentUserId || !currentUserName) return;
 
-    const messageContent = inputValue.trim();
+    const typedMessageContent = inputValue.trim();
+    let attachments: string[] = [];
+    if (selectedImages.length) {
+      if (Date.now() - lastImageBatchSentAt.current < 2000) {
+        toast.error('Please wait a moment before sending another image batch.');
+        return;
+      }
+      setUploadingImages(true);
+      try {
+        const form = new FormData();
+        form.append('workspaceId', workspaceId || '');
+        if (type === 'direct' && conversationId) form.append('conversationId', conversationId);
+        if (type === 'workspace' && channelId) form.append('channelId', channelId);
+        selectedImages.forEach((file) => form.append('files', file));
+        const response = await api.post('/chat/images', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+        attachments = response.data?.data?.attachments || [];
+        if (attachments.length !== selectedImages.length) throw new Error('The uploaded images could not be attached to this message.');
+        lastImageBatchSentAt.current = Date.now();
+      } catch (error: any) {
+        toast.error(error?.response?.data?.message || error?.message || 'Could not upload images');
+        setUploadingImages(false);
+        return;
+      }
+      setUploadingImages(false);
+    }
+    const messageContent = getChatMessageContent(typedMessageContent, attachments.length);
     const mentions = selectedMentionIds.filter((id) => {
       const member = getMentionSuggestions(workspaceMembers, '').find((candidate) => candidate.id === id);
-      return !!member && messageContent.toLocaleLowerCase().includes(`@${member.name}`.toLocaleLowerCase());
+      return !!member && typedMessageContent.toLocaleLowerCase().includes(`@${member.name}`.toLocaleLowerCase());
     });
     const tempId = `temp_${Date.now()}_${Math.random()}`;
     
@@ -484,6 +565,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         avatar: currentUser?.avatar
       },
       content: messageContent,
+      attachments,
+      replyTo: replyTarget ? { _id: replyTarget._id, content: replyTarget.content, sender: replyTarget.sender } : undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       type: 'text',
@@ -502,6 +585,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
     // Clear input immediately for better UX
     setInputValue('');
+    setSelectedImages([]);
     clearDraft(roomId);
     
     // Reset textarea height
@@ -516,7 +600,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
     // Send message to backend
     try {
-      await sendMessage(messageContent, mentions);
+      await sendMessage(messageContent, mentions, replyTarget?._id, attachments);
+      setReplyTarget(null);
       setSelectedMentionIds([]);
       setMentionQuery(null);
       
@@ -557,18 +642,56 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     }, 0);
   };
 
+  const handleSelectImages = (files: FileList | null) => {
+    if (!files?.length) return;
+    const picked = Array.from(files);
+    if (imageInputRef.current) imageInputRef.current.value = '';
+    const validationError = validateChatImageSelection(selectedImages, picked);
+    if (validationError) { toast.error(validationError); return; }
+    setSelectedImages((current) => [...current, ...picked]);
+  };
+
+  const saveChatImage = async (url: string) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Download failed');
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = url.split('/').pop()?.split('?')[0] || 'teamsever-image';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      toast.error('Could not save this image. Please try again.');
+    }
+  };
+
+  const handleCopyMessage = useCallback(async (message: ChatMessage) => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      toast.success('Message copied');
+    } catch {
+      toast.error('Could not copy message');
+    }
+  }, []);
+
   // Handle message reaction (Fire, Pulse, Kudos, Love, Like, etc.)
   const handleReact = useCallback(async (messageId: string, emoji: string) => {
     try {
       if (type === 'workspace') {
-        await api.post(`/chat/messages/${messageId}/react`, { emoji });
+        const response = await api.post(`/chat/messages/${messageId}/react`, { emoji });
+        updateMessageReactions(messageId, response.data?.data?.reactions);
       } else {
-        await api.post(`/dm/messages/${messageId}/react`, { emoji });
+        const response = await api.post(`/dm/messages/${messageId}/react`, { emoji });
+        updateMessageReactions(messageId, response.data?.data?.reactions);
       }
     } catch (err: any) {
       toast.error('Failed to react to message');
     }
-  }, [type]);
+  }, [type, updateMessageReactions]);
 
   // Insert emoji at cursor position in textarea
   const handleInsertEmoji = (emoji: string) => {
@@ -671,7 +794,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     setMentionQuery(activeMention ? activeMention[1] : null);
     setActiveMentionIndex(0);
     
-    if (value.trim() && type === 'workspace') {
+    if (value.trim()) {
       sendTypingIndicator();
     }
 
@@ -705,6 +828,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       .map((member) => member.name)
       .filter(Boolean)
       .sort((a, b) => b.length - a.length);
+    if (!shouldRenderChatMessageText(message.content, message.attachments?.length || 0)) return null;
     if (!names.length) return message.content;
     const escaped = names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
     const matcher = new RegExp(`(@(?:${escaped.join('|')}))`, 'gi');
@@ -1100,6 +1224,53 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
             const groupedWithNext = isSameMessageGroup(message, localMessages[index + 1]);
             const isSystemMessage = message.type === 'system';
             const isOwnMessage = message.sender._id === currentUserId;
+            const readers = (message.readBy || [])
+              .map(reader => typeof reader === 'string' ? null : reader)
+              .filter((reader): reader is NonNullable<typeof reader> => Boolean(reader && reader._id !== currentUserId));
+            const canUnsend = isOwnMessage && !isCommitLog && (!message.type || message.type === 'text') && !message.isDeleted && !message.tempId;
+            const withMessageActions = (content: React.ReactNode) => (
+              <MessageActionMenu
+                key={message._id}
+                onReact={(emoji) => void handleReact(message._id, emoji)}
+                onReply={() => { setReplyTarget(message); textareaRef.current?.focus(); }}
+                onCopy={() => void handleCopyMessage(message)}
+                onDelete={canUnsend ? () => void handleDeleteMessage(message) : undefined}
+              >{content}</MessageActionMenu>
+            );
+
+            if (message.isDeleted) {
+              const deletedAttribution = isOwnMessage ? (
+                <div className="mb-1.5 flex items-center justify-end gap-2 opacity-90">
+                  <span className="text-[10px] font-medium text-muted-foreground">{formatMessageTime(message.createdAt)}</span>
+                  <span className="text-xs font-bold text-primary">You</span>
+                </div>
+              ) : (
+                <div className="mb-1.5 flex items-center gap-2 opacity-90">
+                  <UserAvatar
+                    user={message.sender}
+                    className="h-8 w-8 shrink-0 cursor-pointer hover:opacity-80"
+                    onClick={() => openProfile(message.sender._id)}
+                  />
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="cursor-pointer text-xs font-bold text-foreground hover:text-primary"
+                      onClick={() => openProfile(message.sender._id)}
+                    >{message.sender.name}</span>
+                    <span className="text-[10px] font-medium text-muted-foreground">{formatMessageTime(message.createdAt)}</span>
+                  </div>
+                </div>
+              );
+              return (
+                <div key={message._id} className={cn('flex w-full', isOwnMessage ? 'justify-end' : 'justify-start')}>
+                  <div className="flex max-w-[82%] flex-col">
+                    {deletedAttribution}
+                    <p className={cn('rounded-2xl bg-muted/50 px-4 py-2 text-sm italic text-muted-foreground', !isOwnMessage && 'ml-10')}>
+                      This message was deleted
+                    </p>
+                  </div>
+                </div>
+              );
+            }
 
             if (isSystemMessage) {
               return (
@@ -1239,9 +1410,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
             // Own messages on the right, others on the left
             if (isOwnMessage) {
-              return (
+              return withMessageActions(
                 <div
-                  key={message._id}
                   className={cn(
                     'flex w-full justify-end group/msg relative',
                     showAvatar && index > 0 && '!mt-4'
@@ -1258,6 +1428,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                         </span>
                       </div>
                     )}
+                    <div className="group/bubble relative">
+                    {message.replyTo && <ReplyPreview reply={message.replyTo} />}
                     <div className={cn(
                       "w-fit min-w-[40px] max-w-full whitespace-pre-wrap break-words rounded-[18px] px-4 py-2 text-sm",
                       groupedWithPrevious && 'rounded-tr-md',
@@ -1267,6 +1439,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                         : "bg-primary text-primary-foreground"
                     )}>
                       {renderMessageContent(message, true)}
+                      <ChatImageGrid images={message.attachments || []} onOpen={(index) => setImageViewer({ images: message.attachments || [], index })} />
                       
                       {/* Status indicators */}
                       <div className="flex items-center gap-1 mt-1 justify-end text-xs opacity-70">
@@ -1292,19 +1465,22 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                           </div>
                         )}
                         {!message.sending && !message.failed && !message.tempId && (
-                          <CheckCheck className="h-3 w-3" />
+                          type === 'direct' && readers.length > 0
+                            ? <span className="text-[10px]">Seen</span>
+                            : <CheckCheck className="h-3 w-3" />
                         )}
                       </div>
                     </div>
+                    </div>
 
                     {/* Reactions Bar */}
-                    {!message.sending && !message.failed && (
-                      <MessageReactionsBar
-                        reactions={message.reactions as any}
-                        currentUserId={currentUserId || ''}
-                        onReact={(emoji) => handleReact(message._id, emoji)}
-                        className="justify-end"
-                      />
+                    {type === 'workspace' && readers.length > 0 && (
+                      <div className="mt-1 text-[10px] text-muted-foreground" title={readers.map(reader => reader.name || 'Member').join(', ')}>
+                        Seen by {readers.length > 3 ? `${readers.slice(0, 3).map(reader => reader.name || 'Member').join(', ')} +${readers.length - 3}` : readers.map(reader => reader.name || 'Member').join(', ')}
+                      </div>
+                    )}
+                    {!message.sending && !message.failed && (message.reactions?.length ?? 0) > 0 && (
+                      <MessageReactionsBar reactions={message.reactions as any} currentUserId={currentUserId || ''} className="mt-1 justify-end" />
                     )}
                   </div>
 
@@ -1313,9 +1489,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
             }
 
             // Other users' messages on the left
-            return (
+            return withMessageActions(
               <div
-                key={message._id}
                 className={cn(
                   'flex w-full items-end gap-2 group/msg relative',
                   showAvatar && index > 0 && '!mt-4'
@@ -1344,21 +1519,20 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                       </span>
                     </div>
                   )}
+                  <div className="group/bubble relative">
+                  {message.replyTo && <ReplyPreview reply={message.replyTo} />}
                   <div className={cn(
                     'w-fit min-w-[40px] max-w-full whitespace-pre-wrap break-words rounded-[18px] bg-muted px-4 py-2 text-sm text-foreground',
                     groupedWithPrevious && 'rounded-tl-md',
                     groupedWithNext && 'rounded-bl-md'
                   )}>
                     {renderMessageContent(message)}
+                    <ChatImageGrid images={message.attachments || []} onOpen={(index) => setImageViewer({ images: message.attachments || [], index })} />
+                  </div>
                   </div>
 
                   {/* Reactions Bar */}
-                  <MessageReactionsBar
-                    reactions={message.reactions as any}
-                    currentUserId={currentUserId || ''}
-                    onReact={(emoji) => handleReact(message._id, emoji)}
-                    className="justify-start"
-                  />
+                  {(message.reactions?.length ?? 0) > 0 && <MessageReactionsBar reactions={message.reactions as any} currentUserId={currentUserId || ''} className="mt-1 justify-start" />}
                 </div>
 
               </div>
@@ -1379,7 +1553,19 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       {/* Input Area - Hidden for Commit Log */}
       {!isCommitLog && (
         <div className="sticky bottom-0 z-10 border-t border-border bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-sm transition-all sm:p-4 md:pb-6">
+          {replyTarget && <div className="mx-auto mb-2 flex max-w-4xl items-center gap-2 rounded-lg border-l-2 border-primary bg-muted/50 px-3 py-2 text-sm"><Reply className="h-4 w-4 shrink-0 text-primary" /><div className="min-w-0 flex-1"><div className="font-medium">Replying to {replyTarget.sender.name}</div><div className="truncate text-xs text-muted-foreground">{replyTarget.content}</div></div><button type="button" aria-label="Cancel reply" onClick={() => setReplyTarget(null)}><X className="h-4 w-4" /></button></div>}
+          {selectedImages.length > 0 && <div className="mx-auto mb-2 flex max-w-4xl items-center gap-2 overflow-x-auto">
+            {pendingImageUrls.map((url, index) => <div key={`${url}-${index}`} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border">
+              <img src={url} alt={`Image to send ${index + 1}`} className="h-full w-full object-cover" />
+              <button type="button" aria-label={`Remove image ${index + 1}`} disabled={uploadingImages} onClick={() => setSelectedImages((images) => images.filter((_, itemIndex) => itemIndex !== index))} className="absolute right-0.5 top-0.5 rounded-full bg-black/70 p-0.5 text-white"><X className="h-3.5 w-3.5" /></button>
+            </div>)}
+            <span className="text-xs text-muted-foreground">{uploadingImages ? 'Uploading images…' : `${selectedImages.length} image${selectedImages.length === 1 ? '' : 's'}`}</span>
+          </div>}
           <div className="mx-auto flex min-w-0 max-w-4xl items-end gap-2">
+            <input ref={imageInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="hidden" onChange={(event) => handleSelectImages(event.target.files)} />
+            <Button type="button" variant="ghost" size="icon" aria-label="Attach images" title="Attach images" disabled={sending || uploadingImages || selectedImages.length >= MAX_CHAT_IMAGES} onClick={() => imageInputRef.current?.click()} className="h-11 w-11 shrink-0 rounded-xl text-muted-foreground hover:text-primary">
+              <ImagePlus className="h-5 w-5" />
+            </Button>
             <div className="relative min-w-0 flex-1">
               {mentionQuery !== null && type === 'workspace' && !isCommitLog && (
                 <div role="listbox" aria-label="Mention a channel member" className="absolute bottom-full left-0 z-30 mb-2 max-h-56 w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-xl">
@@ -1431,7 +1617,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
             <Button
               onClick={handleSend}
-              disabled={!inputValue.trim() || sending}
+              disabled={(!inputValue.trim() && selectedImages.length === 0) || sending || uploadingImages}
               size="icon"
               className="h-[44px] w-[44px] flex-shrink-0 rounded-xl shadow-md transition-all hover:scale-105 active:scale-95"
             >
@@ -1441,6 +1627,27 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
           <div className="max-w-4xl mx-auto flex items-center justify-between text-[10px] text-muted-foreground mt-2 px-1">
             <span className="hidden sm:inline">Shift + Enter for new line • Enter to send</span>
             <span className="sm:hidden">Press send to transmit</span>
+          </div>
+        </div>
+      )}
+
+      {imageViewer && (
+        <div role="dialog" aria-modal="true" aria-label="Image preview" className="fixed inset-0 z-[100] flex flex-col bg-black/95 text-white" onClick={() => setImageViewer(null)} onTouchStart={(event) => { imageTouchStartX.current = event.touches[0]?.clientX ?? null; }} onTouchEnd={(event) => {
+          const start = imageTouchStartX.current;
+          const end = event.changedTouches[0]?.clientX;
+          imageTouchStartX.current = null;
+          if (start === null || end === undefined || Math.abs(end - start) < 45) return;
+          setImageViewer((current) => current ? { ...current, index: Math.max(0, Math.min(current.images.length - 1, current.index + (end < start ? 1 : -1))) } : current);
+        }}>
+          <div className="flex h-14 shrink-0 items-center justify-between px-4" onClick={(event) => event.stopPropagation()}>
+            <button type="button" aria-label="Close image preview" onClick={() => setImageViewer(null)} className="rounded-full p-2 hover:bg-white/10"><X className="h-5 w-5" /></button>
+            <span className="text-sm text-white/80">{imageViewer.index + 1} / {imageViewer.images.length}</span>
+            <button type="button" aria-label="Save image to device" onClick={() => void saveChatImage(imageViewer.images[imageViewer.index])} className="rounded-full p-2 hover:bg-white/10"><Download className="h-5 w-5" /></button>
+          </div>
+          <div className="relative flex min-h-0 flex-1 items-center justify-center px-3 pb-4" onClick={(event) => event.stopPropagation()}>
+            {imageViewer.index > 0 && <button type="button" aria-label="Previous image" onClick={() => setImageViewer((current) => current ? { ...current, index: current.index - 1 } : current)} className="absolute left-3 z-10 rounded-full bg-black/45 p-2 hover:bg-black/70"><ChevronLeft className="h-6 w-6" /></button>}
+            <img src={imageViewer.images[imageViewer.index]} alt={`Image ${imageViewer.index + 1} of ${imageViewer.images.length}`} className="h-auto w-auto max-h-[calc(100dvh-5rem)] max-w-[min(92vw,90rem)] select-none object-contain" />
+            {imageViewer.index < imageViewer.images.length - 1 && <button type="button" aria-label="Next image" onClick={() => setImageViewer((current) => current ? { ...current, index: current.index + 1 } : current)} className="absolute right-3 z-10 rounded-full bg-black/45 p-2 hover:bg-black/70"><ChevronRight className="h-6 w-6" /></button>}
           </div>
         </div>
       )}
@@ -1462,3 +1669,4 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     </div>
   );
 };
+

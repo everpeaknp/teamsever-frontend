@@ -20,6 +20,7 @@ interface ChatChannel {
   type: 'public' | 'private';
   lastMessageAt?: string;
   isDefault?: boolean;
+  unreadCount?: number;
 }
 
 interface WorkspaceMember {
@@ -277,9 +278,8 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
           </div>
           <div className="space-y-1.5 md:space-y-0.5">
             {publicChannels.map((channel) => {
-              const unread = channel.isDefault
-                ? (getRoom(`workspace_${workspaceId}`)?.unreadCount || 0)
-                : (getRoom(`channel_${channel._id}`)?.unreadCount || 0);
+              const room = getRoom(channel.isDefault ? `workspace_${workspaceId}` : `channel_${channel._id}`);
+              const unread = room ? room.unreadCount : (channel.unreadCount || 0);
               return (
                 <div
                   key={channel._id}
@@ -355,7 +355,8 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
             </div>
             <div className="space-y-1.5 md:space-y-0.5">
               {privateChannels.map((channel) => {
-                const unread = getRoom(`channel_${channel._id}`)?.unreadCount || 0;
+                const room = getRoom(`channel_${channel._id}`);
+                const unread = room ? room.unreadCount : (channel.unreadCount || 0);
                 return (
                   <div
                     key={channel._id}
@@ -458,9 +459,13 @@ export const ChatSidebar = ({ workspaceId, activeChannel, onChannelSelect, isAdm
               const conversationRoomId = linkedConversation?._id;
               // Realtime DM events are keyed by conversationId in the chat store.
               // Fallback to legacy generated room id for backward compatibility.
-              const unread =
-                (conversationRoomId ? (getRoom(conversationRoomId)?.unreadCount || 0) : 0) ||
-                (getRoom(dmRoomId)?.unreadCount || 0);
+              const conversationRoom = conversationRoomId ? getRoom(conversationRoomId) : undefined;
+              const legacyRoom = getRoom(dmRoomId);
+              const unread = conversationRoom
+                ? conversationRoom.unreadCount
+                : legacyRoom
+                  ? legacyRoom.unreadCount
+                  : (linkedConversation?.unreadCount || 0);
 
               return (
                 <div

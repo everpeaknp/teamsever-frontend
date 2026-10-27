@@ -20,7 +20,7 @@ describe('MobileWorkspaceTabBar', () => {
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/workspace/ws1/analytics');
     expect(screen.getByRole('link', { name: 'Spaces' })).toHaveAttribute('href', '/workspace/ws1/spaces');
     expect(screen.getByRole('link', { name: 'Messages' })).toHaveAttribute('href', '/workspace/ws1/inbox');
-    expect(screen.getByRole('link', { name: 'Attendance' })).toHaveAttribute('href', '/workspace/ws1/attendance');
+    expect(screen.getByRole('link', { name: 'Files' })).toHaveAttribute('href', '/workspace/ws1/files');
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
   });
 
@@ -36,14 +36,14 @@ describe('MobileWorkspaceTabBar', () => {
 
     expect(screen.getByRole('link', { name: 'Spaces' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Spaces' })).toHaveAttribute('href', '/workspace/ws1/spaces');
-    expect(screen.getByRole('button', { name: 'More' })).not.toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'More' })).not.toHaveAttribute('aria-current', 'page');
   });
 
   it('keeps More selected for destinations outside the primary tabs', () => {
     navigation.pathname = '/workspace/ws1/quality/cases';
     render(<MobileWorkspaceTabBar workspaceId="ws1" />);
 
-    expect(screen.getByRole('button', { name: 'More' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'More' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Spaces' })).not.toHaveAttribute('aria-current', 'page');
   });
 
@@ -54,9 +54,9 @@ describe('MobileWorkspaceTabBar', () => {
     expect(screen.getByRole('link', { name: 'Messages' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('provides an accessible More control for destinations outside the primary tabs', () => {
+  it('links More to a compact tools page instead of opening the sidebar', () => {
     render(<MobileWorkspaceTabBar workspaceId="ws1" />);
 
-    expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'More' })).toHaveAttribute('href', '/workspace/ws1/more');
   });
 });

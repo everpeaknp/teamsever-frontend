@@ -20,6 +20,17 @@ describe('reconcileChatMessages', () => {
     expect(reconcileChatMessages([confirmed], [optimistic])).toEqual([confirmed]);
   });
 
+  it('keeps a successful optimistic message visible until its socket echo arrives', () => {
+    const optimistic = message({ _id: 'temp-1', tempId: 'temp-1', sending: false });
+    expect(reconcileChatMessages([], [optimistic])).toEqual([optimistic]);
+  });
+
+  it('reconciles a populated conversation reference to the optimistic conversation id', () => {
+    const optimistic = message({ _id: 'temp-1', tempId: 'temp-1', sending: false });
+    const confirmed = message({ _id: 'server-1', conversation: { _id: 'conversation-1' } });
+    expect(reconcileChatMessages([confirmed], [optimistic])).toEqual([confirmed]);
+  });
+
   it('keeps separate rapid messages with identical text when only one echo has arrived', () => {
     const optimisticA = message({ _id: 'temp-a', tempId: 'temp-a', sending: true });
     const optimisticB = message({ _id: 'temp-b', tempId: 'temp-b', sending: true, createdAt: new Date(baseTime + 1000).toISOString() });

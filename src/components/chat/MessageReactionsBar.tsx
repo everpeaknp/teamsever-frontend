@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Smile, Plus } from 'lucide-react';
+import { Heart, Plus, Smile } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
@@ -20,48 +20,69 @@ export const EXTENDED_EMOJIS = [
   '😀', '😂', '😎', '🥳', '🤔', '🙏',
 ];
 
+function QuickEmoji({ emoji }: { emoji: string }) {
+  return emoji === '❤️'
+    ? <Heart aria-hidden="true" className="h-5 w-5 fill-red-500 text-red-500" />
+    : emoji;
+}
+
 interface MessageReactionsBarProps {
   reactions?: Array<{
     emoji: string;
-    users: string[];
+    users: Array<string | { _id: string; name?: string; avatar?: string; profilePicture?: string }>;
     count: number;
   }>;
   currentUserId: string;
-  onReact: (emoji: string) => void;
   className?: string;
 }
 
 export function MessageReactionsBar({
   reactions = [],
   currentUserId,
-  onReact,
   className,
 }: MessageReactionsBarProps) {
   return (
     <div className={cn('flex items-center flex-wrap gap-1 mt-1.5', className)}>
       {reactions.map((r) => {
-        const hasReacted = r.users?.some((u) => u === currentUserId);
+        const users = r.users || [];
+        const hasReacted = users.some((user) => (typeof user === 'string' ? user : user._id) === currentUserId);
+        const names = users.map(user => typeof user === 'string' ? 'Member' : user.name || 'Member');
         return (
-          <button
-            key={r.emoji}
-            type="button"
-            onClick={() => onReact(r.emoji)}
-            className={cn(
-              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-all duration-150 select-none',
-              hasReacted
-                ? 'bg-primary/15 border-primary/40 text-primary shadow-sm scale-105'
-                : 'bg-muted/40 hover:bg-muted/80 border-border/40 text-muted-foreground hover:text-foreground'
-            )}
-            title={`${r.count} reaction${r.count > 1 ? 's' : ''}`}
-          >
-            <span>{r.emoji}</span>
-            <span className="text-[11px] font-semibold">{r.count}</span>
-          </button>
+          <Popover key={r.emoji}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border transition-colors select-none',
+                  hasReacted
+                    ? 'bg-primary/15 border-primary/40 text-primary'
+                    : 'bg-muted/40 hover:bg-muted/80 border-border/40 text-muted-foreground hover:text-foreground'
+                )}
+                title={names.join(', ')}
+                aria-label={`${r.emoji}, ${r.count} reactions. View who reacted`}
+              >
+                <span>{r.emoji}</span>
+                <span className="text-[11px] font-semibold">{r.count}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="center" className="w-56 p-2">
+              <p className="px-2 pb-1 text-xs font-semibold text-muted-foreground">Reacted with {r.emoji}</p>
+              <div className="max-h-40 overflow-y-auto">
+                {users.map((user, index) => (
+                  <div key={typeof user === 'string' ? `${user}-${index}` : user._id} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm">
+                    {typeof user === 'object' && (user.avatar || user.profilePicture)
+                      ? <img className="h-6 w-6 rounded-full object-cover" src={user.avatar || user.profilePicture} alt="" />
+                      : <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs">{names[index]?.[0] || 'M'}</span>}
+                    <span className="truncate">{names[index]}</span>
+                    <span className="ml-auto">{r.emoji}</span>
+                  </div>
+                ))}
+                {users.length === 0 && <p className="px-2 py-2 text-sm text-muted-foreground">No reaction details available</p>}
+              </div>
+            </PopoverContent>
+          </Popover>
         );
       })}
-
-      {/* Keep one reaction picker in the same row, even before the first reaction. */}
-      <MessageReactionTrigger onReact={onReact} />
     </div>
   );
 }
@@ -123,7 +144,7 @@ export function MessageReactionTrigger({
               className="h-8 w-8 flex items-center justify-center text-lg rounded-full hover:bg-muted hover:scale-125 transition-transform"
               title={item.name}
             >
-              {item.emoji}
+              <QuickEmoji emoji={item.emoji} />
             </button>
           ))}
           <div className="w-[1px] h-5 bg-border/60 mx-0.5" />
@@ -209,7 +230,7 @@ export function InputEmojiPicker({
                 className="h-9 w-9 flex items-center justify-center text-xl rounded-lg hover:bg-background/80 hover:scale-125 transition-all active:scale-95"
                 title={`${item.name} (${item.emoji})`}
               >
-                {item.emoji}
+                <QuickEmoji emoji={item.emoji} />
               </button>
             ))}
           </div>
@@ -250,7 +271,7 @@ export function InputEmojiPicker({
                   className="px-1.5 py-0.5 rounded text-sm hover:bg-primary/15 hover:text-primary transition-all font-medium active:scale-95"
                   title={`Send ${item.name} immediately`}
                 >
-                  {item.emoji}
+                  <QuickEmoji emoji={item.emoji} />
                 </button>
               ))}
             </div>

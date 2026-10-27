@@ -371,13 +371,21 @@ export default function FilesPage() {
     }
   };
 
-  const handleDownload = (file: WorkspaceFile) => {
-    // Only use fl_attachment for image resources to bypass browser opening them inline
-    let downloadUrl = file.cloudinaryUrl;
-    if (file.resourceType === 'image' && downloadUrl.includes('/upload/')) {
-      downloadUrl = downloadUrl.replace('/upload/', '/upload/fl_attachment/');
+  const handleDownload = async (file: WorkspaceFile) => {
+    try {
+      const response = await fetch(file.cloudinaryUrl);
+      if (!response.ok) throw new Error('Download failed');
+      const objectUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = file.fileName || 'teamsever-file';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch {
+      toast.error('Could not save this file. Please try again.');
     }
-    window.open(downloadUrl, '_blank');
   };
 
   const getFileIcon = (fileType: string, resourceType: string) => {
@@ -824,7 +832,9 @@ export default function FilesPage() {
           "max-h-[calc(100dvh-1rem)] max-w-4xl flex flex-col p-0 overflow-hidden border-none shadow-2xl transition-all duration-300",
           (previewFile?.fileType.includes('pdf') || ['md', 'txt', 'sql', 'pptx', 'docx', 'xlsx', 'ppt', 'doc', 'xls'].includes(previewFile?.format?.toLowerCase() || ''))
             ? "h-[90vh] w-[95vw] max-w-[1200px]" 
-            : "max-h-[90vh] w-auto"
+            : previewFile?.resourceType === 'image'
+              ? "h-[100dvh] max-h-[100dvh] w-screen max-w-none rounded-none"
+              : "max-h-[90vh] w-auto"
         )}>
           <DialogHeader className="p-4 border-b bg-card">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -873,7 +883,7 @@ export default function FilesPage() {
                 )}
               </div>
             ) : (previewFile?.resourceType === 'image' && !['pdf', 'md', 'txt', 'sql'].includes(previewFile?.format?.toLowerCase() || '')) ? (
-              <div className="p-4 w-full h-full flex items-center justify-center">
+              <div className="w-full h-full flex items-center justify-center">
                 <img 
                   src={previewFile.cloudinaryUrl} 
                   alt={previewFile.fileName}
