@@ -1,19 +1,38 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight, Download, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { chatImagePreviewUrl } from '@/lib/chat/chatImageUrls';
+
+function ChatImage({ src, alt, className, style, previewWidth = 960 }: { src: string; alt: string; className: string; style?: CSSProperties; previewWidth?: number }) {
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => setLoaded(false), [src]);
+  return <span className="relative inline-flex min-h-32 max-w-full items-center justify-center overflow-hidden bg-neutral-300/20">
+    {!loaded && <span aria-hidden="true" className="absolute inset-0 animate-pulse bg-neutral-400/25" />}
+    <img
+      src={chatImagePreviewUrl(src, previewWidth)}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      onLoad={() => setLoaded(true)}
+      onError={() => setLoaded(true)}
+      className={cn(className, !loaded && 'opacity-0')}
+      style={style}
+    />
+  </span>;
+}
 
 export function ChatImageGrid({ images, onOpen, className }: { images: string[]; onOpen: (index: number) => void; className?: string }) {
   if (!images.length) return null;
   if (images.length === 1) return <button type="button" onClick={() => onOpen(0)} aria-label="Open image 1 of 1" className={cn('block max-w-full overflow-hidden rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', className)} style={{ maxWidth: 'min(72vw, 24rem)' }}>
-    <img src={images[0]} alt="Shared image 1" className="block h-auto w-auto object-contain" style={{ maxWidth: 'min(72vw, 24rem)', maxHeight: 'min(60vh, 22rem)' }} />
+    <ChatImage src={images[0]} alt="Shared image 1" className="block h-auto w-auto object-contain" style={{ maxWidth: 'min(72vw, 24rem)', maxHeight: 'min(60vh, 22rem)' }} />
   </button>;
 
   return <div className={cn('grid w-[min(72vw,24rem)] grid-cols-2 gap-1 rounded-xl', className)}>
     {images.map((src, index) => <button key={`${src}-${index}`} type="button" onClick={() => onOpen(index)} aria-label={`Open image ${index + 1} of ${images.length}`} className="flex min-h-40 items-center justify-center overflow-hidden rounded-lg bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-      <img src={src} alt={`Shared image ${index + 1}`} className="block h-auto w-full" style={{ maxHeight: '15rem', objectFit: 'contain' }} />
+      <ChatImage src={src} alt={`Shared image ${index + 1}`} className="block h-auto w-full" style={{ maxHeight: '15rem', objectFit: 'contain' }} previewWidth={480} />
     </button>)}
   </div>;
 }
@@ -42,7 +61,7 @@ export function ChatImageViewer({ images, index, onClose, onIndexChange, onDownl
       </div>
       <div className="relative flex min-h-0 w-full flex-1 items-center justify-center px-10 pb-4" onClick={(event) => event.stopPropagation()}>
         {index > 0 && <button type="button" aria-label="Previous image" onClick={() => onIndexChange(index - 1)} className="absolute left-3 z-10 rounded-full bg-black/45 p-2 hover:bg-black/70"><ChevronLeft className="h-6 w-6" /></button>}
-        <img src={images[index]} alt={`Image ${index + 1} of ${images.length}`} className="block h-auto w-auto shrink select-none" style={{ maxWidth: 'calc(100vw - 5rem)', maxHeight: 'calc(100dvh - 5rem)', objectFit: 'contain' }} />
+        <img src={images[index]} alt={`Image ${index + 1} of ${images.length}`} loading="eager" decoding="async" className="block h-auto w-auto shrink select-none" style={{ maxWidth: 'calc(100vw - 5rem)', maxHeight: 'calc(100dvh - 5rem)', objectFit: 'contain' }} />
         {index < images.length - 1 && <button type="button" aria-label="Next image" onClick={() => onIndexChange(index + 1)} className="absolute right-3 z-10 rounded-full bg-black/45 p-2 hover:bg-black/70"><ChevronRight className="h-6 w-6" /></button>}
       </div>
     </div>,
