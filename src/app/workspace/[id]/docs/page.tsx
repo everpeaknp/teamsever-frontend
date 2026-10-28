@@ -99,7 +99,7 @@ export default function DocumentsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-card border-b border-border">
+      <header className="sticky top-0 z-10 bg-card border-b border-border">
         <div className="w-full px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div>

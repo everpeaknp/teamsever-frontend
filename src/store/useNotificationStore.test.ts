@@ -1,49 +1,50 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { replaceBellNotifications, useNotificationStore, type Notification } from './useNotificationStore';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const notification = (id: string): Notification => ({
-  _id: id,
-  type: 'TEST',
-  title: id,
-  body: '',
+const toastInfo = vi.hoisted(() => vi.fn());
+
+vi.mock('sonner', () => ({ toast: { info: toastInfo, error: vi.fn() } }));
+vi.mock('@/lib/firebase', () => ({
+  requestNotificationPermission: vi.fn(),
+  onMessageListener: vi.fn(),
+}));
+vi.mock('@/lib/axios', () => ({ api: { post: vi.fn() } }));
+
+import { useNotificationStore } from './useNotificationStore';
+
+const notification = {
+  _id: 'notification-1',
+  type: 'TASK_UPDATED',
+  title: 'Task updated',
+  body: 'The task changed',
   read: false,
-  createdAt: new Date(0).toISOString(),
-});
-const originalSetBellNotifications = useNotificationStore.getState().setBellNotifications;
-const originalVapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
+  createdAt: new Date().toISOString(),
+};
 
-describe('replaceBellNotifications', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-    if (originalVapidKey === undefined) {
-      delete process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
-    } else {
-      process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY = originalVapidKey;
-    }
+describe('notification toasts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
     useNotificationStore.setState({
+      notifications: [],
       bellNotifications: [],
-      setBellNotifications: originalSetBellNotifications,
+      unreadCount: 0,
+      processedNotificationIds: new Set(),
     });
   });
 
-  it('updates the bell list even when Fast Refresh preserved a state without the new action', () => {
-    useNotificationStore.setState({ setBellNotifications: undefined } as unknown as Partial<ReturnType<typeof useNotificationStore.getState>>);
+  it('does not toast for updates while the notification center is open', () => {
+    window.history.replaceState({}, '', '/workspace/ws-1/notifications');
 
-    replaceBellNotifications([notification('one'), notification('one'), notification('two')]);
+    useNotificationStore.getState().addNotification(notification);
 
-    expect(useNotificationStore.getState().bellNotifications.map(({ _id }) => _id)).toEqual(['one', 'two']);
+    expect(useNotificationStore.getState().notifications).toHaveLength(1);
+    expect(toastInfo).not.toHaveBeenCalled();
   });
 
-  it('treats an unset web-push VAPID key as optional local configuration', async () => {
-    delete process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
-    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  it('still toasts for updates elsewhere in the app', () => {
+    window.history.replaceState({}, '', '/workspace/ws-1/spaces');
 
-    await useNotificationStore.getState().initializeFCM();
+    useNotificationStore.getState().addNotification(notification);
 
-    expect(error).not.toHaveBeenCalledWith(
-      expect.stringContaining('VAPID key not configured'),
-    );
-    expect(warn).not.toHaveBeenCalled();
+    expect(toastInfo).toHaveBeenCalledOnce();
   });
 });

@@ -35,6 +35,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { clearAuthData } from '@/lib/auth';
 import { DesktopPresencePreference } from '@/components/account/DesktopPresencePreference';
+import { DesktopStartupPreference } from '@/components/account/DesktopStartupPreference';
 
 // Validation schemas
 const profileSchema = z.object({
@@ -778,6 +779,7 @@ export default function AccountSettingsPage() {
                 </section>
 
                 <DesktopPresencePreference />
+                <DesktopStartupPreference />
                 <ContributionHeatmap userId="me" />
               </>
             )}

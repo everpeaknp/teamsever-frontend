@@ -7,6 +7,7 @@ import AnalyticsDashboard from "@/components/super-admin/AnalyticsDashboard";
 import PlanBuilderNew from "@/components/super-admin/PlanBuilderNew";
 import UserManagementNew from "@/components/super-admin/UserManagementNew";
 import SystemSettings from "@/components/super-admin/SystemSettings";
+import ProductUpdates from "@/components/super-admin/ProductUpdates";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CurrencySwitcherDark } from "@/components/currency/CurrencySwitcherDark";
@@ -17,8 +18,8 @@ export default function SuperAdminDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<"dashboard" | "plans" | "users" | "settings">(
-    (tabParam as "dashboard" | "plans" | "users" | "settings") || "dashboard"
+  const [activeTab, setActiveTab] = useState<"dashboard" | "plans" | "users" | "settings" | "updates">(
+    (tabParam as "dashboard" | "plans" | "users" | "settings" | "updates") || "dashboard"
   );
   const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // For desktop minimize
@@ -37,7 +38,7 @@ export default function SuperAdminDashboard() {
 
   // Update active tab when URL changes
   useEffect(() => {
-    if (tabParam && ['dashboard', 'plans', 'users', 'settings'].includes(tabParam)) {
+    if (tabParam && ['dashboard', 'plans', 'users', 'settings', 'updates'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
   }, [tabParam]);
@@ -47,6 +48,7 @@ export default function SuperAdminDashboard() {
     { id: "plans", label: "Plans", icon: CardStackIcon },
     { id: "users", label: "Users", icon: PersonIcon },
     { id: "settings", label: "Settings", icon: GearIcon },
+    { id: "updates", label: "What’s New", icon: CardStackIcon },
   ];
 
   return (
@@ -193,6 +195,7 @@ export default function SuperAdminDashboard() {
           {activeTab === "plans" && <PlanBuilderNew />}
           {activeTab === "users" && <UserManagementNew />}
           {activeTab === "settings" && <SystemSettings />}
+          {activeTab === "updates" && <ProductUpdates />}
         </div>
       </main>
     </div>

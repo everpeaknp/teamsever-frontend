@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { Toaster } from 'sonner';
+import { useTheme } from 'next-themes';
 import dynamic from 'next/dynamic';
 import { SearchProvider } from '@/components/search/SearchProvider';
 import { NavigationLoader } from '@/components/layout/NavigationLoader';
@@ -73,6 +74,7 @@ function MobileAwareNavigation() {
 }
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
+  const { theme = 'system' } = useTheme();
   const { isOpen, userId, closeProfile } = useProfileModalStore();
   const pathname = usePathname();
 
@@ -160,7 +162,22 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         <TaskDetailSidebar />
         <GitHubWebhookModal />
         <UserProfileModal isOpen={isOpen} userId={userId} onClose={closeProfile} />
-        <Toaster position="top-right" richColors />
+        <Toaster
+          position="bottom-center"
+          theme={theme === 'dark' ? 'dark' : theme === 'light' ? 'light' : 'system'}
+          richColors
+          closeButton
+          visibleToasts={3}
+          toastOptions={{
+            duration: 4000,
+            classNames: {
+              toast: 'w-[calc(100vw-2rem)] sm:w-[356px] rounded-2xl border border-border/80 bg-card text-card-foreground shadow-xl',
+              title: 'text-sm font-semibold text-foreground',
+              description: 'text-sm text-muted-foreground',
+              closeButton: 'border-border bg-background text-muted-foreground hover:text-foreground',
+            },
+          }}
+        />
         <AppUpdateNotifier />
         <DesktopUpdateNotifier />
         {user && <MobileShiftSyncPrompt />}

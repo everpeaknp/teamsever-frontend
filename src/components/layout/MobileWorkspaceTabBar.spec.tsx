@@ -39,13 +39,13 @@ describe('MobileWorkspaceTabBar', () => {
     expect(screen.getByRole('link', { name: 'Tools' })).not.toHaveAttribute('aria-current', 'page');
   });
 
-  it('uses a tool-shaped icon and stays selected for destinations outside the primary tabs', () => {
+  it('uses a Lucide grid icon for Tools and stays selected outside the primary tabs', () => {
     navigation.pathname = '/workspace/ws1/quality/cases';
     render(<MobileWorkspaceTabBar workspaceId="ws1" />);
 
     const toolsLink = screen.getByRole('link', { name: 'Tools' });
     expect(toolsLink).toHaveAttribute('aria-current', 'page');
-    expect(toolsLink.querySelector('svg')).toHaveClass('lucide-wrench');
+    expect(toolsLink.querySelector('svg')).toHaveClass('lucide-grid-2x2');
     expect(screen.getByRole('link', { name: 'Spaces' })).not.toHaveAttribute('aria-current', 'page');
   });
 

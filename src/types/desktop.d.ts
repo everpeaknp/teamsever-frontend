@@ -12,6 +12,8 @@ export {};
 declare global {
   interface Window {
     teamseverDesktop?: {
+      getStartupPreference?: () => Promise<{ supported: boolean; enabled: boolean }>;
+      setStartupPreference?: (enabled: boolean) => Promise<{ supported: boolean; enabled: boolean }>;
       getCapabilities: () => Promise<{ platform: string; credentialInstalled: boolean; foregroundMonitoringSupported: boolean; foregroundUnavailableReason?: string; idleDetectionSupported: boolean; idleDetectionUnavailableReason?: string }>;
       storeCredential: (credential: string) => Promise<{ stored: boolean }>;
       forgetCredential: () => Promise<{ forgotten: boolean }>;

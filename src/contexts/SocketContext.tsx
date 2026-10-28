@@ -9,6 +9,7 @@ import { useNotificationStore } from '@/store/useNotificationStore';
 import { getChatNotificationPreview } from '@/lib/chat/chatImages';
 import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
+import { isNotificationCenterRoute } from '@/lib/notifications/isNotificationCenterRoute';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -221,6 +222,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           normalizedCurrentUserId &&
           !isSenderSelf &&
           !document.hidden &&
+          !isNotificationCenterRoute() &&
           isSameWorkspace &&
           groupChatsEnabled &&
           !isMuted &&

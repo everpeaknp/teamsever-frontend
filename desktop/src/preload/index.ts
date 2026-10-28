@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 const desktop = Object.freeze({
   getCapabilities: () => ipcRenderer.invoke('desktop:capabilities'),
+  getStartupPreference: () => ipcRenderer.invoke('desktop:get-startup-preference'),
+  setStartupPreference: (enabled: boolean) => ipcRenderer.invoke('desktop:set-startup-preference', enabled),
   storeCredential: (credential: string) => ipcRenderer.invoke('desktop:store-credential', credential),
   forgetCredential: () => ipcRenderer.invoke('desktop:forget-credential'),
   setMonitoringEnabled: (enabled: boolean) => ipcRenderer.invoke('desktop:set-monitoring', enabled),

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { requestNotificationPermission, onMessageListener } from '@/lib/firebase';
 import { api } from '@/lib/axios';
 import { toast } from 'sonner';
+import { isNotificationCenterRoute } from '@/lib/notifications/isNotificationCenterRoute';
 
 export interface Notification {
   _id: string;
@@ -93,6 +94,9 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       });
       return;
     }
+
+    // The notification center already shows this update in its live list.
+    if (isNotificationCenterRoute()) return;
 
     // Active tab: show a small in-app toast so webhook/system events are still visible
     // without forcing a browser popup.

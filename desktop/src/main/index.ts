@@ -8,6 +8,7 @@ import { isAllowedWebUrl, isFirebaseAuthPopupUrl, isSafeExternalUrl, isSameOrigi
 import { detectPresenceCapabilities, isWaylandSession } from './tracker';
 import { DesktopPresenceSession, type DesktopPresenceAuthorization } from './desktopPresenceSession';
 import { DesktopUpdaterController } from './desktopUpdater';
+import { initializeStartupPreference, updateStartupPreference } from './startupPreference';
 import { createGeolocationPermissionHandler } from './desktopPermissions';
 import type { DesktopUpdateState } from '../../../src/types/desktop';
 
@@ -29,6 +30,20 @@ let trackerGeneration = 0;
 let deviceMonitoringConsent = false;
 let allowNormalQuitAfterUpdateCheck = false;
 let updateCheckTimer: NodeJS.Timeout | null = null;
+let startupEnabled = true;
+const startupPreferencePath = () => path.join(app.getPath('userData'), 'startup-preference.json');
+
+async function readStartupPreference(): Promise<boolean | undefined> {
+  try {
+    const parsed = JSON.parse(await fs.readFile(startupPreferencePath(), 'utf8'));
+    return typeof parsed.openAtLogin === 'boolean' ? parsed.openAtLogin : undefined;
+  } catch { return undefined; }
+}
+
+async function writeStartupPreference(enabled: boolean): Promise<void> {
+  await fs.mkdir(app.getPath('userData'), { recursive: true });
+  await fs.writeFile(startupPreferencePath(), JSON.stringify({ openAtLogin: enabled }), { mode: 0o600 });
+}
 function showPresenceNotice(body: string): void {
   if (!Notification.isSupported()) return;
   try {
@@ -142,6 +157,26 @@ function registerSecureIpc(): void {
     });
   };
   const syncStatus = syncDesktopStatus;
+
+  register('desktop:get-startup-preference', async () => ({
+    supported: process.platform === 'win32' && app.isPackaged,
+    enabled: process.platform === 'win32' && app.isPackaged
+      ? app.getLoginItemSettings().openAtLogin
+      : startupEnabled,
+  }));
+  register('desktop:set-startup-preference', async (_event, enabled: unknown) => {
+    if (typeof enabled !== 'boolean') throw new Error('Invalid startup preference');
+    const result = await updateStartupPreference(enabled, {
+      platform: process.platform,
+      isPackaged: app.isPackaged,
+      read: readStartupPreference,
+      write: writeStartupPreference,
+      setLoginItem: (settings) => app.setLoginItemSettings(settings),
+    });
+    if (!result.supported) throw new Error('Launch at Windows sign-in is only available in the installed app.');
+    startupEnabled = result.enabled;
+    return result;
+  });
 
   register('desktop:capabilities', async () => {
     const capabilities = await detectPresenceCapabilities(
@@ -367,7 +402,19 @@ function createWindow(): BrowserWindow {
   return window;
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  try {
+    const result = await initializeStartupPreference({
+      platform: process.platform,
+      isPackaged: app.isPackaged,
+      read: readStartupPreference,
+      write: writeStartupPreference,
+      setLoginItem: (settings) => app.setLoginItemSettings(settings),
+    });
+    startupEnabled = result.enabled;
+  } catch (error) {
+    console.warn('[Startup] Could not update sign-in launch preference:', error);
+  }
   registerSecureIpc();
   createWindow();
   scheduleDesktopUpdateChecks();

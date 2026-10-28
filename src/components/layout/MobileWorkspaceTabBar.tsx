@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BarChart3, Folder, Layers3, MessageCircle, Wrench } from 'lucide-react';
+import { BarChart3, Folder, Grid2X2, Layers3, MessageCircle } from 'lucide-react';
 import { matchesSidebarRoute } from '@/components/sidebar/sidebarRouteMatch';
 
 const tabs = [
@@ -61,7 +61,7 @@ export function MobileWorkspaceTabBar({
           aria-label="Tools"
           className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-medium transition-colors ${isToolsRoute ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'}`}
         >
-          <Wrench className="h-5 w-5" aria-hidden="true" />
+          <Grid2X2 className="h-5 w-5" aria-hidden="true" />
           <span>Tools</span>
         </Link>
       </div>

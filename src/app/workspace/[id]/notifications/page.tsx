@@ -88,6 +88,8 @@ export default function NotificationsPage() {
         return <CheckCheck className="w-5 h-5 text-green-500" />;
       case 'COMMENT_ADDED':
       case 'MENTION':
+      case 'DM_REACTION':
+      case 'GROUP_CHAT_REACTION':
         return <MessageSquare className="w-5 h-5 text-purple-500" />;
       case 'DUE_DATE_REMINDER':
         return <Calendar className="w-5 h-5 text-orange-500" />;
