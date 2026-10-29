@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 
 interface Announcement {
   _id: string;
+  subject?: string;
+  body?: string;
   content: string;
   author: {
     _id: string;
@@ -36,7 +38,9 @@ export function Announcements({
   managedByParent = false,
 }: AnnouncementsProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [text, setText] = useState('');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [composerOpen, setComposerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const fetchAnnouncements = async () => {
@@ -49,15 +53,20 @@ export function Announcements({
   };
 
   const handlePost = async () => {
-    if (!text.trim()) {
-      toast.error('Please enter an announcement');
+    if (!subject.trim() || !body.trim()) {
+      toast.error('Please enter a subject and body');
       return;
     }
 
     try {
       setLoading(true);
-      await api.post(`/workspaces/${workspaceId}/announcements`, { content: text });
-      setText('');
+      await api.post(`/workspaces/${workspaceId}/announcements`, {
+        subject: subject.trim(),
+        body: body.trim(),
+      });
+      setSubject('');
+      setBody('');
+      setComposerOpen(false);
       toast.success('Announcement posted');
       fetchAnnouncements();
     } catch (error: any) {
@@ -74,13 +83,6 @@ export function Announcements({
       fetchAnnouncements();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to delete announcement');
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handlePost();
     }
   };
 
@@ -104,17 +106,58 @@ export function Announcements({
       </CardHeader>
       <CardContent className="flex-1 overflow-y-auto space-y-4 px-6 pb-6">
         {canCreateAnnouncement && (
-          <div className="flex gap-2 mb-4 sticky top-0 bg-background z-10 pb-2">
-            <Input
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Broadcast to team..."
-              disabled={loading}
-            />
-            <Button onClick={handlePost} disabled={loading || !text.trim()}>
-              Post
+          <div className="mb-4 sticky top-0 bg-background z-10 pb-2">
+            <Button onClick={() => setComposerOpen(true)} disabled={loading}>
+              New announcement
             </Button>
+          </div>
+        )}
+
+        {composerOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-2xl rounded-lg bg-background p-6 shadow-xl">
+              <div className="mb-5 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">New announcement</h2>
+                <Button
+                  variant="ghost"
+                  onClick={() => setComposerOpen(false)}
+                  disabled={loading}
+                >
+                  Close
+                </Button>
+              </div>
+              <div className="space-y-4">
+                <Input
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="Subject"
+                  disabled={loading}
+                />
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="Write the announcement body..."
+                  disabled={loading}
+                  rows={8}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setComposerOpen(false)}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handlePost}
+                  disabled={loading || !subject.trim() || !body.trim()}
+                >
+                  {loading ? 'Posting...' : 'Post announcement'}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
         
@@ -133,7 +176,12 @@ export function Announcements({
               >
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex-1">
-                    <p className="text-sm font-medium mb-1">{announcement.content}</p>
+                    {announcement.subject?.trim() && (
+                      <p className="text-sm font-semibold mb-1">{announcement.subject}</p>
+                    )}
+                    <p className="text-sm font-medium mb-1">
+                      {announcement.body || announcement.content}
+                    </p>
                     <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                       <span className="font-medium">{announcement.author.name}</span>
                       <span>•</span>
