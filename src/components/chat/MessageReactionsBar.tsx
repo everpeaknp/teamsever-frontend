@@ -61,12 +61,18 @@ export function MessageReactionsBar({
                 title={names.join(', ')}
                 aria-label={`${r.emoji}, ${r.count} reactions. View who reacted`}
               >
-                <span>{r.emoji}</span>
+                {r.emoji === '❤️'
+                  ? <Heart aria-hidden="true" className="h-4 w-4 fill-red-500 text-red-500" />
+                  : <span>{r.emoji}</span>}
                 <span className="text-[11px] font-semibold">{r.count}</span>
               </button>
             </PopoverTrigger>
             <PopoverContent align="center" className="w-56 p-2">
-              <p className="px-2 pb-1 text-xs font-semibold text-muted-foreground">Reacted with {r.emoji}</p>
+              <div className="flex items-center gap-1.5 px-2 pb-1 text-xs font-semibold text-muted-foreground">
+                Reacted with {r.emoji === '❤️'
+                  ? <Heart aria-hidden="true" className="h-3.5 w-3.5 fill-red-500 text-red-500" />
+                  : r.emoji}
+              </div>
               <div className="max-h-40 overflow-y-auto">
                 {users.map((user, index) => (
                   <div key={typeof user === 'string' ? `${user}-${index}` : user._id} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm">
@@ -74,7 +80,11 @@ export function MessageReactionsBar({
                       ? <img className="h-6 w-6 rounded-full object-cover" src={user.avatar || user.profilePicture} alt="" />
                       : <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs">{names[index]?.[0] || 'M'}</span>}
                     <span className="truncate">{names[index]}</span>
-                    <span className="ml-auto">{r.emoji}</span>
+                    <span className="ml-auto">
+                      {r.emoji === '❤️'
+                        ? <Heart aria-hidden="true" className="h-4 w-4 fill-red-500 text-red-500" />
+                        : r.emoji}
+                    </span>
                   </div>
                 ))}
                 {users.length === 0 && <p className="px-2 py-2 text-sm text-muted-foreground">No reaction details available</p>}

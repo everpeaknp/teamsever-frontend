@@ -88,7 +88,7 @@ export function MobileShiftSyncPrompt() {
         }
       }
       setPending(null);
-      if (action === 'not_now') toast.message('Desktop presence was not linked to this mobile shift.');
+      if (action === 'not_now') toast.info('Desktop presence was not linked to this mobile shift.');
       else if (result.synced) toast.success('Desktop presence linked to this mobile shift.');
     } catch (cause: any) {
       setError(cause?.message || 'Could not update mobile shift sync. Please try again.');

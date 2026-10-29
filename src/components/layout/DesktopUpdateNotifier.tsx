@@ -19,7 +19,7 @@ export function DesktopUpdateNotifier() {
         case 'checking':
           return;
         case 'available':
-          toast.message('TeamsEver update found', {
+          toast.info('TeamsEver update found', {
             id: UPDATE_TOAST_ID,
             description: `Version ${state.version} is downloading in the background.`,
             duration: 5_000,

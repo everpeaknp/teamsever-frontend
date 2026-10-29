@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays, Phone, Video, X, Reply, ImagePlus } from 'lucide-react';
+import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays, Phone, Video, X, Reply, ImagePlus, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { reconcileChatMessages } from '@/lib/chat/reconcileMessages';
@@ -127,6 +127,13 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       }
       // Set active room - this also clears unread count in useChatStore
       setActiveRoom(roomId);
+      toast.dismiss(`chat-notification-${roomId}`);
+      if (type === 'direct' && userId) {
+        toast.dismiss(`chat-notification-user_${userId}`);
+        toast.dismiss(
+          `chat-notification-sender_${encodeURIComponent(title.trim().toLowerCase())}`,
+        );
+      }
       if (type === 'workspace' && workspaceId) {
         clearUnread(`workspace_${workspaceId}`);
       }
@@ -1468,9 +1475,41 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
                     {/* Reactions Bar */}
                     {type === 'workspace' && readers.length > 0 && (
-                      <div className="mt-1 text-[10px] text-muted-foreground" title={readers.map(reader => reader.name || 'Member').join(', ')}>
-                        Seen by {readers.length > 3 ? `${readers.slice(0, 3).map(reader => reader.name || 'Member').join(', ')} +${readers.length - 3}` : readers.map(reader => reader.name || 'Member').join(', ')}
-                      </div>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={`View all ${readers.length} people who saw this message`}
+                            className="mt-1 inline-flex max-w-full min-w-0 items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-foreground"
+                          >
+                            <Eye className="h-3 w-3 shrink-0" />
+                            <span className="min-w-0 truncate">
+                              Seen by {readers.length > 3 ? `${readers.slice(0, 3).map(reader => reader.name || 'Member').join(', ')} +${readers.length - 3}` : readers.map(reader => reader.name || 'Member').join(', ')}
+                            </span>
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-64 p-0">
+                          <div className="border-b px-3 py-2 text-sm font-semibold">
+                            Seen by {readers.length}
+                          </div>
+                          <div className="max-h-64 overflow-y-auto p-1">
+                            {readers.map(reader => {
+                              const name = reader.name || 'Member';
+                              return (
+                                <div key={reader._id} className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm">
+                                  <Avatar className="h-7 w-7">
+                                    <AvatarImage src={reader.profilePicture || reader.avatar} />
+                                    <AvatarFallback className="text-[10px]">
+                                      {name.trim().charAt(0).toUpperCase() || 'M'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="truncate">{name}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     )}
                     {!message.sending && !message.failed && (message.reactions?.length ?? 0) > 0 && (
                       <MessageReactionsBar reactions={message.reactions as any} currentUserId={currentUserId || ''} className="mt-1 justify-end" />

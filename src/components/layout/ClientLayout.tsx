@@ -172,8 +172,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
             duration: 4000,
             classNames: {
               toast: 'w-[calc(100vw-2rem)] sm:w-[356px] rounded-2xl border border-border/80 bg-card text-card-foreground shadow-xl',
-              title: 'text-sm font-semibold text-foreground',
-              description: 'text-sm text-muted-foreground',
+              success: 'border-green-500/40 bg-green-50 text-green-950 dark:bg-green-950 dark:text-green-50',
+              error: 'border-red-500/40 bg-red-50 text-red-950 dark:bg-red-950 dark:text-red-50',
+              info: 'border-blue-500/40 bg-blue-50 text-blue-950 dark:bg-blue-950 dark:text-blue-50',
+              title: 'text-sm font-semibold text-inherit',
+              description: 'text-sm text-inherit opacity-80',
               closeButton: 'border-border bg-background text-muted-foreground hover:text-foreground',
             },
           }}

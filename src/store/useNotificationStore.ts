@@ -3,6 +3,7 @@ import { requestNotificationPermission, onMessageListener } from '@/lib/firebase
 import { api } from '@/lib/axios';
 import { toast } from 'sonner';
 import { isNotificationCenterRoute } from '@/lib/notifications/isNotificationCenterRoute';
+import { useChatStore } from '@/store/useChatStore';
 
 export interface Notification {
   _id: string;
@@ -22,6 +23,111 @@ export interface Notification {
   };
   createdAt: string;
 }
+
+const chatToastId = (
+  data?: Record<string, any>,
+  notificationType?: string,
+  title?: string,
+) => {
+  if (data?.conversationId) {
+    return `chat-notification-${String(data.conversationId)}`;
+  }
+  if (
+    String(notificationType || data?.type || '').toUpperCase() === 'DM_NEW' &&
+    data?.resourceType === 'DirectMessage' &&
+    data?.resourceId
+  ) {
+    return `chat-notification-${String(data.resourceId)}`;
+  }
+  if (data?.channelId) {
+    return `chat-notification-channel_${String(data.channelId)}`;
+  }
+  const senderId = data?.senderId || data?.actorId;
+  if (senderId) return `chat-notification-user_${String(senderId)}`;
+  if (String(notificationType || data?.type || '').toUpperCase().startsWith('DM_')) {
+    const senderName = String(data?.senderName || data?.actorName || title || '')
+      .trim()
+      .toLowerCase();
+    if (senderName) {
+      return `chat-notification-sender_${encodeURIComponent(senderName)}`;
+    }
+  }
+  return undefined;
+};
+
+const openChatRoomForNotification = (
+  data?: Record<string, any>,
+  title?: string,
+  notificationType?: string,
+) => {
+  if (typeof window === 'undefined') return null;
+  const { activeRoomId, rooms } = useChatStore.getState();
+  const path = window.location.pathname;
+  const type = String(notificationType || data?.type || '').toUpperCase();
+  const conversationId = data?.conversationId
+    ? String(data.conversationId)
+    : type === 'DM_NEW' && data?.resourceType === 'DirectMessage' && data?.resourceId
+      ? String(data.resourceId)
+      : null;
+  if (
+    conversationId &&
+    activeRoomId === conversationId &&
+    /\/inbox(?:\/|$)/.test(path)
+  ) {
+    return activeRoomId;
+  }
+
+  // Some delivery paths omit conversationId. Match the sender against the
+  // participants/messages in the currently open DM as a safe fallback.
+  const isDirectMessageNotification =
+    type.startsWith('DM_') ||
+    ['DirectMessage', 'dm'].includes(String(data?.resourceType || '')) ||
+    Boolean(data?.conversationId);
+  if (isDirectMessageNotification && /\/inbox(?:\/|$)/.test(path)) {
+    const activeRoom = rooms[activeRoomId];
+    if (activeRoomId && activeRoom?.type === 'direct') {
+      const senderId = data?.senderId || data?.actorId;
+      const senderName = String(
+        data?.senderName || data?.actorName || title || '',
+      ).trim().toLowerCase();
+      const senderIsParticipant =
+        senderId &&
+        (activeRoom.participants?.includes(String(senderId)) ||
+          activeRoom.messages.some((message) => {
+            const messageSenderId =
+              typeof message.sender === 'string'
+                ? message.sender
+                : message.sender?._id;
+            return messageSenderId === String(senderId);
+          }));
+      const senderAppearsInMessages =
+        senderName &&
+        activeRoom.messages.some((message) => {
+          const messageSenderName =
+            typeof message.sender === 'string' ? '' : message.sender?.name;
+          return messageSenderName?.trim().toLowerCase() === senderName;
+        });
+      if (senderIsParticipant || senderAppearsInMessages) return activeRoomId;
+    }
+
+    // The inbox route itself is the reliable signal. A selected DM may be
+    // visible before activeRoomId hydrates, and some delivery paths reshape
+    // sender metadata. Keep these notifications in the store, but suppress
+    // their in-page toast while the user is in the inbox. Background OS alerts
+    // remain available through showBrowserNotification.
+    return activeRoomId || '__inbox__';
+  }
+
+  const channelId = data?.channelId ? String(data.channelId) : null;
+  if (
+    channelId &&
+    activeRoomId === `channel_${channelId}` &&
+    /\/chat(?:\/|$)/.test(path)
+  ) {
+    return activeRoomId;
+  }
+  return null;
+};
 
 interface NotificationStore {
   notifications: Notification[];
@@ -85,6 +191,26 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     
     set({ notifications: newNotifications, bellNotifications: newBellNotifications, unreadCount });
 
+    const data = notification.data || {};
+    const activeRoomId = openChatRoomForNotification(
+      data,
+      notification.title,
+      notification.type,
+    );
+    if (activeRoomId) {
+      toast.dismiss(`chat-notification-${activeRoomId}`);
+      // Keep native alerts for a backgrounded tab when permitted, but never
+      // fall back to an in-page toast for the conversation already being read.
+      if (typeof document !== 'undefined' && document.hidden) {
+        get().showBrowserNotification(notification.title, notification.body, {
+          ...data,
+          notificationId: notification._id,
+          _id: notification._id,
+        });
+      }
+      return;
+    }
+
     // Backgrounded tab: use native/browser notification path.
     if (typeof document !== 'undefined' && document.hidden) {
       get().showBrowserNotification(notification.title, notification.body, {
@@ -103,6 +229,9 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
     toast.info(notification.title, {
       description: notification.body,
       duration: 5000,
+      ...(chatToastId(data, notification.type, notification.title)
+        ? { id: chatToastId(data, notification.type, notification.title) }
+        : {}),
     });
   },
 
@@ -190,9 +319,28 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   showBrowserNotification: async (title, body, data) => {
     if (typeof window === 'undefined') return;
 
+    // Foreground FCM may arrive through this path instead of addNotification.
+    // Avoid duplicating a message already visible in the open conversation.
+    const activeRoomId = openChatRoomForNotification(
+      data,
+      title,
+      data?.type,
+    );
+    if (activeRoomId) {
+      toast.dismiss(`chat-notification-${activeRoomId}`);
+      if (!document.hidden) return;
+    }
+    const allowToastFallback = !activeRoomId;
+    const toastId = chatToastId(data, data?.type, title);
+
     // Check if browser supports notifications
     if (!('Notification' in window)) {
-      toast.info(title, { description: body });
+      if (allowToastFallback) {
+        toast.info(title, {
+          description: body,
+          ...(toastId ? { id: toastId } : {}),
+        });
+      }
       return;
     }
 
@@ -232,24 +380,32 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
           }
         };
       } catch (error) {
-        toast.info(title, { description: body });
+        if (allowToastFallback) {
+          toast.info(title, {
+            description: body,
+            ...(toastId ? { id: toastId } : {}),
+          });
+        }
       }
     } else {
       // Fallback to toast if permission not granted
-      toast.info(title, {
-        description: body,
-        duration: 5000,
-        action: data?.workspaceId || data?.conversationId ? {
-          label: 'View',
-          onClick: () => {
-            if (data?.workspaceId) {
-              window.location.href = `/workspace/${data.workspaceId}/chat`;
-            } else if (data?.conversationId) {
-              window.location.href = `/workspace/${data.workspaceId || 'current'}/inbox?id=${data.conversationId}`;
+      if (allowToastFallback) {
+        toast.info(title, {
+          description: body,
+          duration: 5000,
+          ...(toastId ? { id: toastId } : {}),
+          action: data?.workspaceId || data?.conversationId ? {
+            label: 'View',
+            onClick: () => {
+              if (data?.workspaceId) {
+                window.location.href = `/workspace/${data.workspaceId}/chat`;
+              } else if (data?.conversationId) {
+                window.location.href = `/workspace/${data.workspaceId || 'current'}/inbox?id=${data.conversationId}`;
+              }
             }
-          }
-        } : undefined
-      });
+          } : undefined
+        });
+      }
     }
   },
 

@@ -215,6 +215,11 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         const isMuted = (channelId && mutedChannels.includes(channelId)) || 
                         mutedChannels.includes(`workspace_${workspaceId}`);
+        const activeRoomId = useChatStore.getState().activeRoomId;
+        const isViewingThisChannel =
+          Boolean(channelId) &&
+          activeRoomId === `channel_${channelId}` &&
+          window.location.pathname.includes('/chat');
 
         // Always show a small in-app toast for group chat in active tabs.
         if (
@@ -224,6 +229,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           !document.hidden &&
           !isNotificationCenterRoute() &&
           isSameWorkspace &&
+          !isViewingThisChannel &&
           groupChatsEnabled &&
           !isMuted &&
           allowCommitChatNotification
@@ -231,6 +237,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           toast.info(`${senderName} to ${groupName}`, {
             description: getChatNotificationPreview(data?.message?.content || '', data?.message?.attachments?.length || 0),
             duration: 3500,
+            ...(channelId ? { id: `chat-notification-channel_${channelId}` } : {}),
           });
         }
 
