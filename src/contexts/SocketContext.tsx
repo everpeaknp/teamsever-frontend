@@ -172,23 +172,46 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setTimeout(() => processedChatEventIdsRef.current.delete(messageId), 120000);
         }
 
-        const roomId = `workspace_${workspaceId}`;
-        addMessage(roomId, data.message);
-
         const channelId =
           typeof data.message.channel === 'string'
             ? data.message.channel
             : data.message.channel?._id?.toString?.() || data.message.channel?.toString?.();
+
+        const currentUserId = useAuthStore.getState().user?._id || localStorage.getItem('userId');
+        const normalizedCurrentUserId = currentUserId?.toString?.();
+
+        // Defense-in-depth: If this message belongs to a private channel, ensure current user is actually a member
+        const channelObj = typeof data?.message?.channel === 'object' ? data.message.channel : null;
+        const channelType = channelObj?.type || data?.message?.channelType;
+        const channelMembers = channelObj?.members || data?.message?.channelMembers;
+        if (channelType === 'private' && Array.isArray(channelMembers) && normalizedCurrentUserId) {
+          const isMember = channelMembers.some((m: any) => {
+            const mId = typeof m === 'string' ? m : m?._id?.toString?.() || m?.id?.toString?.();
+            return mId === normalizedCurrentUserId;
+          });
+          if (!isMember) {
+            return;
+          }
+        }
+        if (channelId && normalizedCurrentUserId) {
+          const knownChannel = useChatStore.getState().channels?.find?.((c: any) => (c?._id || c?.id) === channelId);
+          if (knownChannel && knownChannel.type === 'private' && Array.isArray(knownChannel.members)) {
+            const isMember = knownChannel.members.some((m: any) => {
+              const mId = typeof m === 'string' ? m : m?._id?.toString?.() || m?.id?.toString?.();
+              return mId === normalizedCurrentUserId;
+            });
+            if (!isMember) {
+              return;
+            }
+          }
+        }
+
+        const roomId = `workspace_${workspaceId}`;
+        addMessage(roomId, data.message);
+
         if (channelId) {
           addMessage(`channel_${channelId}`, data.message);
         }
-
-        const currentUserId = useAuthStore.getState().user?._id || localStorage.getItem('userId');
-        const senderId =
-          typeof data?.message?.sender === 'string'
-            ? data.message.sender
-            : data?.message?.sender?._id?.toString?.();
-        const normalizedCurrentUserId = currentUserId?.toString?.();
         const normalizedSenderId = senderId?.toString?.();
         const isSenderSelf =
           !!normalizedCurrentUserId &&

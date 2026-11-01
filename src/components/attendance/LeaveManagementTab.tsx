@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { CheckCircle2, XCircle, Clock, AlertTriangle, Search, Loader2, RotateCcw } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, AlertTriangle, Search, Loader2, RotateCcw, CalendarDays, ChevronLeft, ChevronRight, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +52,10 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
   const [members, setMembers] = useState<Array<{ _id: string; name: string; email?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [activeScope, setActiveScope] = useState<'my' | 'overall' | 'review'>('my');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [calendarMonth, setCalendarMonth] = useState(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); });
+  const [calendarLeaves, setCalendarLeaves] = useState<LeaveItem[]>([]);
+  const [calendarLoading, setCalendarLoading] = useState(false);
   const [canViewOverall, setCanViewOverall] = useState(false);
   const [canReviewRequests, setCanReviewRequests] = useState(false);
   const [page, setPage] = useState(1);
@@ -123,6 +127,46 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
     }
   };
 
+  useEffect(() => {
+    if (!workspaceId || viewMode !== 'calendar') return;
+    let cancelled = false;
+    const loadCalendar = async () => {
+      setCalendarLoading(true);
+      try {
+        const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+        const monthEnd = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
+        const localKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const from = dateFrom && dateFrom > localKey(monthStart) ? dateFrom : localKey(monthStart);
+        const to = dateTo && dateTo < localKey(monthEnd) ? dateTo : localKey(monthEnd);
+        if (from > to) { setCalendarLeaves([]); return; }
+        const reviewInbox = activeScope === 'review';
+        const personal = activeScope === 'my' || (!canViewOverall && !reviewInbox);
+        const endpoint = reviewInbox
+          ? `/workspaces/${workspaceId}/leaves/inbox`
+          : personal
+            ? `/workspaces/${workspaceId}/leaves/my-requests`
+            : `/workspaces/${workspaceId}/leaves`;
+        const params: Record<string, string | number> = { page: 1, pageSize: 50, from, to };
+        if (filterStatus !== 'all' && !reviewInbox) params.status = filterStatus;
+        if (filterType !== 'all') params.requestType = filterType;
+        if (!personal && filterUser !== 'all') params.userId = filterUser;
+        if (searchQuery.trim()) params.search = searchQuery.trim();
+        const first = await api.get(endpoint, { params });
+        const all = [...(first.data.data || [])] as LeaveItem[];
+        const totalPages = Math.min(20, Math.max(1, Number(first.data.pagination?.totalPages) || 1));
+        if (totalPages > 1) {
+          const otherPages = await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) => api.get(endpoint, { params: { ...params, page: index + 2 } })));
+          for (const response of otherPages) all.push(...(response.data.data || []));
+        }
+        if (!cancelled) setCalendarLeaves(all);
+      } catch (error: any) {
+        if (!cancelled) { setCalendarLeaves([]); toast.error(error?.response?.data?.message || 'Could not load the leave calendar'); }
+      } finally { if (!cancelled) setCalendarLoading(false); }
+    };
+    void loadCalendar();
+    return () => { cancelled = true; };
+  }, [workspaceId, viewMode, calendarMonth, activeScope, canViewOverall, filterStatus, filterUser, filterType, dateFrom, dateTo, searchQuery]);
+
   const decideRequest = async (requestId: string, decision: 'approve' | 'deny') => {
     const denialInput = decision === 'deny' ? window.prompt('Optional reason for denying this request:') : undefined;
     if (denialInput === null) return;
@@ -150,6 +194,15 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
       day: 'numeric',
       year: 'numeric',
     });
+  };
+
+  const calendarStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1 - new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1).getDay());
+  const calendarDays = Array.from({ length: 42 }, (_, index) => new Date(calendarStart.getFullYear(), calendarStart.getMonth(), calendarStart.getDate() + index));
+  const calendarDayKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const calendarLabel = calendarMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const leaveForDay = (date: Date) => {
+    const day = calendarDayKey(date);
+    return calendarLeaves.filter((leave) => leave.startDate.slice(0, 10) <= day && leave.endDate.slice(0, 10) >= day);
   };
 
   const filteredLeaves = leaves;
@@ -205,6 +258,10 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
 
       {/* 2. Leave History & Directory Table */}
       <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="flex justify-end gap-2 border-b border-border/60 px-4 pt-3">
+          <Button type="button" variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" aria-pressed={viewMode === 'list'} onClick={() => setViewMode('list')}><List className="mr-1.5 h-4 w-4" />List</Button>
+          <Button type="button" variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} size="sm" aria-pressed={viewMode === 'calendar'} onClick={() => setViewMode('calendar')}><CalendarDays className="mr-1.5 h-4 w-4" />Calendar</Button>
+        </div>
         <div role="tablist" aria-label="Leave request scope" className="flex items-center gap-1 border-b border-border/60 px-4 pt-3">
           {([
             ['my', 'My requests'],
@@ -294,6 +351,23 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
           </div>
         </div>
 
+        {viewMode === 'calendar' ? <section aria-label="Leave calendar" className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div><h2 className="text-lg font-semibold">{calendarLabel}</h2><p className="text-xs text-muted-foreground">{activeScope === 'my' || (!canViewOverall && activeScope === 'review') ? 'Your requests' : 'Workspace requests'} · {calendarLeaves.length} matching request{calendarLeaves.length === 1 ? '' : 's'}</p></div>
+            <div className="flex items-center gap-2"><Button type="button" size="icon" variant="outline" aria-label="Previous month" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}><ChevronLeft className="h-4 w-4" /></Button><Button type="button" variant="outline" onClick={() => { const now = new Date(); setCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1)); }}>Today</Button><Button type="button" size="icon" variant="outline" aria-label="Next month" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}><ChevronRight className="h-4 w-4" /></Button></div>
+          </div>
+          <div className="grid grid-cols-7 border-l border-t text-center text-[11px] font-semibold text-muted-foreground">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <div key={day} className="border-b border-r bg-muted/30 py-2">{day}</div>)}</div>
+          {calendarLoading ? <div className="flex justify-center py-12 text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading calendar</div> : <div className="grid grid-cols-7 border-l border-t">{calendarDays.map((date) => {
+            const dayLeaves = leaveForDay(date);
+            const inMonth = date.getMonth() === calendarMonth.getMonth();
+            return <div key={calendarDayKey(date)} className={cn('min-h-24 border-b border-r p-1.5 sm:min-h-32 sm:p-2', !inMonth && 'bg-muted/20 text-muted-foreground')}>
+              <div className={cn('mb-1 grid h-6 w-6 place-items-center rounded-full text-xs', calendarDayKey(date) === calendarDayKey(new Date()) && 'bg-primary text-primary-foreground')}>{date.getDate()}</div>
+              <div className="space-y-1">{dayLeaves.slice(0, 3).map((leave) => <div key={leave._id} title={`${leave.requester?.name || 'Member'} · ${leave.status} · ${leave.requestType === 'remote' ? 'Remote' : 'Leave'}`} className={cn('truncate rounded px-1 py-0.5 text-left text-[10px] sm:text-xs', leave.status === 'approved' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : leave.status === 'pending' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-muted text-muted-foreground')}>
+                <span className="font-medium">{leave.requester?.name || 'Member'}</span><span className="hidden sm:inline"> · {leave.requestType === 'remote' ? 'Remote' : 'Leave'}</span>
+              </div>)}{dayLeaves.length > 3 && <p className="px-1 text-[10px] text-muted-foreground">+{dayLeaves.length - 3} more</p>}</div>
+            </div>;
+          })}</div>}
+        </section> : <>
         {/* Content Table */}
         {loading ? (
           <div className="flex items-center justify-center p-12 text-muted-foreground">
@@ -438,6 +512,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
             </div>
           </div>
         )}
+        </>}
       </div>
     </div>
   );

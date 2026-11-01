@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { PlansSkeleton } from "./page";
+import { PlansSkeleton } from "@/components/plans/PlansSkeleton";
 
 describe("PlansSkeleton mobile layout", () => {
   it("constrains the header description skeleton to its available width", () => {

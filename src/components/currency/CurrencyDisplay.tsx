@@ -41,13 +41,13 @@ export function CurrencyDisplay({
     maximumFractionDigits: displayCurrency === 'NPR' ? 0 : 2,
   }).format(displayAmount);
 
-  // For NPR, replace the currency symbol with "Rs. "
+  // For NPR, replace the currency symbol with non-breaking "Rs. "
   const finalDisplay = displayCurrency === 'NPR' 
-    ? formatted.replace('NPR', 'Rs.').replace(/\s+/g, ' ')
+    ? formatted.replace('NPR', 'Rs.\u00A0').replace(/\s+/g, '\u00A0')
     : formatted;
 
   return (
-    <span className={className}>
+    <span className={`inline-block whitespace-nowrap ${className}`}>
       {finalDisplay}
     </span>
   );

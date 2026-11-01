@@ -14,6 +14,7 @@ import {
   MessageSquare,
   TrendingUp,
 } from 'lucide-react';
+import { HomePricingSection } from '@/components/pricing/HomePricingSection';
 
 const C = 'mx-auto w-full max-w-[1100px] px-5 sm:px-8';
 
@@ -30,7 +31,7 @@ function Header() {
         <nav className="hidden items-center gap-7 md:flex">
           <Link href="#features" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Features</Link>
           <Link href="#roles" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Roles</Link>
-          <Link href="/pricing" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Pricing</Link>
+          <Link href="#pricing" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Pricing</Link>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -403,6 +404,7 @@ export default function Home() {
         <Features />
         <PermissionsSection />
         <HowItWorks />
+        <HomePricingSection />
         <CTA />
       </main>
       <Footer />

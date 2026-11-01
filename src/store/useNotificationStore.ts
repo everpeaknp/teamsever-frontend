@@ -84,7 +84,7 @@ const openChatRoomForNotification = (
     ['DirectMessage', 'dm'].includes(String(data?.resourceType || '')) ||
     Boolean(data?.conversationId);
   if (isDirectMessageNotification && /\/inbox(?:\/|$)/.test(path)) {
-    const activeRoom = rooms[activeRoomId];
+    const activeRoom = activeRoomId ? rooms[activeRoomId] : undefined;
     if (activeRoomId && activeRoom?.type === 'direct') {
       const senderId = data?.senderId || data?.actorId;
       const senderName = String(

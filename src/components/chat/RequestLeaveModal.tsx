@@ -37,12 +37,22 @@ export function RequestLeaveModal({
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [quotaChecking, setQuotaChecking] = useState(false);
-  const [requestType, setRequestType] = useState<'leave' | 'remote'>('leave');
+  const [requestType, setRequestType] = useState<'leave' | 'remote' | 'site_visit'>('leave');
+  const [siteName, setSiteName] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [sitePurpose, setSitePurpose] = useState('meeting');
+  const [siteAddress, setSiteAddress] = useState('');
+  const [sitePoint, setSitePoint] = useState<{ latitude: number; longitude: number }>({ latitude: 27.7172, longitude: 85.324 });
   const [remoteAreas, setRemoteAreas] = useState<any[]>([]);
   const [remoteAreaId, setRemoteAreaId] = useState('propose');
   const [remotePoint, setRemotePoint] = useState<{ latitude: number; longitude: number } | null>(null);
   const [remoteAreaName, setRemoteAreaName] = useState('');
   const [isMapExpanded, setIsMapExpanded] = useState(false);
+  const [leavePolicies, setLeavePolicies] = useState<Array<{ _id: string; name: string; active: boolean; paid: boolean }>>([]);
+  const [leaveBalances, setLeaveBalances] = useState<Array<{ policy: string; available: number | null }>>([]);
+  const [leavePolicyId, setLeavePolicyId] = useState('');
+  const [policiesLoading, setPoliciesLoading] = useState(false);
+  const [policyError, setPolicyError] = useState<string | null>(null);
   const [quotaInfo, setQuotaInfo] = useState<{
     approvedDaysThisMonth: number;
     standardLimit: number;
@@ -63,6 +73,18 @@ export function RequestLeaveModal({
       setRemoteAreaId('propose');
       setRemotePoint(null);
       setRemoteAreaName('');
+      setLeavePolicyId(''); setLeavePolicies([]); setLeaveBalances([]); setPolicyError(null);
+      setPoliciesLoading(true);
+      Promise.all([
+        api.get(`/workspaces/${workspaceId}/hr/leave-policies`),
+        api.get(`/workspaces/${workspaceId}/hr/my/leave-balances`),
+      ]).then(([policyResponse, balanceResponse]) => {
+        const policies = Array.isArray(policyResponse.data.data) ? policyResponse.data.data.filter((policy: any) => policy.active) : [];
+        setLeavePolicies(policies);
+        setLeavePolicyId(policies[0]?._id || '');
+        setLeaveBalances(Array.isArray(balanceResponse.data.data) ? balanceResponse.data.data : []);
+      }).catch((error) => setPolicyError(error?.response?.data?.message || 'Could not load leave types. Close and reopen to retry.'))
+        .finally(() => setPoliciesLoading(false));
       api.get(`/attendance/workspace/${workspaceId}/location-policy`).then((res) => {
         const member = res.data.data.member;
         setRemoteAreas(member.remoteAreas || []);
@@ -96,7 +118,8 @@ export function RequestLeaveModal({
 
   const daysRequested = calculateDays();
   const willExceedQuota =
-    quotaInfo && (quotaInfo.approvedDaysThisMonth >= 2 || quotaInfo.approvedDaysThisMonth + daysRequested > 2);
+    leavePolicies.length === 0 && quotaInfo && (quotaInfo.approvedDaysThisMonth >= 2 || quotaInfo.approvedDaysThisMonth + daysRequested > 2);
+  const selectedBalance = leaveBalances.find((balance) => balance.policy === leavePolicyId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,6 +138,14 @@ export function RequestLeaveModal({
       toast.error('Leave reason is compulsory');
       return;
     }
+    if (requestType === 'leave' && (policiesLoading || policyError || (leavePolicies.length > 0 && !leavePolicyId))) {
+      toast.error(policyError || 'Select a leave type once the policies finish loading');
+      return;
+    }
+    if (requestType === 'site_visit' && !siteName.trim()) {
+      toast.error('Site or destination name is compulsory');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -125,10 +156,21 @@ export function RequestLeaveModal({
         endDate: new Date(endDate).toISOString(),
         reason: reason.trim(),
         requestType,
+        ...(requestType === 'leave' && leavePolicyId ? { leavePolicyId } : {}),
         ...(requestType === 'remote' ? remoteAreaId !== 'propose' ? { remoteAreaId } : { proposedRemoteArea: remotePoint ? { name: remoteAreaName.trim() || 'Requested remote place', latitude: remotePoint.latitude, longitude: remotePoint.longitude, radiusMeters: 60 } : undefined } : {}),
+        ...(requestType === 'site_visit' ? {
+          siteVisitDetails: {
+            siteName: siteName.trim(),
+            clientName: clientName.trim() || undefined,
+            purpose: sitePurpose,
+            latitude: sitePoint.latitude,
+            longitude: sitePoint.longitude,
+            address: siteAddress.trim() || undefined,
+          }
+        } : {}),
       });
 
-      toast.success(`${requestType === 'remote' ? 'Remote work' : 'Leave'} request submitted to ${managerName}`);
+      toast.success(`${requestType === 'site_visit' ? 'Site visit' : requestType === 'remote' ? 'Remote work' : 'Leave'} request submitted to ${managerName}`);
       if (onRequestSubmitted) onRequestSubmitted();
       onClose();
     } catch (err: any) {
@@ -151,7 +193,11 @@ export function RequestLeaveModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 gap-2"><Button type="button" variant={requestType === 'leave' ? 'default' : 'outline'} onClick={() => { setRequestType('leave'); setIsMapExpanded(false); }}>Leave</Button><Button type="button" variant={requestType === 'remote' ? 'default' : 'outline'} onClick={() => setRequestType('remote')}>Remote</Button></div>
+        <div className="grid grid-cols-3 gap-2">
+          <Button type="button" variant={requestType === 'leave' ? 'default' : 'outline'} onClick={() => { setRequestType('leave'); setIsMapExpanded(false); }}>Leave</Button>
+          <Button type="button" variant={requestType === 'remote' ? 'default' : 'outline'} onClick={() => { setRequestType('remote'); setIsMapExpanded(false); }}>Remote</Button>
+          <Button type="button" variant={requestType === 'site_visit' ? 'default' : 'outline'} onClick={() => { setRequestType('site_visit'); setIsMapExpanded(false); }}>Site Visit</Button>
+        </div>
 
         {/* 2-Day Monthly Limit Warning Banner */}
         {requestType === 'leave' && willExceedQuota && (
@@ -167,8 +213,45 @@ export function RequestLeaveModal({
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className={`grid w-full min-w-0 grid-cols-1 gap-4 py-2 ${requestType === 'remote' ? 'md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : ''}`}>
+        <form onSubmit={handleSubmit} className={`grid w-full min-w-0 grid-cols-1 gap-4 py-2 ${requestType !== 'leave' ? 'md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : ''}`}>
           <div className="min-w-0 space-y-4">
+          {requestType === 'leave' && <>
+            {policiesLoading && <p className="text-xs text-muted-foreground">Loading leave types…</p>}
+            {policyError && <p role="alert" className="text-xs text-destructive">{policyError}</p>}
+            {leavePolicies.length > 0 && <div className="space-y-1.5"><Label htmlFor="request-leave-type">Leave type</Label><select id="request-leave-type" required value={leavePolicyId} onChange={(event) => setLeavePolicyId(event.target.value)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">{leavePolicies.map((policy) => <option key={policy._id} value={policy._id}>{policy.name} · {policy.paid ? 'Paid' : 'Unpaid'}</option>)}</select><p className="text-xs text-muted-foreground">{selectedBalance ? `${selectedBalance.available ?? 'Unlimited'}${selectedBalance.available === null ? '' : ' day(s)'} available. ` : ''}The server excludes the policy’s non-working days and configured schedule holidays.</p></div>}
+          </>}
+
+          {requestType === 'site_visit' && (
+            <div className="space-y-3 rounded-lg border p-3 bg-muted/20">
+              <div className="space-y-1.5">
+                <Label htmlFor="site-name" className="text-xs font-semibold">Site / Destination Name <span className="text-destructive font-bold">*</span></Label>
+                <Input id="site-name" placeholder="e.g. Acme Corp HQ, Apex Construction Site" value={siteName} onChange={(e) => setSiteName(e.target.value)} required />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="site-client" className="text-xs font-semibold">Client Name</Label>
+                  <Input id="site-client" placeholder="e.g. Acme Corp" value={clientName} onChange={(e) => setClientName(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="site-purpose" className="text-xs font-semibold">Purpose</Label>
+                  <select id="site-purpose" value={sitePurpose} onChange={(e) => setSitePurpose(e.target.value)} className="h-10 w-full rounded-md border bg-background px-2 text-xs">
+                    <option value="meeting">Client Demo / Meeting</option>
+                    <option value="inspection">Site Inspection</option>
+                    <option value="delivery">Delivery</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="survey">Site Survey</option>
+                    <option value="site_visit">General Visit</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="site-address" className="text-xs font-semibold">Address / Landmark</Label>
+                <Input id="site-address" placeholder="e.g. 450 Financial District" value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} />
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-foreground">From Date</Label>
@@ -193,7 +276,7 @@ export function RequestLeaveModal({
           </div>
 
           <div className="flex items-center justify-between text-xs px-1 text-muted-foreground">
-            <span>Duration:</span>
+            <span>{leavePolicies.length && requestType === 'leave' ? 'Calendar span:' : 'Duration:'}</span>
             <span className="font-bold text-foreground">
               {daysRequested} day{daysRequested > 1 ? 's' : ''}
             </span>
@@ -245,13 +328,24 @@ export function RequestLeaveModal({
             </>}
           </div>}
 
+          {requestType === 'site_visit' && (
+            <div className="min-w-0 space-y-2 overflow-hidden rounded-lg border p-3">
+              <Label className="text-xs font-semibold">Pinned Destination Location</Label>
+              <p className="text-xs text-muted-foreground">Click or drag the marker to pin the client or inspection site on the map.</p>
+              <div className="relative isolate z-0 min-w-0 w-full overflow-hidden rounded-md">
+                <AttendanceLocationMapPicker latitude={sitePoint.latitude} longitude={sitePoint.longitude} hasSelection={true} radiusMeters={100} mapHeightClassName="h-44" onSelect={(latitude, longitude) => setSitePoint({ latitude, longitude })} />
+              </div>
+              <p className="text-xs text-primary font-medium">Pinned: {sitePoint.latitude.toFixed(5)}, {sitePoint.longitude.toFixed(5)}</p>
+            </div>
+          )}
+
           <DialogFooter className="gap-2 pt-2 md:col-span-2 sm:gap-0">
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={loading || !reason.trim() || (requestType === 'remote' && remoteAreaId === 'propose' && !remotePoint)} className="gap-1.5">
+            <Button type="submit" size="sm" disabled={loading || !reason.trim() || (requestType === 'leave' && (policiesLoading || !!policyError || (leavePolicies.length > 0 && !leavePolicyId))) || (requestType === 'remote' && remoteAreaId === 'propose' && !remotePoint) || (requestType === 'site_visit' && !siteName.trim())} className="gap-1.5">
               {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              Send {requestType === 'leave' ? 'Leave' : 'Remote'} Request
+              Send {requestType === 'site_visit' ? 'Site Visit' : requestType === 'leave' ? 'Leave' : 'Remote'} Request
             </Button>
           </DialogFooter>
         </form>

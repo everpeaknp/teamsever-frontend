@@ -21,6 +21,7 @@ import {
   FolderOpen,
   Clock,
   ClipboardCheck,
+  BriefcaseBusiness,
   MoreHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -55,6 +56,7 @@ import UpgradeButton from '@/components/subscription/UpgradeButton';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { useQualityCapabilities } from '@/hooks/queries/useQuality';
+import { useWorkspaceEntitlements } from '@/hooks/useWorkspaceEntitlements';
 import { matchesSidebarRoute } from './sidebarRouteMatch';
 
 interface AppSidebarProps {
@@ -161,6 +163,7 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
   }
 
   const qualityCapabilities = useQualityCapabilities(workspaceId);
+  const { canAccessAttendance, canAccessHr, canAccessQuality } = useWorkspaceEntitlements(workspaceId);
 
   const expansionSessionKey =
     workspaceId && workspaceId !== 'undefined'
@@ -1048,18 +1051,33 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                       <FolderOpen className="w-3.5 h-3.5" />
                       Files
                     </Link>
-                    <Link
-                      href={`/workspace/${workspaceId}/attendance`}
-                      aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/attendance`) ? 'page' : undefined}
-                      className={cn(
-                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
-                        getQuickLinkClassName(`/workspace/${workspaceId}/attendance`)
-                      )}
-                    >
-                      <Clock className="w-3.5 h-3.5" />
-                      Attendance
-                    </Link>
-                    {qualityCapabilities.data?.canViewQuality && <Link
+                    {canAccessAttendance && (
+                      <Link
+                        href={`/workspace/${workspaceId}/attendance`}
+                        aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/attendance`) ? 'page' : undefined}
+                        className={cn(
+                          'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                          getQuickLinkClassName(`/workspace/${workspaceId}/attendance`)
+                        )}
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        Attendance
+                      </Link>
+                    )}
+                    {canAccessHr && (
+                      <Link
+                        href={`/workspace/${workspaceId}/hr`}
+                        aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/hr`) ? 'page' : undefined}
+                        className={cn(
+                          'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                          getQuickLinkClassName(`/workspace/${workspaceId}/hr`)
+                        )}
+                      >
+                        <BriefcaseBusiness className="w-3.5 h-3.5" />
+                        Human Resources
+                      </Link>
+                    )}
+                    {(qualityCapabilities.data?.canViewQuality && canAccessQuality) && <Link
                       href={`/workspace/${workspaceId}/quality`}
                       aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/quality`) ? 'page' : undefined}
                       className={cn('flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',

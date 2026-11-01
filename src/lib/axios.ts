@@ -58,7 +58,8 @@ api.interceptors.request.use(
         isAuthEndpoint || 
         (config.method === 'get' && config.url?.includes('/super-admin/settings')) ||
         config.url?.includes('/subscription/next-plan') ||
-        config.url?.includes('/plans');
+        config.url?.includes('/plans') ||
+        config.url?.includes('/public/workspaces/');
 
       if (isPublicEndpoint) {
         // Allow public and expected semi-public requests to proceed without token
@@ -93,6 +94,7 @@ api.interceptors.request.use(
           currentPath.includes('/auth/forgot-password') ||
           currentPath.includes('/auth/reset-password') ||
           currentPath.includes('/pricing') ||
+          currentPath.startsWith('/careers/') ||
           currentPath === '/';
         
         if (!isPaymentPage && !isPublicPage) {
@@ -141,6 +143,7 @@ api.interceptors.response.use(
           currentPath.includes('/auth/forgot-password') ||
           currentPath.includes('/auth/reset-password') ||
           currentPath.includes('/pricing') ||
+          currentPath.startsWith('/careers/') ||
           currentPath === '/';
         
         if (!isPaymentPage && !isPublicPage) {

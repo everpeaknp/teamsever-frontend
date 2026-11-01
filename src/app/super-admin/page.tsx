@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DashboardIcon, CardStackIcon, PersonIcon, Cross2Icon, ArrowLeftIcon, HamburgerMenuIcon } from "@radix-ui/react-icons";
 import AnalyticsDashboard from "@/components/super-admin/AnalyticsDashboard";
@@ -14,16 +14,27 @@ import { CurrencySwitcherDark } from "@/components/currency/CurrencySwitcherDark
 import { GearIcon } from "@radix-ui/react-icons";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
 
+const VALID_TABS = ["dashboard", "plans", "users", "settings", "updates"] as const;
+type SuperAdminTab = typeof VALID_TABS[number];
+
+const STORAGE_KEY = "superadmin_active_tab";
+
 export default function SuperAdminDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<"dashboard" | "plans" | "users" | "settings" | "updates">(
-    (tabParam as "dashboard" | "plans" | "users" | "settings" | "updates") || "dashboard"
-  );
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // For desktop minimize
+  const tabParam = searchParams.get("tab") as SuperAdminTab | null;
 
+  // Determine initial tab with URL precedence > localStorage > default
+  const [activeTab, setActiveTab] = useState<SuperAdminTab>("dashboard");
+  const [visitedTabs, setVisitedTabs] = useState<Record<string, boolean>>({});
+  const [isReady, setIsReady] = useState(false);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const { systemName } = useSystemSettings();
+
+  // Auth Guard & Initial Tab Hydration
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     const isSuperUser = localStorage.getItem("isSuperUser") === "true";
@@ -32,16 +43,42 @@ export default function SuperAdminDashboard() {
       router.push("/super-admin-login");
       return;
     }
-  }, [router]);
 
-  const { systemName } = useSystemSettings();
-
-  // Update active tab when URL changes
-  useEffect(() => {
-    if (tabParam && ['dashboard', 'plans', 'users', 'settings', 'updates'].includes(tabParam)) {
-      setActiveTab(tabParam as any);
+    // Determine initial tab
+    let initialTab: SuperAdminTab = "dashboard";
+    if (tabParam && VALID_TABS.includes(tabParam)) {
+      initialTab = tabParam;
+    } else {
+      const savedTab = localStorage.getItem(STORAGE_KEY) as SuperAdminTab | null;
+      if (savedTab && VALID_TABS.includes(savedTab)) {
+        initialTab = savedTab;
+      }
     }
-  }, [tabParam]);
+
+    setActiveTab(initialTab);
+    setVisitedTabs({ [initialTab]: true });
+    setIsReady(true);
+
+    // Sync URL if missing
+    if (tabParam !== initialTab) {
+      router.replace(`/super-admin?tab=${initialTab}`, { scroll: false });
+    }
+  }, [router, tabParam]);
+
+  // Handle Tab Switch with URL & LocalStorage Persistence
+  const handleTabChange = useCallback((tab: SuperAdminTab) => {
+    setActiveTab(tab);
+    setVisitedTabs((prev) => ({ ...prev, [tab]: true }));
+    try {
+      localStorage.setItem(STORAGE_KEY, tab);
+    } catch {}
+    router.replace(`/super-admin?tab=${tab}`, { scroll: false });
+
+    // Auto-close on mobile
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setSidebarOpen(false);
+    }
+  }, [router]);
 
   const menuItems = [
     { id: "dashboard", label: "Analytics", icon: DashboardIcon },
@@ -49,16 +86,14 @@ export default function SuperAdminDashboard() {
     { id: "users", label: "Users", icon: PersonIcon },
     { id: "settings", label: "Settings", icon: GearIcon },
     { id: "updates", label: "What’s New", icon: CardStackIcon },
-  ];
+  ] as const;
 
   return (
     <div className="min-h-screen flex bg-gray-50 dark:bg-background">
       {/* Dark Sidebar */}
       <aside className={cn(
         "fixed lg:sticky inset-y-0 left-0 top-0 z-50 h-screen bg-[#0a0a0a] border-r border-gray-800 flex flex-col transition-all duration-300",
-        // Mobile: show/hide with full width
         sidebarOpen ? "w-64" : "-translate-x-full lg:translate-x-0",
-        // Desktop: expand/collapse
         "lg:w-64",
         sidebarCollapsed && "lg:w-16"
       )}>
@@ -99,15 +134,9 @@ export default function SuperAdminDashboard() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id as any);
-                    // Auto-close on mobile
-                    if (window.innerWidth < 1024) {
-                      setSidebarOpen(false);
-                    }
-                  }}
+                  onClick={() => handleTabChange(item.id as SuperAdminTab)}
                   className={cn(
-                  "min-h-11 w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                    "min-h-11 w-full flex items-center gap-3 px-3 sm:px-4 py-3 rounded-lg text-sm font-medium transition-colors",
                     isActive
                       ? "bg-purple-600 text-white"
                       : "text-gray-400 hover:text-white hover:bg-gray-800",
@@ -155,7 +184,7 @@ export default function SuperAdminDashboard() {
         />
       )}
 
-      {/* Main Content - Properly expands when sidebar is collapsed */}
+      {/* Main Content - Lazy Loaded & Kept-Alive for Instant Switching and 0 Refetch Lag */}
       <main className="flex-1 overflow-auto bg-gray-50 dark:bg-background min-h-screen">
         {/* Header with Hamburger */}
         <div className="sticky top-0 z-30 bg-white dark:bg-card border-b shadow-sm px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-3">
@@ -163,11 +192,9 @@ export default function SuperAdminDashboard() {
             variant="ghost"
             size="icon"
             onClick={() => {
-              // Mobile: toggle sidebar open/close
-              if (window.innerWidth < 1024) {
+              if (typeof window !== "undefined" && window.innerWidth < 1024) {
                 setSidebarOpen(!sidebarOpen);
               } else {
-                // Desktop: toggle sidebar collapse/expand
                 setSidebarCollapsed(!sidebarCollapsed);
               }
             }}
@@ -190,12 +217,37 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
 
+        {/* Tab Panels: Only mount when visited, keep alive in DOM */}
         <div className="p-3 sm:p-4 md:p-6 lg:p-8 max-w-[1600px] mx-auto">
-          {activeTab === "dashboard" && <AnalyticsDashboard />}
-          {activeTab === "plans" && <PlanBuilderNew />}
-          {activeTab === "users" && <UserManagementNew />}
-          {activeTab === "settings" && <SystemSettings />}
-          {activeTab === "updates" && <ProductUpdates />}
+          {isReady && (
+            <>
+              {visitedTabs.dashboard && (
+                <div className={activeTab === "dashboard" ? "block" : "hidden"}>
+                  <AnalyticsDashboard />
+                </div>
+              )}
+              {visitedTabs.plans && (
+                <div className={activeTab === "plans" ? "block" : "hidden"}>
+                  <PlanBuilderNew />
+                </div>
+              )}
+              {visitedTabs.users && (
+                <div className={activeTab === "users" ? "block" : "hidden"}>
+                  <UserManagementNew />
+                </div>
+              )}
+              {visitedTabs.settings && (
+                <div className={activeTab === "settings" ? "block" : "hidden"}>
+                  <SystemSettings />
+                </div>
+              )}
+              {visitedTabs.updates && (
+                <div className={activeTab === "updates" ? "block" : "hidden"}>
+                  <ProductUpdates />
+                </div>
+              )}
+            </>
+          )}
         </div>
       </main>
     </div>

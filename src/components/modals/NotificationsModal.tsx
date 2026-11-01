@@ -254,6 +254,19 @@ export function NotificationsModal({ isOpen, onClose }: NotificationsModalProps)
                   <div
                     key={notification._id}
                     onClick={() => {
+                      const hrRoute = notification.data?.hrRoute;
+                      if (notification.data?.workspaceId && hrRoute === 'me') {
+                        if (!notification.read) void handleMarkAsRead(notification._id, notification.type);
+                        onClose();
+                        router.push(`/workspace/${notification.data.workspaceId}/hr/me`);
+                        return;
+                      }
+                      if (notification.data?.workspaceId && ['onboarding', 'development'].includes(hrRoute)) {
+                        if (!notification.read) void handleMarkAsRead(notification._id, notification.type);
+                        onClose();
+                        router.push(`/workspace/${notification.data.workspaceId}/hr/${hrRoute}`);
+                        return;
+                      }
                       const runId = notification.data?.runId || notification.data?.resourceId;
                       if (notification.type !== 'QA_RUN_ASSIGNED' || !notification.data?.workspaceId || !runId) return;
                       if (!notification.read) void handleMarkAsRead(notification._id, notification.type);

@@ -27,6 +27,21 @@ describe('RequestLeaveModal remote locations', () => {
       : { data: { data: {} } } as any);
   });
 
+  it('submits the configured leave type and shows the current balance', async () => {
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url.includes('location-policy')) return { data: { data: { member: { remoteAreas: [] } } } } as any;
+      if (url.endsWith('leave-policies')) return { data: { data: [{ _id: 'annual-policy', name: 'Annual leave', active: true, paid: true }] } } as any;
+      if (url.endsWith('my/leave-balances')) return { data: { data: [{ policy: 'annual-policy', available: 10 }] } } as any;
+      return { data: { data: {} } } as any;
+    });
+    render(<RequestLeaveModal isOpen onClose={vi.fn()} workspaceId="workspace-1" assignedManagerId="manager-1" managerName="Manager" />);
+    expect(await screen.findByLabelText('Leave type')).toHaveValue('annual-policy');
+    expect(screen.getByText(/10 day\(s\) available/)).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText('Reason for taking leave…'), { target: { value: 'Family event' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send Leave Request' }));
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/workspaces/workspace-1/leaves', expect.objectContaining({ leavePolicyId: 'annual-policy', requestType: 'leave' })));
+  });
+
   it('lets a member with no assigned private map request a new address in a viewport-bounded modal', async () => {
     render(<RequestLeaveModal isOpen onClose={vi.fn()} workspaceId="workspace-1" assignedManagerId="manager-1" managerName="Manager" />);
 

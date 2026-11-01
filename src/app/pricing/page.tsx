@@ -14,6 +14,8 @@ import { CurrencyDisplay } from '@/components/currency/CurrencyDisplay';
 import { PaymentSelectionModal } from '@/components/modals/PaymentSelectionModal';
 import { Plan } from '@/types';
 import { getPlanFeatureLines } from '@/lib/planFeatures';
+import { PlanComparisonTable } from '@/components/pricing/PlanComparisonTable';
+import { PlanDetailsModal } from '@/components/modals/PlanDetailsModal';
 
 const C = 'mx-auto w-full max-w-[1100px] px-5 sm:px-8';
 
@@ -111,6 +113,7 @@ export default function PricingPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [detailsPlan, setDetailsPlan] = useState<Plan | null>(null);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
@@ -234,8 +237,8 @@ export default function PricingPage() {
                         <span className="text-sm font-medium text-neutral-500">/member/mo</span>
                       </div>
 
-                      <div className="mb-8 space-y-4 flex-1">
-                        {features.map((item, itemIndex) => {
+                      <div className="mb-8 space-y-3.5 flex-1">
+                        {features.slice(0, 8).map((item, itemIndex) => {
                           const isDisabled = item.includes('Disabled');
                           return (
                             <div key={itemIndex} className="flex items-start gap-3">
@@ -250,6 +253,18 @@ export default function PricingPage() {
                             </div>
                           );
                         })}
+
+                        {features.length > 8 && (
+                          <div className="pt-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setDetailsPlan(plan)}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2563EB] hover:text-blue-700 hover:underline transition-colors cursor-pointer py-1"
+                            >
+                              <span>+ View more ({features.length - 8} more features)</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
 
                       <div className="mt-auto pt-6 border-t border-neutral-100">
@@ -278,6 +293,21 @@ export default function PricingPage() {
                 })}
               </div>
             )}
+
+            {/* Everything You Get, Side by Side Table */}
+            {!loading && plans.length > 0 && (
+              <div className="mt-20 pt-12 border-t border-neutral-100">
+                <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
+                  <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">
+                    Everything You Get, Side by Side
+                  </h3>
+                  <p className="text-sm text-neutral-500">
+                    Compare features, storage limits, and module capabilities across every plan tier.
+                  </p>
+                </div>
+                <PlanComparisonTable plans={plans} />
+              </div>
+            )}
           </div>
         </section>
 
@@ -300,6 +330,15 @@ export default function PricingPage() {
           systemName={systemName}
         />
       )}
+
+      {/* Plan Details Modal */}
+      <PlanDetailsModal
+        plan={detailsPlan}
+        isOpen={Boolean(detailsPlan)}
+        onClose={() => setDetailsPlan(null)}
+        onSelectPlan={(p) => handleBuyPlan(p)}
+        isCurrent={detailsPlan ? isCurrentPlan(detailsPlan.name) : false}
+      />
     </div>
   );
 }

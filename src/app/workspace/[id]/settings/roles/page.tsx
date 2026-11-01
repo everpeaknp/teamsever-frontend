@@ -62,6 +62,7 @@ import { TableSkeleton } from '@/components/skeletons/PageSkeleton';
 import { UserAvatar } from '@/components/ui/user-avatar';
 import { applyPermissionGroupSelection, getPermissionGroupToggleTargets } from '@/lib/permissionGroupSelection';
 import { QUALITY_PERMISSION_ACTIONS } from '@/lib/permissions/qualityPermissions';
+import { useWorkspaceEntitlements } from '@/hooks/useWorkspaceEntitlements';
 
 interface PermissionCatalogItem {
   key: string;
@@ -145,9 +146,32 @@ const DEFAULT_PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { key: 'VIEW_ANALYTICS_TEAM', label: 'View Workspace Analytics', category: 'Analytics' },
   { key: 'VIEW_ACTIVITY_LOG', label: 'View Activity Log', category: 'Analytics' },
   { key: 'MANAGE_SETTINGS', label: 'Manage Workspace Settings', category: 'Workspace Settings' },
-  { key: 'MANAGE_LEAVES_AND_REMOTE', label: 'Manage Leave & Remote Requests', category: 'HR & Leaves' },
+  { key: 'MANAGE_LEAVES_AND_REMOTE', label: 'Manage Leave, Remote & Site Visit Requests', category: 'HR & Leaves' },
   { key: 'MANAGE_ADDRESSES', label: 'Manage Office & Member Addresses', category: 'Attendance' },
   { key: 'VIEW_LEAVES', label: 'View Team Leaves', category: 'HR & Leaves' },
+  { key: 'VIEW_HR_RECORDS', label: 'View Employee Records', category: 'Human Resources' },
+  { key: 'VIEW_HR_TEAM_RECORDS', label: 'View Direct and Indirect Reports', category: 'Human Resources' },
+  { key: 'VIEW_HR_LOCATION_RECORDS', label: 'View Employees at My Location', category: 'Human Resources' },
+  { key: 'MANAGE_HR_RECORDS', label: 'Manage Employee Records', category: 'Human Resources' },
+  { key: 'VIEW_HR_SENSITIVE_DATA', label: 'View Sensitive Employee Details', category: 'Human Resources' },
+  { key: 'MANAGE_HR_SENSITIVE_DATA', label: 'Manage Sensitive Employee Details', category: 'Human Resources' },
+  { key: 'VIEW_HR_COMPENSATION', label: 'View Compensation Records', category: 'Compensation & Payroll' },
+  { key: 'MANAGE_HR_COMPENSATION', label: 'Request Compensation Changes', category: 'Compensation & Payroll' },
+  { key: 'APPROVE_HR_COMPENSATION', label: 'Approve Compensation Changes', category: 'Compensation & Payroll' },
+  { key: 'VIEW_HR_PAYROLL', label: 'View Payroll Runs & Payslips', category: 'Compensation & Payroll' },
+  { key: 'MANAGE_HR_PAYROLL', label: 'Create & Submit Payroll Runs', category: 'Compensation & Payroll' },
+  { key: 'APPROVE_HR_PAYROLL', label: 'Approve Payroll Runs', category: 'Compensation & Payroll' },
+  { key: 'VIEW_HR_RECRUITING', label: 'View Hiring Pipeline', category: 'Recruiting & Onboarding' },
+  { key: 'MANAGE_HR_RECRUITING', label: 'Manage Hiring Pipeline', category: 'Recruiting & Onboarding' },
+  { key: 'APPROVE_HR_REQUISITIONS', label: 'Approve Job Requisitions', category: 'Recruiting & Onboarding' },
+  { key: 'VIEW_HR_CANDIDATE_DATA', label: 'View Candidate Details', category: 'Recruiting & Onboarding' },
+  { key: 'VIEW_HR_ONBOARDING', label: 'View Onboarding Checklists', category: 'Recruiting & Onboarding' },
+  { key: 'MANAGE_HR_ONBOARDING', label: 'Manage Onboarding Checklists', category: 'Recruiting & Onboarding' },
+  { key: 'VIEW_HR_PERFORMANCE', label: 'View Performance & Development', category: 'Performance & Growth' },
+  { key: 'MANAGE_HR_PERFORMANCE', label: 'Manage Performance & Development', category: 'Performance & Growth' },
+  { key: 'VIEW_HR_RELATIONS', label: 'View Employee Relations Cases', category: 'Employee Relations' },
+  { key: 'MANAGE_HR_RELATIONS', label: 'Manage Employee Relations Cases', category: 'Employee Relations' },
+  { key: 'VIEW_HR_REPORTS', label: 'View HR Reports', category: 'HR Reports' },
 ];
 
 const PERMISSION_CATEGORIES = [
@@ -160,6 +184,12 @@ const PERMISSION_CATEGORIES = [
   'Analytics',
   'Workspace Settings',
   'HR & Leaves',
+  'Human Resources',
+  'Compensation & Payroll',
+  'Recruiting & Onboarding',
+  'Performance & Growth',
+  'Employee Relations',
+  'HR Reports',
   'Attendance',
 ];
 
@@ -167,6 +197,17 @@ const LEGACY_PERMISSION_ALIASES: Record<string, string[]> = {
   VIEW_ANALYTICS: ['VIEW_ANALYTICS_PERSONAL', 'VIEW_ANALYTICS_TEAM'],
   MANAGE_LEAVES_AND_REMOTE: ['MANAGE_LEAVES'],
   MANAGE_ADDRESSES: ['MANAGE_ATTENDANCE_LOCATIONS'],
+  MANAGE_HR_RECORDS: ['VIEW_HR_RECORDS'],
+  MANAGE_HR_SENSITIVE_DATA: ['VIEW_HR_SENSITIVE_DATA'],
+  MANAGE_HR_COMPENSATION: ['VIEW_HR_COMPENSATION'],
+  APPROVE_HR_COMPENSATION: ['VIEW_HR_COMPENSATION'],
+  MANAGE_HR_PAYROLL: ['VIEW_HR_PAYROLL'],
+  APPROVE_HR_PAYROLL: ['VIEW_HR_PAYROLL'],
+  MANAGE_HR_RECRUITING: ['VIEW_HR_RECRUITING', 'VIEW_HR_CANDIDATE_DATA'],
+  APPROVE_HR_REQUISITIONS: ['VIEW_HR_RECRUITING'],
+  MANAGE_HR_ONBOARDING: ['VIEW_HR_ONBOARDING'],
+  MANAGE_HR_PERFORMANCE: ['VIEW_HR_PERFORMANCE'],
+  MANAGE_HR_RELATIONS: ['VIEW_HR_RELATIONS'],
 };
 
 const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
@@ -210,6 +251,27 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'MANAGE_LEAVES_AND_REMOTE',
     'MANAGE_ADDRESSES',
     'VIEW_LEAVES',
+    'VIEW_HR_RECORDS',
+    'MANAGE_HR_RECORDS',
+    'VIEW_HR_SENSITIVE_DATA',
+    'MANAGE_HR_SENSITIVE_DATA',
+    'VIEW_HR_COMPENSATION',
+    'MANAGE_HR_COMPENSATION',
+    'APPROVE_HR_COMPENSATION',
+    'VIEW_HR_PAYROLL',
+    'MANAGE_HR_PAYROLL',
+    'APPROVE_HR_PAYROLL',
+    'VIEW_HR_RECRUITING',
+    'MANAGE_HR_RECRUITING',
+    'APPROVE_HR_REQUISITIONS',
+    'VIEW_HR_CANDIDATE_DATA',
+    'VIEW_HR_ONBOARDING',
+    'MANAGE_HR_ONBOARDING',
+    'VIEW_HR_PERFORMANCE',
+    'MANAGE_HR_PERFORMANCE',
+    'VIEW_HR_RELATIONS',
+    'MANAGE_HR_RELATIONS',
+    'VIEW_HR_REPORTS',
   ],
   admin: [
     'UPDATE_WORKSPACE',
@@ -253,6 +315,25 @@ const BASE_ROLE_PERMISSIONS: Record<SystemRoleKey, string[]> = {
     'MANAGE_LEAVES_AND_REMOTE',
     'MANAGE_ADDRESSES',
     'VIEW_LEAVES',
+    'VIEW_HR_RECORDS',
+    'MANAGE_HR_RECORDS',
+    'VIEW_HR_COMPENSATION',
+    'MANAGE_HR_COMPENSATION',
+    'APPROVE_HR_COMPENSATION',
+    'VIEW_HR_PAYROLL',
+    'MANAGE_HR_PAYROLL',
+    'APPROVE_HR_PAYROLL',
+    'VIEW_HR_RECRUITING',
+    'MANAGE_HR_RECRUITING',
+    'APPROVE_HR_REQUISITIONS',
+    'VIEW_HR_CANDIDATE_DATA',
+    'VIEW_HR_ONBOARDING',
+    'MANAGE_HR_ONBOARDING',
+    'VIEW_HR_PERFORMANCE',
+    'MANAGE_HR_PERFORMANCE',
+    'VIEW_HR_RELATIONS',
+    'MANAGE_HR_RELATIONS',
+    'VIEW_HR_REPORTS',
   ],
   operations_manager: [
     'VIEW_WORKSPACE',
@@ -701,6 +782,8 @@ export default function RolesPage() {
   const params = useParams();
   const workspaceId = params.id as string;
   const { can } = usePermissions();
+  const { entitlements } = useWorkspaceEntitlements(workspaceId);
+  const canUseCustomRoles = entitlements?.modules?.projects?.canUseCustomRoles ?? false;
 
   const [roles, setRoles] = useState<ICustomRole[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
@@ -1202,17 +1285,19 @@ export default function RolesPage() {
                 <UserCog className="h-4 w-4" />
                 Member Override
               </Button>
-              <Button className="gap-2" onClick={openCreateRoleModal}>
-                <Plus className="h-4 w-4" />
-                Create Role
-              </Button>
+              {canUseCustomRoles && (
+                <Button className="gap-2" onClick={openCreateRoleModal}>
+                  <Plus className="h-4 w-4" />
+                  Create Role
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className={`grid gap-4 ${canUseCustomRoles ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
           <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
             <div className="mb-3 flex items-center gap-2">
               <Settings2 className="h-5 w-5 text-sky-600" />
@@ -1231,28 +1316,32 @@ export default function RolesPage() {
               Give one person extra capabilities without changing everyone else on the same system role.
             </p>
           </div>
-          <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-emerald-600" />
-              <div className="font-semibold text-foreground">Custom Role Templates</div>
+          {canUseCustomRoles && (
+            <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+              <div className="mb-3 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-emerald-600" />
+                <div className="font-semibold text-foreground">Custom Role Templates</div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Create reusable permission bundles and assign them where role templates make more sense than overrides.
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Create reusable permission bundles and assign them where role templates make more sense than overrides.
-            </p>
-          </div>
+          )}
         </div>
 
         <Tabs defaultValue="system" className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-1 gap-2 rounded-2xl bg-transparent p-0 md:grid-cols-3">
+          <TabsList className={`grid h-auto w-full grid-cols-1 gap-2 rounded-2xl bg-transparent p-0 ${canUseCustomRoles ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
             <TabsTrigger value="system" className="rounded-2xl border border-border bg-card py-3 data-[state=active]:border-sky-500/40 data-[state=active]:bg-sky-500/10">
               System Roles
             </TabsTrigger>
             <TabsTrigger value="members" className="rounded-2xl border border-border bg-card py-3 data-[state=active]:border-orange-500/40 data-[state=active]:bg-orange-500/10">
               Member Overrides
             </TabsTrigger>
-            <TabsTrigger value="custom" className="rounded-2xl border border-border bg-card py-3 data-[state=active]:border-emerald-500/40 data-[state=active]:bg-emerald-500/10">
-              Custom Roles
-            </TabsTrigger>
+            {canUseCustomRoles && (
+              <TabsTrigger value="custom" className="rounded-2xl border border-border bg-card py-3 data-[state=active]:border-emerald-500/40 data-[state=active]:bg-emerald-500/10">
+                Custom Roles
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="system" className="space-y-6">
@@ -1370,7 +1459,8 @@ export default function RolesPage() {
             </section>
           </TabsContent>
 
-          <TabsContent value="custom" className="space-y-6">
+          {canUseCustomRoles && (
+            <TabsContent value="custom" className="space-y-6">
             <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
               <div className="mb-5 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
@@ -1443,7 +1533,8 @@ export default function RolesPage() {
                 </Table>
               </div>
             </section>
-          </TabsContent>
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 

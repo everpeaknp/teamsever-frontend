@@ -2,20 +2,26 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Bell, CalendarCheck2, FileText, Folder, Palette, Settings2, ShieldCheck, Users } from 'lucide-react';
-
-const tools = [
-  { label: 'Documents', path: 'docs', Icon: FileText },
-  { label: 'Quality', path: 'quality', Icon: ShieldCheck },
-  { label: 'Attendance', path: 'attendance', Icon: CalendarCheck2 },
-  { label: 'Notifications', path: 'notifications', Icon: Bell },
-  { label: 'Workspace settings', path: 'settings', Icon: Settings2 },
-  { label: 'Members', path: 'settings/members', Icon: Users },
-] as const;
+import { Bell, BriefcaseBusiness, CalendarCheck2, FileText, Folder, HeartHandshake, Palette, Settings2, ShieldCheck, Users } from 'lucide-react';
+import { useWorkspaceEntitlements } from '@/hooks/useWorkspaceEntitlements';
 
 export default function MorePage() {
   const params = useParams();
   const workspaceId = params.id as string;
+  const { canAccessAttendance, canAccessHr, canAccessQuality } = useWorkspaceEntitlements(workspaceId);
+
+  const tools = [
+    { label: 'Documents', path: 'docs', Icon: FileText, visible: true },
+    { label: 'Quality', path: 'quality', Icon: ShieldCheck, visible: canAccessQuality },
+    { label: 'Attendance', path: 'attendance', Icon: CalendarCheck2, visible: canAccessAttendance },
+    { label: 'Human Resources', path: 'hr', Icon: BriefcaseBusiness, visible: canAccessHr },
+    { label: 'My HR & payslips', path: 'hr/me', Icon: BriefcaseBusiness, visible: canAccessHr },
+    { label: 'Team engagement', path: 'hr/engagement', Icon: HeartHandshake, visible: canAccessHr },
+    { label: 'Notifications', path: 'notifications', Icon: Bell, visible: true },
+    { label: 'Workspace settings', path: 'settings', Icon: Settings2, visible: true },
+    { label: 'Members', path: 'settings/members', Icon: Users, visible: true },
+  ].filter(t => t.visible);
+
   return <main className="min-h-full overflow-y-auto bg-background px-4 pb-28 pt-6 sm:px-6 lg:mx-auto lg:max-w-4xl lg:pt-10">
     <section aria-labelledby="account-tools-heading">
       <h1 id="account-tools-heading" className="mb-3 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account</h1>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, KeyboardEvent, useCallback } from 'react';
-import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays, Phone, Video, X, Reply, ImagePlus, Eye } from 'lucide-react';
+import { Send, Loader2, Check, CheckCheck, AlertCircle, RefreshCw, Settings, Github, ArrowLeft, ExternalLink, GitBranch, Calendar as CalendarIcon, User, Folder, CalendarDays, Phone, Video, X, Reply, ImagePlus, Eye, Info } from 'lucide-react';
+import { ChatDetailsDrawer } from './ChatDetailsDrawer';
 import { cn } from '@/lib/utils';
 import { useChat, ChatMessage } from '@/hooks/useChat';
 import { reconcileChatMessages } from '@/lib/chat/reconcileMessages';
@@ -45,10 +46,29 @@ import { MessageReactionsBar, InputEmojiPicker } from './MessageReactionsBar';
 import { MessageActionMenu } from './MessageActionMenu';
 
 
-function ReplyPreview({ reply }: { reply: NonNullable<ChatMessage['replyTo']> }) {
+function ReplyPreview({ reply, isOwnMessage, senderName }: { reply: NonNullable<ChatMessage['replyTo']>; isOwnMessage?: boolean; senderName?: string }) {
   const item = typeof reply === 'string' ? null : reply;
   if (!item) return null;
-  return <div className="mb-1 rounded-md border-l-2 border-primary/70 bg-background/30 px-2 py-1 text-xs"><div className="font-semibold opacity-80">{item.sender?.name || 'Reply'}</div><div className="line-clamp-2 opacity-75">{item.isDeleted ? 'This message was deleted' : item.content}</div></div>;
+  const replySenderName = item.sender?.name || 'Member';
+  const hasPhoto = !item.isDeleted && (!item.content || item.content.trim() === '') && Boolean((item as any).attachments && (item as any).attachments.length > 0);
+  const snippet = item.isDeleted
+    ? 'This message was deleted'
+    : (item.content?.trim() || (hasPhoto ? 'Photo' : 'Attachment'));
+
+  return (
+    <div className={cn('flex flex-col mb-1 text-xs select-none', isOwnMessage ? 'items-end' : 'items-start')}>
+      <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/80 mb-0.5">
+        <Reply className="h-3 w-3 -scale-x-100 opacity-70" />
+        <span>{isOwnMessage ? `You replied to ${replySenderName}` : `${senderName || 'Member'} replied to ${replySenderName}`}</span>
+      </div>
+      <div className={cn(
+        'max-w-[280px] truncate rounded-xl px-2.5 py-1 text-xs border border-border/40 backdrop-blur-sm',
+        isOwnMessage ? 'bg-primary/10 text-foreground' : 'bg-muted/70 text-muted-foreground'
+      )}>
+        {hasPhoto ? <span className="inline-flex items-center gap-1 font-medium">📷 Photo</span> : snippet}
+      </div>
+    </div>
+  );
 }
 
 export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, type, title, profileUser, presence, isAdmin, onMenuClick }: ChatWindowProps) => {
@@ -168,6 +188,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
   const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessage[]>([]);
   const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
+  const [showDetailsDrawer, setShowDetailsDrawer] = useState(false);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [pendingImageUrls, setPendingImageUrls] = useState<string[]>([]);
   const [imageViewer, setImageViewer] = useState<{ images: string[]; index: number } | null>(null);
@@ -850,11 +871,19 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
     }
   };
 
+  const getSenderId = (sender: any): string => {
+    if (!sender) return '';
+    if (typeof sender === 'string') return sender;
+    return (sender._id || sender.id || '').toString();
+  };
+
   // Group messages by sender
   const isSameMessageGroup = (message: ChatMessage, other?: ChatMessage) => {
     if (!other || message.type === 'system' || other.type === 'system') return false;
     if (message.type === 'github_commit' || other.type === 'github_commit') return false;
-    if (message.sender._id !== other.sender._id) return false;
+    const senderA = getSenderId(message.sender);
+    const senderB = getSenderId(other.sender);
+    if (!senderA || !senderB || senderA !== senderB) return false;
     return Math.abs(new Date(message.createdAt).getTime() - new Date(other.createdAt).getTime()) <= 5 * 60 * 1000;
   };
 
@@ -916,28 +945,39 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
             presence={presence}
             now={presenceNow}
           />
-          {type === 'direct' && (
-            <div className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                onClick={() => toast.info('Audio calls are not available yet.')}
-                className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Start audio call"
-                title="Audio call"
-              >
-                <Phone className="h-5 w-5" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                onClick={() => toast.info('Video calls are not available yet.')}
-                className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Start video call"
-                title="Video call"
-              >
-                <Video className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-          )}
+          <div className="flex shrink-0 items-center gap-1">
+            {type === 'direct' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => toast.info('Audio calls are not available yet.')}
+                  className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label="Start audio call"
+                  title="Audio call"
+                >
+                  <Phone className="h-5 w-5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toast.info('Video calls are not available yet.')}
+                  className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  aria-label="Start video call"
+                  title="Video call"
+                >
+                  <Video className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowDetailsDrawer(true)}
+              className="grid h-10 w-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label="Conversation info"
+              title="Conversation info"
+            >
+              <Info className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </div>
           
           {isCommitLog && (
             <div className="ml-2 flex min-w-0 max-w-full items-center gap-1 rounded-lg border border-border/30 bg-muted/20 p-1 overflow-x-auto no-scrollbar sm:ml-4">
@@ -1221,7 +1261,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
             const groupedWithPrevious = isSameMessageGroup(message, localMessages[index - 1]);
             const groupedWithNext = isSameMessageGroup(message, localMessages[index + 1]);
             const isSystemMessage = message.type === 'system';
-            const isOwnMessage = message.sender._id === currentUserId;
+            const msgSenderId = getSenderId(message.sender);
+            const isOwnMessage = Boolean(currentUserId && msgSenderId && msgSenderId === currentUserId);
             const hasVisibleText = shouldRenderChatMessageText(message.content, message.attachments?.length || 0);
             const readers = (message.readBy || [])
               .map(reader => typeof reader === 'string' ? null : reader)
@@ -1248,12 +1289,12 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                   <UserAvatar
                     user={message.sender}
                     className="h-8 w-8 shrink-0 cursor-pointer hover:opacity-80"
-                    onClick={() => openProfile(message.sender._id)}
+                    onClick={() => openProfile(msgSenderId)}
                   />
                   <div className="flex items-center gap-2">
                     <span
                       className="cursor-pointer text-xs font-bold text-foreground hover:text-primary"
-                      onClick={() => openProfile(message.sender._id)}
+                      onClick={() => openProfile(msgSenderId)}
                     >{message.sender.name}</span>
                     <span className="text-[10px] font-medium text-muted-foreground">{formatMessageTime(message.createdAt)}</span>
                   </div>
@@ -1428,7 +1469,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                       </div>
                     )}
                     <div className="group/bubble relative">
-                    {message.replyTo && <ReplyPreview reply={message.replyTo} />}
+                    {message.replyTo && <ReplyPreview reply={message.replyTo} isOwnMessage={true} />}
                     <div className={cn(
                       'w-fit max-w-full whitespace-pre-wrap break-words',
                       hasVisibleText && 'min-w-[40px] rounded-[18px] px-4 py-2 text-sm',
@@ -1532,7 +1573,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                   <UserAvatar 
                     user={message.sender} 
                     className="h-8 w-8 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity mb-1"
-                    onClick={() => openProfile(message.sender._id)}
+                    onClick={() => openProfile(msgSenderId)}
                   />
                 )}
                 {!showAvatar && <div className="h-8 w-8 flex-shrink-0" aria-hidden="true" />}
@@ -1542,7 +1583,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                     <div className="flex items-center gap-2 mb-1.5 opacity-90">
                       <span 
                         className="font-bold text-xs text-foreground cursor-pointer hover:text-primary transition-colors"
-                        onClick={() => openProfile(message.sender._id)}
+                        onClick={() => openProfile(msgSenderId)}
                       >
                         {message.sender.name}
                       </span>
@@ -1552,7 +1593,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                     </div>
                   )}
                   <div className="group/bubble relative">
-                  {message.replyTo && <ReplyPreview reply={message.replyTo} />}
+                  {message.replyTo && <ReplyPreview reply={message.replyTo} isOwnMessage={false} senderName={(message.sender as any)?.name} />}
                   <div className={cn(
                     'w-fit max-w-full whitespace-pre-wrap break-words',
                     hasVisibleText && 'min-w-[40px] rounded-[18px] bg-muted px-4 py-2 text-sm text-foreground',
@@ -1587,7 +1628,23 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       {/* Input Area - Hidden for Commit Log */}
       {!isCommitLog && (
         <div className="sticky bottom-0 z-10 border-t border-border bg-background/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur-sm transition-all sm:p-4 md:pb-6">
-          {replyTarget && <div className="mx-auto mb-2 flex max-w-4xl items-center gap-2 rounded-lg border-l-2 border-primary bg-muted/50 px-3 py-2 text-sm"><Reply className="h-4 w-4 shrink-0 text-primary" /><div className="min-w-0 flex-1"><div className="font-medium">Replying to {replyTarget.sender.name}</div><div className="truncate text-xs text-muted-foreground">{replyTarget.content}</div></div><button type="button" aria-label="Cancel reply" onClick={() => setReplyTarget(null)}><X className="h-4 w-4" /></button></div>}
+          {replyTarget && (
+          <div className="mx-auto mb-1.5 flex max-w-4xl items-center justify-between rounded-xl border border-border/60 bg-muted/70 px-3 py-1.5 text-xs shadow-xs">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Reply className="h-3.5 w-3.5 shrink-0 -scale-x-100 text-primary" />
+              <div className="min-w-0 flex items-center gap-1.5 truncate">
+                <span className="font-semibold text-foreground">Replying to {replyTarget.sender?.name || 'Member'}</span>
+                <span className="text-muted-foreground/50">·</span>
+                <span className="truncate text-muted-foreground">
+                  {replyTarget.content?.trim() || (replyTarget.attachments?.length ? '📷 Photo' : 'Attachment')}
+                </span>
+              </div>
+            </div>
+            <button type="button" aria-label="Cancel reply" onClick={() => setReplyTarget(null)} className="rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
           {selectedImages.length > 0 && <div className="mx-auto mb-2 flex max-w-4xl items-center gap-2 overflow-x-auto">
             {pendingImageUrls.map((url, index) => <div key={`${url}-${index}`} className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border">
               <img src={url} alt={`Image to send ${index + 1}`} className="h-full w-full object-contain" />
@@ -1672,6 +1729,20 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
         onIndexChange={(index) => setImageViewer((current) => current ? { ...current, index } : current)}
         onDownload={(url) => void saveChatImage(url)}
       />}
+
+      <ChatDetailsDrawer
+        isOpen={showDetailsDrawer}
+        onClose={() => setShowDetailsDrawer(false)}
+        type={type}
+        title={title}
+        workspaceId={workspaceId}
+        channelId={channelId}
+        conversationId={conversationId}
+        userId={userId}
+        profileUser={profileUser}
+        onOpenImage={(images, index) => setImageViewer({ images, index })}
+        onChannelLeft={() => onMenuClick?.()}
+      />
 
       {/* Request Leave Modal in DMs */}
       {type === 'direct' && userId && workspaceId && (

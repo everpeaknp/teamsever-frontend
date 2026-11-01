@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, Loader2, Zap, X, ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/axios';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { CurrencyDisplay } from '@/components/currency/CurrencyDisplay';
 import { PaymentSelectionModal } from '@/components/modals/PaymentSelectionModal';
@@ -16,61 +14,9 @@ import { Plan } from '@/types';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getPlanFeatureLines } from '@/lib/planFeatures';
-
-
-// Plans Page Loading Skeleton
-export function PlansSkeleton() {
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header Skeleton */}
-      <div className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-10 w-10 rounded-lg" />
-            <div className="min-w-0 flex-1">
-              <Skeleton className="h-9 w-64 mb-2" />
-              <Skeleton data-testid="plans-description-skeleton" className="h-5 w-full max-w-96" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Plans Grid Skeleton */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="p-6 animate-pulse">
-              {/* Plan Header */}
-              <div className="text-center mb-6">
-                <Skeleton className="h-6 w-24 mx-auto mb-2" />
-                <Skeleton className="h-10 w-32 mx-auto mb-2" />
-                <Skeleton className="h-4 w-full" />
-              </div>
-
-              {/* Features List */}
-              <div className="space-y-2 mb-6">
-                {[1, 2, 3, 4, 5, 6].map((j) => (
-                  <div key={j} className="flex items-start gap-2">
-                    <Skeleton className="h-4 w-4 rounded flex-shrink-0 mt-0.5" />
-                    <Skeleton className="h-4 flex-1" />
-                  </div>
-                ))}
-              </div>
-
-              {/* Action Button */}
-              <Skeleton className="h-10 w-full rounded-lg" />
-            </Card>
-          ))}
-        </div>
-
-        {/* Footer Note Skeleton */}
-        <div className="mt-12">
-          <Skeleton className="h-24 w-full rounded-lg" />
-        </div>
-      </div>
-    </div>
-  );
-}
+import { PlansSkeleton } from '@/components/plans/PlansSkeleton';
+import { PlanComparisonTable } from '@/components/pricing/PlanComparisonTable';
+import { PlanDetailsModal } from '@/components/modals/PlanDetailsModal';
 
 export default function PlansPage() {
   const router = useRouter();
@@ -81,6 +27,7 @@ export default function PlansPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [detailsPlan, setDetailsPlan] = useState<Plan | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [memberCount, setMemberCount] = useState(1);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('annual'); // Default to annual for higher LTV
@@ -291,9 +238,9 @@ export default function PlansPage() {
                   <p className="text-sm text-muted-foreground">{plan.description}</p>
                 </div>
 
-                {/* Features List */}
+                {/* Features List (Max 8 items, 9th is View More) */}
                 <ul className="space-y-2 mb-6 flex-grow">
-                  {features.map((feature, index) => {
+                  {features.slice(0, 8).map((feature, index) => {
                     const isDisabled = feature.includes('Disabled');
                     
                     return (
@@ -309,10 +256,24 @@ export default function PlansPage() {
                       </li>
                     );
                   })}
+
+                  {features.length > 8 ? (
+                    <li className="pt-1.5 min-h-[32px] flex items-center">
+                      <button
+                        type="button"
+                        onClick={() => setDetailsPlan(plan)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline transition-colors cursor-pointer py-1"
+                      >
+                        <span>+ View more ({features.length - 8} more features)</span>
+                      </button>
+                    </li>
+                  ) : (
+                    <li className="pt-1.5 min-h-[32px]" aria-hidden="true" />
+                  )}
                 </ul>
 
                 {/* Action Button */}
-                <div className="mt-auto">
+                <div className="mt-auto pt-2">
                   {isCurrent ? (
                     <Button disabled className="w-full" variant="outline">
                       Current Plan
@@ -336,10 +297,25 @@ export default function PlansPage() {
           })}
         </div>
 
+        {/* Everything You Get, Side by Side Table */}
+        {plans.length > 0 && (
+          <div className="mt-16 space-y-6">
+            <div className="text-center max-w-2xl mx-auto space-y-2">
+              <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                Everything You Get, Side by Side
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Compare features, storage quotas, and capabilities across every plan tier.
+              </p>
+            </div>
+            <PlanComparisonTable plans={plans} />
+          </div>
+        )}
+
         {/* Footer Note */}
-        <div className="mt-12 p-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <p className="text-sm text-blue-800 dark:text-blue-200 text-center">
-            <strong>Note:</strong> Clicking "Buy Now" will open WhatsApp to complete your purchase. Our team will assist you with the upgrade process.
+        <div className="mt-12 p-6 bg-blue-50/50 dark:bg-blue-950/20 rounded-xl border border-blue-200/60 dark:border-blue-900/40">
+          <p className="text-sm text-muted-foreground text-center">
+            <strong className="text-foreground">Workspace-Centric Subscriptions:</strong> All plans and unified storage pools are dedicated to each workspace. Multiple workspaces can be created and managed under independent subscription tiers. Instant activation supported via online payment gateways.
           </p>
         </div>
       </div>
@@ -359,6 +335,15 @@ export default function PlansPage() {
           systemName={systemName}
         />
       )}
+
+      {/* Plan Details Modal */}
+      <PlanDetailsModal
+        plan={detailsPlan}
+        isOpen={Boolean(detailsPlan)}
+        onClose={() => setDetailsPlan(null)}
+        onSelectPlan={(p) => handleBuyPlan(p)}
+        isCurrent={detailsPlan ? isCurrentPlan(detailsPlan.name) : false}
+      />
     </div>
   );
 }

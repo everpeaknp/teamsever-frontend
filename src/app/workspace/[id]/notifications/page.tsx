@@ -217,6 +217,15 @@ export default function NotificationsPage() {
                   }
                   // Navigate to relevant page if data provided
                   if (notification.data?.workspaceId) {
+                    const hrRoute = notification.data?.hrRoute;
+                    if (hrRoute === 'me') {
+                      router.push(`/workspace/${notification.data.workspaceId}/hr/me`);
+                      return;
+                    }
+                    if (['onboarding', 'development'].includes(hrRoute)) {
+                      router.push(`/workspace/${notification.data.workspaceId}/hr/${hrRoute}`);
+                      return;
+                    }
                     const runId = notification.data.runId || notification.data.resourceId;
                     router.push(notification.type === 'QA_RUN_ASSIGNED' && runId
                       ? `/workspace/${notification.data.workspaceId}/quality/runs/${runId}`

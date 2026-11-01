@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Calendar, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Loader2, Maximize2 } from 'lucide-react';
+import { Calendar, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Loader2, Maximize2, MapPin, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -25,7 +25,15 @@ interface LeaveCardProps {
     };
     metadata?: {
       leaveRequestId?: string;
-      requestType?: 'leave' | 'remote';
+      requestType?: 'leave' | 'remote' | 'site_visit';
+      siteVisitDetails?: {
+        siteName?: string;
+        clientName?: string;
+        purpose?: string;
+        latitude?: number;
+        longitude?: number;
+        address?: string;
+      };
       proposedRemoteArea?: { name?: string; latitude?: number; longitude?: number };
       remoteLocation?: { name?: string; latitude?: number; longitude?: number };
       remoteAreaName?: string;
@@ -65,8 +73,14 @@ export function LeaveCard({
   const status = meta.status || 'pending';
   const leaveRequestId = meta.leaveRequestId;
   const isRemoteRequest = meta.requestType === 'remote';
+  const isSiteVisit = meta.requestType === 'site_visit';
+  const siteVisit = meta.siteVisitDetails;
   const remoteLocation = meta.remoteLocation || meta.proposedRemoteArea;
+  const effectiveLocation = isSiteVisit && siteVisit?.latitude != null && siteVisit.longitude != null
+    ? { name: siteVisit.siteName || 'Site location', latitude: siteVisit.latitude, longitude: siteVisit.longitude }
+    : remoteLocation;
   const hasRemoteCoordinates = remoteLocation?.latitude != null && remoteLocation.longitude != null;
+  const hasCoordinates = (isSiteVisit && siteVisit?.latitude != null && siteVisit.longitude != null) || hasRemoteCoordinates;
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDenyPopover, setShowDenyPopover] = useState(false);
@@ -134,8 +148,8 @@ export function LeaveCard({
         )}
       >
         <div className="flex items-center gap-1.5">
-          <Calendar className="h-4 w-4 text-primary" />
-          <span>{isRemoteRequest ? 'Remote Work Request' : 'Leave Request'}</span>
+          {isSiteVisit ? <MapPin className="h-4 w-4 text-primary" /> : isRemoteRequest ? <Home className="h-4 w-4 text-primary" /> : <Calendar className="h-4 w-4 text-primary" />}
+          <span>{isSiteVisit ? 'Site Visit Request' : isRemoteRequest ? 'Remote Work Request' : 'Leave Request'}</span>
         </div>
 
         <div className={cn(
@@ -178,12 +192,37 @@ export function LeaveCard({
           <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground">{meta.daysCount || 1} day{(meta.daysCount || 1) === 1 ? '' : 's'}</span>
         </div>
 
+        {isSiteVisit && siteVisit && (
+          <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+            <div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Site / Destination</span>
+              <p className="mt-0.5 text-sm font-semibold text-foreground">{siteVisit.siteName || 'Site Location'}</p>
+              {siteVisit.clientName && <p className="text-xs text-muted-foreground">Client: {siteVisit.clientName}</p>}
+              {siteVisit.purpose && <p className="text-xs text-muted-foreground">Purpose: {siteVisit.purpose}</p>}
+              {siteVisit.address && <p className="text-xs text-muted-foreground">Address: {siteVisit.address}</p>}
+            </div>
+            {hasCoordinates && effectiveLocation ? (
+              <div className="relative isolate z-0 min-w-0 overflow-hidden rounded-lg">
+                {!isMapExpanded && <RemoteLocationMap latitude={effectiveLocation.latitude!} longitude={effectiveLocation.longitude!} className="h-28 sm:h-36" />}
+                <div className="flex min-w-0 items-center justify-between gap-2 pt-2">
+                  <span className="min-w-0 break-words text-[10px] leading-snug text-muted-foreground">
+                    {effectiveLocation.latitude!.toFixed(5)}, {effectiveLocation.longitude!.toFixed(5)} · destination coordinates
+                  </span>
+                  <Button type="button" variant="outline" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="h-8 shrink-0 gap-1.5 px-2.5 text-xs">
+                    <Maximize2 className="h-3.5 w-3.5" /> Map
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+
         {isRemoteRequest && <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
           <div>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Remote work location</span>
             <p className="mt-0.5 text-sm font-medium text-foreground">{remoteLocation?.name || meta.remoteAreaName || 'Approved private place'}</p>
           </div>
-          {hasRemoteCoordinates ? <>
+          {hasRemoteCoordinates && remoteLocation ? <>
             <div className="relative isolate z-0 min-w-0 overflow-hidden rounded-lg">
               {!isMapExpanded && <RemoteLocationMap latitude={remoteLocation.latitude!} longitude={remoteLocation.longitude!} className="h-28 sm:h-36" />}
               <div className="flex min-w-0 items-center justify-between gap-2 pt-2">

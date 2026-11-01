@@ -1,5 +1,6 @@
 'use client';
 
+import { GanttView } from '@/components/tasks/gantt/GanttView';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/axios';
@@ -75,6 +76,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { toast } from 'sonner';
 import { BugForm, BugDraft } from '@/components/quality/BugForm';
+import { useWorkspaceEntitlements } from '@/hooks/useWorkspaceEntitlements';
 
 export default function ListView() {
   const router = useRouter();
@@ -86,14 +88,22 @@ export default function ListView() {
   // Get userId from localStorage since it's not in the auth store
   const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
+  const { openTask } = useTaskSidebarStore();
   const { tasks, loading, fetchTasks, updateTask, deleteTask, createTask, updateTaskStatus } = useTaskStore();
   const { activities, loading: activitiesLoading, fetchActivities } = useActivityStore();
+  const { canAccessGantt } = useWorkspaceEntitlements(workspaceId);
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [space, setSpace] = useState<Space | null>(null);
   const [list, setList] = useState<List | null>(null);
   const [folderContext, setFolderContext] = useState<{ id: string; name: string } | null>(null);
-  const [view, setView] = useState<'list' | 'board' | 'calendar' | 'activity'>('board');
+  const [view, setView] = useState<'list' | 'board' | 'calendar' | 'activity' | 'gantt'>('board');
+
+  useEffect(() => {
+    if (!canAccessGantt && view === 'gantt') {
+      setView('board');
+    }
+  }, [canAccessGantt, view]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTasks, setSelectedTasks] = useState<string[]>([]);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
@@ -680,6 +690,20 @@ export default function ListView() {
                       <Activity className="w-3.5 h-3.5" />
                       <span>Activity</span>
                     </button>
+                    {canAccessGantt && (
+                      <button
+                        onClick={() => setView('gantt')}
+                        title="Gantt Timeline View"
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                          view === 'gantt'
+                            ? 'bg-background shadow-sm'
+                            : 'hover:bg-background/50'
+                        }`}
+                      >
+                        <CalendarIcon className="w-3.5 h-3.5" />
+                        <span>Gantt</span>
+                      </button>
+                    )}
                   </div>
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -718,6 +742,17 @@ export default function ListView() {
                 >
                   <Activity className="w-3.5 h-3.5" />
                 </button>
+                {canAccessGantt && (
+                  <button
+                    onClick={() => setView('gantt')}
+                    aria-label="Gantt view"
+                    className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 flex-1 justify-center ${
+                      view === 'gantt' ? 'bg-background shadow-sm' : 'hover:bg-background/50'
+                    }`}
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               {/* List Members Display - Simplified */}
@@ -1074,6 +1109,14 @@ export default function ListView() {
               />
             ))}
           </div>
+        )}
+
+        {view === 'gantt' && (
+          <GanttView
+            tasks={filteredTasks}
+            listName={list?.name || 'Project Tasks'}
+            onTaskClick={(task) => openTask(task._id)}
+          />
         )}
 
         {view === 'board' && (
