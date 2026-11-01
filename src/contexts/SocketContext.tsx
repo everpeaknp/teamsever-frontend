@@ -194,7 +194,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
         }
         if (channelId && normalizedCurrentUserId) {
-          const knownChannel = useChatStore.getState().channels?.find?.((c: any) => (c?._id || c?.id) === channelId);
+          const knownChannel = (useChatStore.getState() as any).channels?.find?.((c: any) => (c?._id || c?.id) === channelId);
           if (knownChannel && knownChannel.type === 'private' && Array.isArray(knownChannel.members)) {
             const isMember = knownChannel.members.some((m: any) => {
               const mId = typeof m === 'string' ? m : m?._id?.toString?.() || m?.id?.toString?.();
@@ -212,6 +212,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (channelId) {
           addMessage(`channel_${channelId}`, data.message);
         }
+        const senderId =
+          data?.message?.sender?._id ||
+          data?.message?.sender?.id ||
+          (typeof data?.message?.sender === 'string' ? data.message.sender : undefined);
         const normalizedSenderId = senderId?.toString?.();
         const isSenderSelf =
           !!normalizedCurrentUserId &&
