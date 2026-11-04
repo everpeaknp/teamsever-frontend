@@ -39,9 +39,16 @@ interface LeaveItem {
   daysCount: number;
   reason: string;
   denialReason?: string;
-  status: 'pending' | 'approved' | 'denied' | 'expired';
+  status: 'pending' | 'approved' | 'denied' | 'expired' | 'cancelled';
   isExceedingMonthlyQuota?: boolean;
-  requestType?: 'leave' | 'remote';
+  leaveWarnings?: Array<{ period: 'monthly' | 'yearly'; key: string; limit: number; projected: number; overBy: number }>;
+  requestType?: 'leave' | 'remote' | 'site_visit';
+  siteVisitDetails?: {
+    siteName?: string;
+    clientName?: string;
+    purpose?: string;
+    address?: string;
+  };
   createdAt: string;
 }
 
@@ -54,6 +61,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
   const [activeScope, setActiveScope] = useState<'my' | 'overall' | 'review'>('my');
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [calendarMonth, setCalendarMonth] = useState(() => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); });
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState(() => new Date());
   const [calendarLeaves, setCalendarLeaves] = useState<LeaveItem[]>([]);
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [canViewOverall, setCanViewOverall] = useState(false);
@@ -61,9 +69,9 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'denied' | 'expired'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'denied' | 'expired' | 'cancelled'>('all');
   const [filterUser, setFilterUser] = useState('all');
-  const [filterType, setFilterType] = useState<'all' | 'leave' | 'remote'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'leave' | 'remote' | 'site_visit'>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -178,6 +186,19 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
     } catch (error: any) { toast.error(error.response?.data?.message || `Could not ${decision} remote request`); }
   };
 
+  const cancelRequest = async (requestId: string) => {
+    if (!window.confirm('Cancel this request? The requester and approver will be notified.')) return;
+    try {
+      await api.patch(`/workspaces/${workspaceId}/leaves/${requestId}/cancel`);
+      setCalendarLeaves((current) => current.map((leave) => leave._id === requestId ? { ...leave, status: 'cancelled' } : leave));
+      toast.success('Request cancelled');
+      await Promise.all([fetchLeaves(page), fetchSupportingData()]);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Could not cancel this request');
+      await fetchLeaves(page);
+    }
+  };
+
   useEffect(() => {
     if (workspaceId) void fetchSupportingData();
   }, [workspaceId]);
@@ -204,8 +225,10 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
     const day = calendarDayKey(date);
     return calendarLeaves.filter((leave) => leave.startDate.slice(0, 10) <= day && leave.endDate.slice(0, 10) >= day);
   };
+  const selectedDayLeaves = leaveForDay(selectedCalendarDay);
 
   const filteredLeaves = leaves;
+  const canCancelInScope = activeScope === 'my' || activeScope === 'review' || (activeScope === 'overall' && canReviewRequests);
 
   const updateFilter = (update: () => void) => {
     update();
@@ -317,6 +340,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
                 <option value="all">Leave & remote</option>
                 <option value="leave">Leave</option>
                 <option value="remote">Remote</option>
+                <option value="site_visit">Site visit</option>
               </select>
             </label>
             <label className="min-w-0 text-[11px] font-medium text-muted-foreground">
@@ -330,7 +354,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 border-t border-border/50 pt-3">
-            {activeScope !== 'review' && (['all', 'pending', 'approved', 'denied', 'expired'] as const).map((st) => (
+            {activeScope !== 'review' && (['all', 'pending', 'approved', 'denied', 'expired', 'cancelled'] as const).map((st) => (
               <Button
                 key={st}
                 type="button"
@@ -339,7 +363,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
                 onClick={() => updateFilter(() => setFilterStatus(st))}
                 className="h-8 min-w-[76px] rounded-lg px-3 text-xs font-medium"
               >
-                {({ all: 'All', pending: 'Pending', approved: 'Approved', denied: 'Denied', expired: 'Expired' } as const)[st]}
+                {({ all: 'All', pending: 'Pending', approved: 'Approved', denied: 'Denied', expired: 'Expired', cancelled: 'Cancelled' } as const)[st]}
               </Button>
             ))}
             <div className="ml-auto flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
@@ -354,19 +378,39 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
         {viewMode === 'calendar' ? <section aria-label="Leave calendar" className="space-y-4 p-4 sm:p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div><h2 className="text-lg font-semibold">{calendarLabel}</h2><p className="text-xs text-muted-foreground">{activeScope === 'my' || (!canViewOverall && activeScope === 'review') ? 'Your requests' : 'Workspace requests'} · {calendarLeaves.length} matching request{calendarLeaves.length === 1 ? '' : 's'}</p></div>
-            <div className="flex items-center gap-2"><Button type="button" size="icon" variant="outline" aria-label="Previous month" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}><ChevronLeft className="h-4 w-4" /></Button><Button type="button" variant="outline" onClick={() => { const now = new Date(); setCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1)); }}>Today</Button><Button type="button" size="icon" variant="outline" aria-label="Next month" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}><ChevronRight className="h-4 w-4" /></Button></div>
+            <div className="flex items-center gap-2"><Button type="button" size="icon" variant="outline" aria-label="Previous month" onClick={() => { const month = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1); setCalendarMonth(month); setSelectedCalendarDay(month); }}><ChevronLeft className="h-4 w-4" /></Button><Button type="button" variant="outline" onClick={() => { const now = new Date(); setCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1)); setSelectedCalendarDay(now); }}>Today</Button><Button type="button" size="icon" variant="outline" aria-label="Next month" onClick={() => { const month = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1); setCalendarMonth(month); setSelectedCalendarDay(month); }}><ChevronRight className="h-4 w-4" /></Button></div>
           </div>
           <div className="grid grid-cols-7 border-l border-t text-center text-[11px] font-semibold text-muted-foreground">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <div key={day} className="border-b border-r bg-muted/30 py-2">{day}</div>)}</div>
           {calendarLoading ? <div className="flex justify-center py-12 text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading calendar</div> : <div className="grid grid-cols-7 border-l border-t">{calendarDays.map((date) => {
             const dayLeaves = leaveForDay(date);
             const inMonth = date.getMonth() === calendarMonth.getMonth();
-            return <div key={calendarDayKey(date)} className={cn('min-h-24 border-b border-r p-1.5 sm:min-h-32 sm:p-2', !inMonth && 'bg-muted/20 text-muted-foreground')}>
+            return <button type="button" key={calendarDayKey(date)} aria-label={`Select ${calendarDayKey(date)}, ${dayLeaves.length} requests`} aria-pressed={calendarDayKey(date) === calendarDayKey(selectedCalendarDay)} onClick={() => { setSelectedCalendarDay(date); if (!inMonth) setCalendarMonth(new Date(date.getFullYear(), date.getMonth(), 1)); }} className={cn('min-h-24 w-full border-b border-r p-1.5 text-left transition-colors hover:bg-muted/40 sm:min-h-32 sm:p-2', calendarDayKey(date) === calendarDayKey(selectedCalendarDay) && 'bg-primary/5 ring-1 ring-inset ring-primary/50', !inMonth && 'bg-muted/20 text-muted-foreground')}>
               <div className={cn('mb-1 grid h-6 w-6 place-items-center rounded-full text-xs', calendarDayKey(date) === calendarDayKey(new Date()) && 'bg-primary text-primary-foreground')}>{date.getDate()}</div>
-              <div className="space-y-1">{dayLeaves.slice(0, 3).map((leave) => <div key={leave._id} title={`${leave.requester?.name || 'Member'} · ${leave.status} · ${leave.requestType === 'remote' ? 'Remote' : 'Leave'}`} className={cn('truncate rounded px-1 py-0.5 text-left text-[10px] sm:text-xs', leave.status === 'approved' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : leave.status === 'pending' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-muted text-muted-foreground')}>
-                <span className="font-medium">{leave.requester?.name || 'Member'}</span><span className="hidden sm:inline"> · {leave.requestType === 'remote' ? 'Remote' : 'Leave'}</span>
+              <div className="space-y-1">{dayLeaves.slice(0, 3).map((leave) => <div key={leave._id} title={`${leave.requester?.name || 'Member'} · ${leave.status} · ${leave.requestType === 'site_visit' ? 'Site Visit' : leave.requestType === 'remote' ? 'Remote' : 'Leave'}`} className={cn('truncate rounded px-1 py-0.5 text-left text-[10px] sm:text-xs', leave.status === 'approved' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : leave.status === 'pending' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' : 'bg-muted text-muted-foreground')}>
+                <span className="font-medium">{leave.requester?.name || 'Member'}</span><span className="hidden sm:inline"> · {leave.requestType === 'site_visit' ? 'Site Visit' : leave.requestType === 'remote' ? 'Remote' : 'Leave'}</span>
               </div>)}{dayLeaves.length > 3 && <p className="px-1 text-[10px] text-muted-foreground">+{dayLeaves.length - 3} more</p>}</div>
-            </div>;
+            </button>;
           })}</div>}
+          <section aria-label={`Requests for ${calendarDayKey(selectedCalendarDay)}`} className="space-y-2 border-t border-border/60 pt-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">{selectedCalendarDay.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</h3>
+              <span className="text-xs text-muted-foreground">{selectedDayLeaves.length} request{selectedDayLeaves.length === 1 ? '' : 's'}</span>
+            </div>
+            {selectedDayLeaves.length === 0 ? <p className="rounded-lg bg-muted/30 px-3 py-4 text-sm text-muted-foreground">No requests for this day.</p> : selectedDayLeaves.map((leave) => (
+              <article key={leave._id} className="rounded-xl border border-border/70 bg-background p-3 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-semibold text-foreground">{leave.requester?.name || 'Workspace member'} · {leave.requestType === 'site_visit' ? 'Site visit' : leave.requestType === 'remote' ? 'Remote work' : 'Leave'}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{formatDate(leave.startDate)} – {formatDate(leave.endDate)} · {leave.daysCount} day{leave.daysCount === 1 ? '' : 's'}</p>
+                  </div>
+                  <Badge variant="outline" className={cn('capitalize', leave.status === 'pending' && 'border-amber-500/30 bg-amber-500/10 text-amber-700', leave.status === 'approved' && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700')}>{leave.status}</Badge>
+                </div>
+                <p className="mt-3 whitespace-pre-wrap break-words rounded-lg bg-muted/40 px-3 py-2 text-sm text-foreground">{leave.reason || 'No reason provided'}</p>
+                {(leave.leaveWarnings?.length || leave.isExceedingMonthlyQuota) ? <div className="mt-2 space-y-0.5 text-xs font-medium text-amber-700"><p className="inline-flex items-center gap-1"><AlertTriangle className="h-3.5 w-3.5" /> Leave warning limit exceeded</p>{leave.leaveWarnings?.map((warning) => <p key={`${warning.period}:${warning.key}`}>{warning.period} limit: {warning.projected} of {warning.limit} days</p>)}</div> : null}
+                {canCancelInScope && ['pending', 'approved'].includes(leave.status) && <Button className="mt-3 w-full sm:w-auto" size="sm" variant="outline" onClick={() => void cancelRequest(leave._id)}>Cancel request</Button>}
+              </article>
+            ))}
+          </section>
         </section> : <>
         {/* Content Table */}
         {loading ? (
@@ -392,21 +436,22 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
                   <Badge variant="outline" className={cn('shrink-0 capitalize', leave.status === 'pending' && 'border-amber-500/30 bg-amber-500/10 text-amber-600', leave.status === 'approved' && 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600', leave.status === 'denied' && 'border-rose-500/30 bg-rose-500/10 text-rose-600')}>{leave.status}</Badge>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                  <Badge variant="outline">{leave.requestType === 'remote' ? 'Remote' : 'Leave'}</Badge>
+                  <Badge variant="outline">{leave.requestType === 'site_visit' ? 'Site Visit' : leave.requestType === 'remote' ? 'Remote' : 'Leave'}</Badge>
                   <span className="font-medium text-foreground">{leave.daysCount} day{leave.daysCount > 1 ? 's' : ''}</span>
                   <span className="text-muted-foreground">{formatDate(leave.startDate)} – {formatDate(leave.endDate)}</span>
                 </div>
                 <div className="mt-3 rounded-lg bg-muted/40 px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Reason</p>
                   <p className="mt-1 break-words text-xs text-foreground">{leave.reason || 'No reason provided'}</p>
-                  {leave.isExceedingMonthlyQuota && <p className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-amber-600"><AlertTriangle className="h-3 w-3" /> Monthly guideline exceeded</p>}
+                  {(leave.leaveWarnings?.length || leave.isExceedingMonthlyQuota) ? <div className="mt-1 space-y-0.5 text-[10px] font-medium text-amber-600"><p className="inline-flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Leave warning limit exceeded</p>{leave.leaveWarnings?.map((warning) => <p key={`${warning.period}:${warning.key}`}>{warning.period} limit: {warning.projected} of {warning.limit} days</p>)}</div> : null}
                 </div>
                 {activeScope === 'review' && leave.status === 'pending' ? (
                   <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/60 pt-3">
                     <Button size="sm" variant="outline" onClick={() => void decideRequest(leave._id, 'deny')}>Deny</Button>
                     <Button size="sm" onClick={() => void decideRequest(leave._id, 'approve')}>Approve</Button>
                   </div>
-                ) : leave.status === 'approved' ? <p className="mt-3 text-[11px] text-muted-foreground">Approved by {leave.approvedBy?.name || 'Manager'}</p> : leave.status === 'denied' ? <p className="mt-3 text-[11px] text-muted-foreground">Denied by {leave.deniedBy?.name || 'Manager'}{leave.denialReason ? ` · ${leave.denialReason}` : ''}</p> : null}
+                ) : leave.status === 'approved' ? <p className="mt-3 text-[11px] text-muted-foreground">Approved by {leave.approvedBy?.name || 'Manager'}</p> : leave.status === 'denied' ? <p className="mt-3 text-[11px] text-muted-foreground">Denied by {leave.deniedBy?.name || 'Manager'}{leave.denialReason ? ` · ${leave.denialReason}` : ''}</p> : leave.status === 'cancelled' ? <p className="mt-3 text-[11px] text-muted-foreground">Cancelled</p> : null}
+                {canCancelInScope && ['pending', 'approved'].includes(leave.status) && <Button className="mt-3 w-full" size="sm" variant="outline" onClick={() => void cancelRequest(leave._id)}>Cancel request</Button>}
               </article>
             ))}
           </div>
@@ -435,7 +480,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="font-medium text-foreground">
-                        <Badge variant="outline" className="mr-2">{leave.requestType === 'remote' ? 'Remote' : 'Leave'}</Badge>
+                        <Badge variant="outline" className="mr-2">{leave.requestType === 'site_visit' ? 'Site Visit' : leave.requestType === 'remote' ? 'Remote' : 'Leave'}</Badge>
                         {leave.daysCount} day{leave.daysCount > 1 ? 's' : ''}
                       </div>
                       <div className="text-[10px] text-muted-foreground">
@@ -446,9 +491,9 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
                       <p className="truncate text-foreground/90 font-medium" title={leave.reason}>
                         {leave.reason}
                       </p>
-                      {leave.isExceedingMonthlyQuota && (
+                      {(leave.leaveWarnings?.length || leave.isExceedingMonthlyQuota) && (
                         <span className="inline-flex items-center gap-1 text-[10px] text-amber-500 font-medium mt-0.5">
-                          <AlertTriangle className="h-3 w-3" /> Exceeded 2 days/mo limit
+                          <AlertTriangle className="h-3 w-3" /> {leave.leaveWarnings?.map((warning) => `${warning.period} ${warning.projected}/${warning.limit}`).join(' · ') || 'Leave warning limit exceeded'}
                         </span>
                       )}
                     </td>
@@ -473,6 +518,7 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
                           <Clock className="h-3 w-3" /> Expired
                         </Badge>
                       )}
+                      {leave.status === 'cancelled' && <Badge variant="outline" className="bg-muted text-muted-foreground gap-1 text-[11px]">Cancelled</Badge>}
                     </td>
                     <td className="px-4 py-3 text-[11px] text-muted-foreground">
                       {activeScope === 'review' && leave.status === 'pending' ? (
@@ -493,7 +539,10 @@ export function LeaveManagementTab({ workspaceId }: { workspaceId: string }) {
                         </div>
                       ) : leave.status === 'pending' ? (
                         <span>Assigned: {leave.assignedManager?.name}</span>
+                      ) : leave.status === 'cancelled' ? (
+                        <span>Cancelled</span>
                       ) : null}
+                      {canCancelInScope && ['pending', 'approved'].includes(leave.status) && <Button size="sm" variant="outline" className="ml-2" onClick={() => void cancelRequest(leave._id)}>Cancel</Button>}
                     </td>
                   </tr>
                 ))}

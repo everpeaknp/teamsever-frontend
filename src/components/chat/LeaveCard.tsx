@@ -41,7 +41,7 @@ interface LeaveCardProps {
       endDate?: string;
       daysCount?: number;
       reason?: string;
-      status?: 'pending' | 'approved' | 'denied';
+      status?: 'pending' | 'approved' | 'denied' | 'expired' | 'cancelled';
       approvedBy?: { _id: string; name: string };
       approvedAt?: string;
       deniedBy?: { _id: string; name: string };
@@ -49,6 +49,7 @@ interface LeaveCardProps {
       denialReason?: string;
       isExceedingMonthlyQuota?: boolean;
       monthlyLeaveCountAtRequest?: number;
+      leaveWarnings?: Array<{ period: 'monthly' | 'yearly'; key: string; limit: number; projected: number; overBy: number }>;
     };
     createdAt: string;
   };
@@ -95,6 +96,10 @@ export function LeaveCard({
     (isDirectConversation && !isRequester) ||
     (canManageLeaves && (!isRequester || isWorkspaceOwner))
   );
+  const canCancel = ['pending', 'approved'].includes(status) && (
+    (!isRequester && (isWorkspaceOwner || canManageLeaves || isDirectConversation)) ||
+    isRequester
+  );
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -107,7 +112,7 @@ export function LeaveCard({
     setIsProcessing(true);
     try {
       await api.patch(`/workspaces/${workspaceId}/leaves/${leaveRequestId}/approve`);
-      toast.success(`${isRemoteRequest ? 'Remote work' : 'Leave'} request approved!`);
+      toast.success(`${isSiteVisit ? 'Site visit' : isRemoteRequest ? 'Remote work' : 'Leave'} request approved!`);
       if (onStatusUpdated) onStatusUpdated();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to approve leave');
@@ -136,6 +141,22 @@ export function LeaveCard({
     }
   };
 
+  const handleCancel = async () => {
+    if (!leaveRequestId || isProcessing) return;
+    if (!window.confirm('Cancel this request? The requester and approver will be notified.')) return;
+    setIsProcessing(true);
+    try {
+      await api.patch(`/workspaces/${workspaceId}/leaves/${leaveRequestId}/cancel`);
+      toast.success('Request cancelled');
+      onStatusUpdated?.();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Could not cancel this request');
+      onStatusUpdated?.();
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div data-testid="leave-request-card" className="my-1 w-full min-w-0 max-w-[min(100%,32rem)] overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-sm">
       {/* Top Banner / Status */}
@@ -156,7 +177,8 @@ export function LeaveCard({
           'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium',
           status === 'pending' && 'border-amber-500/25 bg-amber-500/10 text-amber-500',
           status === 'approved' && 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500',
-          status === 'denied' && 'border-rose-500/25 bg-rose-500/10 text-rose-500'
+          status === 'denied' && 'border-rose-500/25 bg-rose-500/10 text-rose-500',
+          status === 'cancelled' && 'border-border bg-muted text-muted-foreground'
         )}>
           {status === 'pending' && (
             <>
@@ -176,6 +198,7 @@ export function LeaveCard({
               <span>Denied</span>
             </>
           )}
+          {status === 'cancelled' && <span>Cancelled</span>}
         </div>
       </div>
 
@@ -202,17 +225,35 @@ export function LeaveCard({
               {siteVisit.address && <p className="text-xs text-muted-foreground">Address: {siteVisit.address}</p>}
             </div>
             {hasCoordinates && effectiveLocation ? (
-              <div className="relative isolate z-0 min-w-0 overflow-hidden rounded-lg">
-                {!isMapExpanded && <RemoteLocationMap latitude={effectiveLocation.latitude!} longitude={effectiveLocation.longitude!} className="h-28 sm:h-36" />}
-                <div className="flex min-w-0 items-center justify-between gap-2 pt-2">
-                  <span className="min-w-0 break-words text-[10px] leading-snug text-muted-foreground">
-                    {effectiveLocation.latitude!.toFixed(5)}, {effectiveLocation.longitude!.toFixed(5)} · destination coordinates
-                  </span>
-                  <Button type="button" variant="outline" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="h-8 shrink-0 gap-1.5 px-2.5 text-xs">
-                    <Maximize2 className="h-3.5 w-3.5" /> Map
-                  </Button>
+              <>
+                <div className="relative isolate z-0 min-w-0 overflow-hidden rounded-lg">
+                  {!isMapExpanded && <RemoteLocationMap latitude={effectiveLocation.latitude!} longitude={effectiveLocation.longitude!} className="h-28 sm:h-36" />}
+                  <div className="flex min-w-0 items-center justify-between gap-2 pt-2">
+                    <span className="min-w-0 break-words text-[10px] leading-snug text-muted-foreground">
+                      {effectiveLocation.latitude!.toFixed(5)}, {effectiveLocation.longitude!.toFixed(5)} · destination coordinates
+                    </span>
+                    <Button type="button" variant="outline" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="h-8 shrink-0 gap-1.5 px-2.5 text-xs">
+                      <Maximize2 className="h-3.5 w-3.5" /> Map
+                    </Button>
+                  </div>
                 </div>
-              </div>
+                <Dialog open={isMapExpanded} onOpenChange={setIsMapExpanded}>
+                  <DialogContent aria-label={`${siteVisit.siteName || 'Site location'} map`} className="z-[70] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-6xl overflow-y-auto p-3 sm:p-5">
+                    <DialogHeader>
+                      <DialogTitle>{siteVisit.siteName || 'Site Visit Destination'}</DialogTitle>
+                      <DialogDescription>
+                        {[
+                          siteVisit.clientName ? `Client: ${siteVisit.clientName}` : null,
+                          siteVisit.purpose ? `Purpose: ${siteVisit.purpose}` : null,
+                          siteVisit.address ? `Address: ${siteVisit.address}` : null,
+                        ].filter(Boolean).join(' · ') || 'Pinned destination shared in this site visit request.'}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <RemoteLocationMap latitude={effectiveLocation.latitude!} longitude={effectiveLocation.longitude!} className="h-[min(72dvh,46rem)]" />
+                    <p className="text-xs text-muted-foreground">{effectiveLocation.latitude!.toFixed(5)}, {effectiveLocation.longitude!.toFixed(5)} · destination coordinates</p>
+                  </DialogContent>
+                </Dialog>
+              </>
             ) : null}
           </div>
         )}
@@ -255,13 +296,10 @@ export function LeaveCard({
           </p>
         </div>
 
-        {/* 2-Day Warning Badge if exceeded */}
-        {meta.isExceedingMonthlyQuota && (
+        {(meta.leaveWarnings?.length || meta.isExceedingMonthlyQuota) && (
           <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-2.5 text-[11px] leading-relaxed text-amber-500">
             <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-            <span>
-              <strong>Limit Warning:</strong> Exceeds 2-day monthly guideline ({meta.monthlyLeaveCountAtRequest || 0} approved days already on record).
-            </span>
+            <div><strong>Leave warning limit exceeded.</strong><ul className="mt-1">{meta.leaveWarnings?.map((warning) => <li key={`${warning.period}:${warning.key}`}>{warning.period === 'monthly' ? 'Monthly' : 'Yearly'}: {warning.projected} projected of {warning.limit} days ({warning.overBy} over)</li>)}</ul>{!meta.leaveWarnings?.length && <p>Configured monthly limit was exceeded.</p>}<p className="mt-1">This is a warning; the approver can still review the request.</p></div>
           </div>
         )}
 
@@ -284,6 +322,7 @@ export function LeaveCard({
             Denied by {meta.deniedBy.name}{meta.deniedAt ? ` · ${new Date(meta.deniedAt).toLocaleDateString()}` : ''}
           </div>
         )}
+        {status === 'cancelled' && <div className="border-t border-border/60 pt-2 text-[11px] text-muted-foreground">This request was cancelled.</div>}
 
         {/* Action Buttons for Managers with MANAGE_LEAVES permission */}
         {canDecide && (
@@ -347,6 +386,15 @@ export function LeaveCard({
                 </div>
               </PopoverContent>
             </Popover>
+          </div>
+        )}
+
+        {canCancel && (
+          <div className="border-t border-border/60 pt-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => void handleCancel()} disabled={isProcessing} className="h-8 w-full text-xs">
+              {isProcessing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <XCircle className="mr-1.5 h-3.5 w-3.5" />}
+              Cancel request
+            </Button>
           </div>
         )}
 

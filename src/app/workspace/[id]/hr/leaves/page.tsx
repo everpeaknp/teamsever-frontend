@@ -11,9 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LeaveManagementTab } from '@/components/attendance/LeaveManagementTab';
 import { toast } from 'sonner';
 
-type Policy = { _id: string; code: string; name: string; paid: boolean; active: boolean; accrual: string; entitlementDays: number; yearStartMonth: number; weekendDays: number[]; prorateMidYearJoiners?: boolean; maxCarryOverDays?: number; carryOverExpiryMonths?: number };
+type Policy = { _id: string; code: string; name: string; paid: boolean; active: boolean; accrual: string; entitlementDays: number; yearStartMonth: number; weekendDays: number[]; prorateMidYearJoiners?: boolean; maxCarryOverDays?: number; carryOverExpiryMonths?: number; warningLimits?: { monthly?: number | null; yearly?: number | null } };
 type Balance = { policy: string; name: string; active: boolean; accrued: number | null; baseAccrued?: number | null; carriedOver?: number; isProrated?: boolean; used: number; pending: number; available: number | null; period: { from: string; to: string }; maxCarryOverDays?: number };
-const initialForm = { code: '', name: '', paid: true, accrual: 'annual', entitlementDays: '', yearStartMonth: '1', weekendDays: [] as number[], excludeScheduleHolidays: true, allowNegativeBalance: false, prorateMidYearJoiners: true, maxCarryOverDays: '0', carryOverExpiryMonths: '0', reason: '' };
+type WarningLimits = { monthly: number | null; yearly: number | null; yearStartMonth: number };
+const initialForm = { code: '', name: '', paid: true, accrual: 'annual', entitlementDays: '', yearStartMonth: '1', weekendDays: [] as number[], excludeScheduleHolidays: true, allowNegativeBalance: false, prorateMidYearJoiners: true, maxCarryOverDays: '0', carryOverExpiryMonths: '0', warningMonthly: '', warningYearly: '', reason: '' };
+const defaultWarningLimits: WarningLimits = { monthly: null, yearly: null, yearStartMonth: 1 };
 const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function HrLeavesPage() {
@@ -28,6 +30,8 @@ export default function HrLeavesPage() {
   const [form, setForm] = useState(initialForm);
   const [change, setChange] = useState<Policy | null>(null);
   const [changeReason, setChangeReason] = useState('');
+  const [warningLimits, setWarningLimits] = useState<WarningLimits>(defaultWarningLimits);
+  const [savingWarningLimits, setSavingWarningLimits] = useState(false);
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -43,6 +47,26 @@ export default function HrLeavesPage() {
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, [workspaceId]);
+  useEffect(() => {
+    api.get(`/workspaces/${workspaceId}/hr/leave-warning-limits`).then((response) => {
+      setWarningLimits({ ...defaultWarningLimits, ...(response.data.data || {}) });
+    }).catch(() => setWarningLimits(defaultWarningLimits));
+  }, [workspaceId]);
+
+  const saveWarningLimits = async (event: React.FormEvent) => {
+    event.preventDefault(); setSavingWarningLimits(true);
+    try {
+      const payload = {
+        monthly: warningLimits.monthly === null ? null : Number(warningLimits.monthly),
+        yearly: warningLimits.yearly === null ? null : Number(warningLimits.yearly),
+        yearStartMonth: Number(warningLimits.yearStartMonth),
+      };
+      const response = await api.patch(`/workspaces/${workspaceId}/hr/leave-warning-limits`, payload);
+      setWarningLimits({ ...defaultWarningLimits, ...(response.data.data || payload) });
+      toast.success('Workspace leave warning limits saved');
+    } catch (saveError: any) { toast.error(saveError?.response?.data?.message || 'Could not save leave warning limits'); }
+    finally { setSavingWarningLimits(false); }
+  };
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault(); setSaving(true);
@@ -54,6 +78,10 @@ export default function HrLeavesPage() {
         prorateMidYearJoiners: form.prorateMidYearJoiners,
         maxCarryOverDays: Number(form.maxCarryOverDays || 0),
         carryOverExpiryMonths: Number(form.carryOverExpiryMonths || 0),
+        warningLimits: {
+          monthly: form.warningMonthly === '' ? null : Number(form.warningMonthly),
+          yearly: form.warningYearly === '' ? null : Number(form.warningYearly),
+        },
       });
       toast.success('Leave policy created'); setForm(initialForm); setShowForm(false); await load();
     } catch (saveError: any) { toast.error(saveError?.response?.data?.message || 'Could not create leave policy'); }
@@ -73,7 +101,8 @@ export default function HrLeavesPage() {
     <header className="flex flex-wrap items-start justify-between gap-4"><div><Link className="text-sm text-muted-foreground hover:text-foreground" href={`/workspace/${workspaceId}/hr`}>Human Resources</Link><h1 className="mt-3 flex items-center gap-3 text-3xl font-bold tracking-tight"><CalendarDays className="h-7 w-7 text-primary" />Leave & balances</h1><p className="mt-2 text-sm text-muted-foreground">Your entitlements, requests, automatic carryovers and approval history</p></div>{canManage && <Button onClick={() => setShowForm(!showForm)}>{showForm ? 'Close policy form' : 'Create leave policy'}</Button>}</header>
     {loading ? <p className="flex items-center gap-2 py-10 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" />Loading leave information</p> : error ? <Card><CardContent className="space-y-3 py-6"><p className="text-sm text-destructive">{error}</p><Button variant="outline" onClick={load}>Retry</Button></CardContent></Card> : <>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label="My leave balances">{balances.length ? balances.map((balance) => <Card key={balance.policy}><CardHeader className="pb-2"><CardTitle className="text-lg flex items-center justify-between">{balance.name}{!balance.active && <span className="ml-2 text-xs font-normal text-muted-foreground bg-muted px-2 py-0.5 rounded">Inactive</span>}</CardTitle></CardHeader><CardContent className="space-y-1"><div className="flex items-baseline gap-2"><p className="text-3xl font-semibold">{balance.available ?? 'Unlimited'}</p><span className="text-sm font-normal text-muted-foreground">{balance.available !== null ? 'days available' : ''}</span></div><p className="mt-2 text-sm text-muted-foreground">{balance.accrued === null ? 'Unlimited entitlement' : `${balance.accrued} accrued`} · {balance.used} used · {balance.pending} pending</p>{((balance.carriedOver || 0) > 0 || balance.isProrated) && <div className="flex flex-wrap gap-1.5 pt-1">{(balance.carriedOver || 0) > 0 && <span className="text-[11px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full">+{balance.carriedOver}d carried over</span>}{balance.isProrated && <span className="text-[11px] font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-full">Mid-year prorated</span>}</div>}<p className="mt-1 text-xs text-muted-foreground">{balance.period.from} to {balance.period.to}</p></CardContent></Card>) : <Card className="sm:col-span-2"><CardContent className="py-6 text-sm text-muted-foreground">No configured leave balance is available. HR must create your employee record and an applicable leave policy. Existing requests remain available below.</CardContent></Card>}</section>
-      {canManage && <Card><CardHeader><CardTitle>Leave policies</CardTitle></CardHeader><CardContent className="space-y-4"><p className="text-sm text-muted-foreground">Set your organization’s approved rules. Annual allowance is granted per leave year with mid-year joiner fractional proration. Unused days automatically carry over according to statutory rules (Nepal Labour Act up to 90 days home / 45 days sick). Monthly accruals are granted at the start of each month.</p>{!policies.length ? <p className="text-sm text-muted-foreground">No policies configured.</p> : policies.map((policy) => <div key={policy._id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><div><p className="font-medium">{policy.name} <span className="text-xs text-muted-foreground">{policy.code} · {policy.active ? 'Active' : 'Inactive'}</span></p><p className="mt-1 text-sm text-muted-foreground">{policy.paid ? 'Paid' : 'Unpaid'} · {policy.accrual === 'unlimited' ? 'Unlimited days' : `${policy.entitlementDays} days / ${policy.accrual === 'monthly' ? 'month' : 'year'}`} · Non-working days: {policy.weekendDays.map((day) => weekdays[day]).join(', ') || 'None excluded'}</p><div className="mt-1.5 flex flex-wrap gap-2 text-xs text-muted-foreground"><span>Prorate mid-year: {policy.prorateMidYearJoiners !== false ? 'Enabled' : 'Disabled'}</span><span>·</span><span>Carryover: {(policy.maxCarryOverDays || 0) > 0 ? `Up to ${policy.maxCarryOverDays}d${(policy.carryOverExpiryMonths || 0) > 0 ? ` (expires in ${policy.carryOverExpiryMonths} mo)` : ''}` : 'No carryover'}</span></div></div><Button size="sm" variant="outline" onClick={() => { setChange(policy); setChangeReason(''); }}>{policy.active ? 'Deactivate' : 'Activate'}</Button></div>)}
+      {canManage && <Card><CardHeader><CardTitle>Leave warning limits</CardTitle></CardHeader><CardContent><p className="mb-4 text-sm text-muted-foreground">These are soft warnings shown to employees and approvers. Leave type overrides can replace either workspace limit.</p><form onSubmit={saveWarningLimits} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="space-y-1 text-sm font-medium">Monthly warning (days)<Input type="number" min="0" max="31" step="0.01" placeholder="No limit" value={warningLimits.monthly ?? ''} onChange={(event) => setWarningLimits({ ...warningLimits, monthly: event.target.value === '' ? null : Number(event.target.value) })} /></label><label className="space-y-1 text-sm font-medium">Yearly warning (days)<Input type="number" min="0" max="366" step="0.01" placeholder="No limit" value={warningLimits.yearly ?? ''} onChange={(event) => setWarningLimits({ ...warningLimits, yearly: event.target.value === '' ? null : Number(event.target.value) })} /></label><label className="space-y-1 text-sm font-medium">Leave year starts<select className="h-10 w-full rounded-md border bg-background px-3" value={warningLimits.yearStartMonth} onChange={(event) => setWarningLimits({ ...warningLimits, yearStartMonth: Number(event.target.value) })}>{Array.from({ length: 12 }, (_, month) => <option key={month} value={month + 1}>{new Date(2026, month, 1).toLocaleString(undefined, { month: 'long' })}</option>)}</select></label><div className="flex items-end"><Button disabled={savingWarningLimits}>{savingWarningLimits ? 'Saving…' : 'Save warning limits'}</Button></div></form></CardContent></Card>}
+      {canManage && <Card><CardHeader><CardTitle>Leave policies</CardTitle></CardHeader><CardContent className="space-y-4"><p className="text-sm text-muted-foreground">Set your organization’s approved rules. Annual allowance is granted per leave year with mid-year joiner fractional proration. Unused days automatically carry over according to statutory rules (Nepal Labour Act up to 90 days home / 45 days sick). Monthly accruals are granted at the start of each month.</p>{!policies.length ? <p className="text-sm text-muted-foreground">No policies configured.</p> : policies.map((policy) => <div key={policy._id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3"><div><p className="font-medium">{policy.name} <span className="text-xs text-muted-foreground">{policy.code} · {policy.active ? 'Active' : 'Inactive'}</span></p><p className="mt-1 text-sm text-muted-foreground">{policy.paid ? 'Paid' : 'Unpaid'} · {policy.accrual === 'unlimited' ? 'Unlimited days' : `${policy.entitlementDays} days / ${policy.accrual === 'monthly' ? 'month' : 'year'}`} · Non-working days: {policy.weekendDays.map((day) => weekdays[day]).join(', ') || 'None excluded'}</p><div className="mt-1.5 flex flex-wrap gap-2 text-xs text-muted-foreground"><span>Prorate mid-year: {policy.prorateMidYearJoiners !== false ? 'Enabled' : 'Disabled'}</span><span>·</span><span>Carryover: {(policy.maxCarryOverDays || 0) > 0 ? `Up to ${policy.maxCarryOverDays}d${(policy.carryOverExpiryMonths || 0) > 0 ? ` (expires in ${policy.carryOverExpiryMonths} mo)` : ''}` : 'No carryover'}</span><span>·</span><span>Warnings: monthly {policy.warningLimits?.monthly ?? 'workspace'}, yearly {policy.warningLimits?.yearly ?? 'workspace'}</span></div></div><Button size="sm" variant="outline" onClick={() => { setChange(policy); setChangeReason(''); }}>{policy.active ? 'Deactivate' : 'Activate'}</Button></div>)}
         {change && <form onSubmit={setActive} className="space-y-3 rounded-lg border p-4"><p className="text-sm font-medium">{change.active ? 'Deactivate' : 'Activate'} {change.name}</p><Input aria-label="Policy status change reason" value={changeReason} onChange={(event) => setChangeReason(event.target.value)} required minLength={3} maxLength={500} placeholder="Reason for this change" /><div className="flex gap-2"><Button type="submit" disabled={saving}>Save status</Button><Button variant="outline" type="button" onClick={() => setChange(null)}>Cancel</Button></div></form>}
       </CardContent></Card>}
       {showForm && canManage && <Card><CardHeader><CardTitle>Create leave policy</CardTitle></CardHeader><CardContent><form onSubmit={create} className="grid gap-4 sm:grid-cols-2">
@@ -82,6 +111,8 @@ export default function HrLeavesPage() {
         <label className="space-y-1 text-sm font-medium">Entitlement<select className="h-10 w-full rounded-md border bg-background px-3" value={form.accrual} onChange={(event) => setForm({ ...form, accrual: event.target.value })}><option value="annual">Annual allowance</option><option value="monthly">Monthly accrual</option><option value="unlimited">Unlimited</option></select></label>
         {form.accrual !== 'unlimited' && <label className="space-y-1 text-sm font-medium">Days per {form.accrual === 'monthly' ? 'month' : 'leave year'}<Input required type="number" min="0" max="366" step="0.01" value={form.entitlementDays} onChange={(event) => setForm({ ...form, entitlementDays: event.target.value })} /></label>}
         <label className="space-y-1 text-sm font-medium">Leave year starts<select className="h-10 w-full rounded-md border bg-background px-3" value={form.yearStartMonth} onChange={(event) => setForm({ ...form, yearStartMonth: event.target.value })}>{Array.from({ length: 12 }, (_, month) => <option key={month} value={month + 1}>{new Date(2026, month, 1).toLocaleString(undefined, { month: 'long' })}</option>)}</select></label>
+        <label className="space-y-1 text-sm font-medium">Monthly warning override (days)<Input type="number" min="0" max="31" step="0.01" placeholder="Use workspace setting" value={form.warningMonthly} onChange={(event) => setForm({ ...form, warningMonthly: event.target.value })} /></label>
+        <label className="space-y-1 text-sm font-medium">Yearly warning override (days)<Input type="number" min="0" max="366" step="0.01" placeholder="Use workspace setting" value={form.warningYearly} onChange={(event) => setForm({ ...form, warningYearly: event.target.value })} /></label>
         <div className="grid grid-cols-2 gap-3 sm:col-span-2">
           <label className="space-y-1 text-sm font-medium">Max carryover days to next year<Input type="number" min="0" max="90" value={form.maxCarryOverDays} onChange={(event) => setForm({ ...form, maxCarryOverDays: event.target.value })} placeholder="0 (no carryover)" /></label>
           <label className="space-y-1 text-sm font-medium">Carryover expiry (months)<Input type="number" min="0" max="12" value={form.carryOverExpiryMonths} onChange={(event) => setForm({ ...form, carryOverExpiryMonths: event.target.value })} placeholder="0 (valid all year)" /></label>

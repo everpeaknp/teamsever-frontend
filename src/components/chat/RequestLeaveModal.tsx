@@ -55,8 +55,9 @@ export function RequestLeaveModal({
   const [policyError, setPolicyError] = useState<string | null>(null);
   const [quotaInfo, setQuotaInfo] = useState<{
     approvedDaysThisMonth: number;
-    standardLimit: number;
+    standardLimit: number | null;
     isExceeded: boolean;
+    warnings?: Array<{ period: 'monthly' | 'yearly'; key: string; limit: number; projected: number; overBy: number }>;
   } | null>(null);
 
   // Set default dates on open (tomorrow)
@@ -91,20 +92,24 @@ export function RequestLeaveModal({
         setRemoteAreaId(member.remoteAreas?.[0]?._id || 'propose');
       }).catch(() => setRemoteAreas([]));
 
-      // Check quota
-      setQuotaChecking(true);
-      api
-        .get(`/workspaces/${workspaceId}/leaves/my-quota?date=${tomorrowStr}`)
-        .then((res) => {
-          setQuotaInfo(res.data.data);
-        })
-        .catch((err) => {
-        })
-        .finally(() => {
-          setQuotaChecking(false);
-        });
     }
   }, [isOpen, workspaceId]);
+
+  useEffect(() => {
+    if (!isOpen || requestType !== 'leave' || !startDate || !endDate || new Date(endDate) < new Date(startDate)) {
+      setQuotaInfo(null);
+      return;
+    }
+    let active = true;
+    setQuotaChecking(true);
+    const params = new URLSearchParams({ startDate, endDate });
+    if (leavePolicyId) params.set('leavePolicyId', leavePolicyId);
+    api.get(`/workspaces/${workspaceId}/leaves/my-quota?${params.toString()}`)
+      .then((response) => { if (active) setQuotaInfo(response.data.data || null); })
+      .catch(() => { if (active) setQuotaInfo(null); })
+      .finally(() => { if (active) setQuotaChecking(false); });
+    return () => { active = false; };
+  }, [isOpen, workspaceId, requestType, startDate, endDate, leavePolicyId]);
 
   // Calculate day difference
   const calculateDays = () => {
@@ -117,8 +122,7 @@ export function RequestLeaveModal({
   };
 
   const daysRequested = calculateDays();
-  const willExceedQuota =
-    leavePolicies.length === 0 && quotaInfo && (quotaInfo.approvedDaysThisMonth >= 2 || quotaInfo.approvedDaysThisMonth + daysRequested > 2);
+  const quotaWarnings = quotaInfo?.warnings || [];
   const selectedBalance = leaveBalances.find((balance) => balance.policy === leavePolicyId);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -147,15 +151,14 @@ export function RequestLeaveModal({
       return;
     }
 
-    setLoading(true);
-    try {
-      await api.post(`/workspaces/${workspaceId}/leaves`, {
+    const submitRequest = async (replaceRequestIds: string[] = []) => api.post(`/workspaces/${workspaceId}/leaves`, {
         assignedManagerId,
         conversationId,
         startDate: new Date(startDate).toISOString(),
         endDate: new Date(endDate).toISOString(),
         reason: reason.trim(),
         requestType,
+        ...(replaceRequestIds.length ? { replaceRequestIds } : {}),
         ...(requestType === 'leave' && leavePolicyId ? { leavePolicyId } : {}),
         ...(requestType === 'remote' ? remoteAreaId !== 'propose' ? { remoteAreaId } : { proposedRemoteArea: remotePoint ? { name: remoteAreaName.trim() || 'Requested remote place', latitude: remotePoint.latitude, longitude: remotePoint.longitude, radiusMeters: 60 } : undefined } : {}),
         ...(requestType === 'site_visit' ? {
@@ -170,6 +173,21 @@ export function RequestLeaveModal({
         } : {}),
       });
 
+    setLoading(true);
+    try {
+      try {
+        await submitRequest();
+      } catch (error: any) {
+        const body = error?.response?.data;
+        const conflicts = body?.errorCode === 'REQUEST_OVERLAP_CONFIRMATION_REQUIRED' ? body?.details?.conflicts : null;
+        if (!Array.isArray(conflicts) || conflicts.length === 0) throw error;
+        const summary = conflicts.map((item: any) => {
+          const label = item.requestType === 'site_visit' ? 'Site visit' : item.requestType === 'remote' ? 'Remote work' : 'Leave';
+          return `• ${label} (${new Date(item.startDate).toLocaleDateString()} – ${new Date(item.endDate).toLocaleDateString()}, ${item.status})`;
+        }).join('\n');
+        if (!window.confirm(`This overlaps existing request(s):\n${summary}\n\nCancel these requests and submit this one?`)) return;
+        await submitRequest(conflicts.map((item: any) => String(item.id)));
+      }
       toast.success(`${requestType === 'site_visit' ? 'Site visit' : requestType === 'remote' ? 'Remote work' : 'Leave'} request submitted to ${managerName}`);
       if (onRequestSubmitted) onRequestSubmitted();
       onClose();
@@ -199,19 +217,17 @@ export function RequestLeaveModal({
           <Button type="button" variant={requestType === 'site_visit' ? 'default' : 'outline'} onClick={() => { setRequestType('site_visit'); setIsMapExpanded(false); }}>Site Visit</Button>
         </div>
 
-        {/* 2-Day Monthly Limit Warning Banner */}
-        {requestType === 'leave' && willExceedQuota && (
+        {requestType === 'leave' && quotaWarnings.length > 0 && (
           <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs">
             <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold">Notice: Monthly Guideline Exceeded</p>
-              <p className="text-amber-500/90 mt-0.5">
-                You have already taken {quotaInfo?.approvedDaysThisMonth || 0} leave day(s) this month.
-                Requesting {daysRequested} day(s) will exceed the standard 2 days/month threshold.
-              </p>
+              <p className="font-semibold">Leave warning limit exceeded</p>
+              <ul className="mt-1 space-y-0.5 text-amber-500/90">{quotaWarnings.map((warning) => <li key={`${warning.period}:${warning.key}`}>{warning.period === 'monthly' ? 'Monthly' : 'Yearly'} limit: {warning.projected} projected of {warning.limit} days ({warning.overBy} over)</li>)}</ul>
+              <p className="mt-1">This is a warning; the request can still be submitted.</p>
             </div>
           </div>
         )}
+        {requestType === 'leave' && quotaChecking && <p className="text-xs text-muted-foreground">Checking configured leave warning limits…</p>}
 
         <form onSubmit={handleSubmit} className={`grid w-full min-w-0 grid-cols-1 gap-4 py-2 ${requestType !== 'leave' ? 'md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]' : ''}`}>
           <div className="min-w-0 space-y-4">
@@ -334,8 +350,23 @@ export function RequestLeaveModal({
               <p className="text-xs text-muted-foreground">Click or drag the marker to pin the client or inspection site on the map.</p>
               <div className="relative isolate z-0 min-w-0 w-full overflow-hidden rounded-md">
                 <AttendanceLocationMapPicker latitude={sitePoint.latitude} longitude={sitePoint.longitude} hasSelection={true} radiusMeters={100} mapHeightClassName="h-44" onSelect={(latitude, longitude) => setSitePoint({ latitude, longitude })} />
+                <Button type="button" variant="secondary" size="sm" aria-label="Expand map" onClick={() => setIsMapExpanded(true)} className="absolute right-2 top-2 z-[500] h-8 gap-1.5 bg-background/95 text-xs shadow-md">
+                  <Maximize2 className="h-3.5 w-3.5" /> Expand map
+                </Button>
               </div>
-              <p className="text-xs text-primary font-medium">Pinned: {sitePoint.latitude.toFixed(5)}, {sitePoint.longitude.toFixed(5)}</p>
+              <Dialog open={isMapExpanded} onOpenChange={setIsMapExpanded}>
+                <DialogContent className="w-[calc(100vw-1rem)] max-w-6xl p-3 sm:p-5">
+                  <DialogHeader>
+                    <DialogTitle>Choose site visit destination</DialogTitle>
+                    <DialogDescription>Click or drag the pin to set the destination coordinates for this site visit.</DialogDescription>
+                  </DialogHeader>
+                  <AttendanceLocationMapPicker latitude={sitePoint.latitude} longitude={sitePoint.longitude} hasSelection={true} radiusMeters={100} mapHeightClassName="h-[min(72vh,48rem)]" onSelect={(latitude, longitude) => setSitePoint({ latitude, longitude })} />
+                </DialogContent>
+              </Dialog>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-primary font-medium">Pinned: {sitePoint.latitude.toFixed(5)}, {sitePoint.longitude.toFixed(5)}</p>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => navigator.geolocation?.getCurrentPosition(({ coords }) => setSitePoint({ latitude: coords.latitude, longitude: coords.longitude }), () => toast.error('Location unavailable'), { enableHighAccuracy: true, timeout: 15000 })}>Use my location</Button>
+              </div>
             </div>
           )}
 
