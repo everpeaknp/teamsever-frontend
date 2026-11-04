@@ -1,10 +1,12 @@
 'use client';
 
 import { Component, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
+  resetKey?: string | null;
 }
 
 interface State {
@@ -13,27 +15,27 @@ interface State {
 }
 
 /**
- * ErrorBoundary catches any React render errors in its child tree
- * and shows a fallback UI instead of crashing the entire page.
- *
- * Usage:
- *   <ErrorBoundary>
- *     <YourComponent />
- *   </ErrorBoundary>
- *
- * With custom fallback:
- *   <ErrorBoundary fallback={<div>Custom error UI</div>}>
- *     <YourComponent />
- *   </ErrorBoundary>
+ * ErrorBoundaryInner catches React render errors in its child tree,
+ * shows a fallback UI instead of crashing the entire page, and automatically
+ * resets whenever the route pathname (`resetKey`) changes.
  */
-export class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundaryInner extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, errorMessage: error.message };
+  static getDerivedStateFromError(error: Error & { digest?: string }): State {
+    if (error?.digest?.startsWith?.('NEXT_REDIRECT')) {
+      throw error;
+    }
+    return { hasError: true, errorMessage: error?.message };
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (this.state.hasError && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ hasError: false, errorMessage: undefined });
+    }
   }
 
   handleRetry = () => {
@@ -69,6 +71,16 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return this.props.children;
   }
+}
+
+export function ErrorBoundary(props: Props) {
+  let pathname: string | null = null;
+  try {
+    pathname = usePathname();
+  } catch {
+    pathname = null;
+  }
+  return <ErrorBoundaryInner {...props} resetKey={props.resetKey ?? pathname} />;
 }
 
 export default ErrorBoundary;

@@ -3,12 +3,14 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { Activity, CalendarDays, Clock3, MapPin } from 'lucide-react';
+import { Activity, CalendarDays, Clock3, Compass, Cpu, MapPin } from 'lucide-react';
 import { api } from '@/lib/axios';
 import { AttendanceReport } from '@/components/analytics/AttendanceReport';
 import { LiveAttendanceTimers } from '@/components/attendance/LiveAttendanceTimers';
 import { LeaveManagementTab } from '@/components/attendance/LeaveManagementTab';
 import { AttendanceLocationSettings } from '@/components/attendance/AttendanceLocationSettings';
+import { FieldTrackingTab } from '@/components/attendance/FieldTrackingTab';
+import { BiometricTerminalsCard } from '@/components/hr/BiometricTerminalsCard';
 
 import { DesktopPresenceSettings } from '@/components/attendance/DesktopPresenceSettings';
 import { DesktopPresenceTimeline } from '@/components/attendance/DesktopPresenceTimeline';
@@ -18,6 +20,8 @@ const sectionDetails: Record<string, { title: string; icon: typeof Clock3 }> = {
   'leave-remote': { title: 'Leave & remote requests', icon: CalendarDays },
   presence: { title: 'Presence & activity', icon: Activity },
   locations: { title: 'Locations & work modes', icon: MapPin },
+  terminals: { title: 'Physical Biometric Terminals', icon: Cpu },
+  'field-tracking': { title: 'Field GPS Visits', icon: Compass },
 };
 
 export default function AttendanceSectionPage() {
@@ -44,5 +48,7 @@ export default function AttendanceSectionPage() {
     {section === 'leave-remote' && <LeaveManagementTab workspaceId={workspaceId}/>}
     {section === 'presence' && <><DesktopPresenceSettings workspaceId={workspaceId}/><DesktopPresenceTimeline workspaceId={workspaceId}/></>}
     {section === 'locations' && <AttendanceLocationSettings workspaceId={workspaceId}/>}
+    {section === 'terminals' && <BiometricTerminalsCard workspaceId={workspaceId}/>}
+    {section === 'field-tracking' && <FieldTrackingTab workspaceId={workspaceId}/>}
   </main>;
 }

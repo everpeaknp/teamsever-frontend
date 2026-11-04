@@ -137,7 +137,14 @@ export default function EmployeeProfilePage() {
   };
 
   return <main className="container mx-auto space-y-6 px-4 py-8 md:px-8">
-    <Link href={`/workspace/${workspaceId}/hr/people`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Employee directory</Link>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <Link href={`/workspace/${workspaceId}/hr/people`} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" />Employee directory</Link>
+      {employee.user?._id && (
+        <Link href={`/workspace/${workspaceId}/analytics/team-performance/${employee.user._id}`} className="text-sm font-medium text-primary hover:underline">
+          Task &amp; performance scorecard →
+        </Link>
+      )}
+    </div>
     <header className="flex items-center gap-4"><span className="grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-primary"><UserRound className="h-7 w-7" /></span><div><h1 className="text-3xl font-bold tracking-tight">{employee.user?.name || 'Employee'}</h1><p className="mt-1 text-muted-foreground">{employee.user?.email} · {employee.employeeNumber}</p></div></header>
 
     <Card><CardHeader><CardTitle>Employment record</CardTitle></CardHeader><CardContent>{access.canManageRecords ? <form onSubmit={save} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
