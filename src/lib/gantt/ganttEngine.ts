@@ -135,74 +135,8 @@ export function wouldCreateCycle(tasks: GanttTask[], taskId: string, candidateId
   return false;
 }
 
-type TemplateTask = { name: string; duration: number; after?: string[] };
-export type GanttTemplate = { id: string; name: string; description: string; icon: string; phases: { name: string; tasks: TemplateTask[] }[] };
-
-export const GANTT_TEMPLATES: GanttTemplate[] = [
-  {
-    id: 'software', name: 'Software Development', icon: 'Code2', description: 'Plan, build, test, and ship a software release.',
-    phases: [
-      { name: 'Planning', tasks: [{ name: 'Requirements gathering', duration: 5 }, { name: 'Technical design', duration: 4 }, { name: 'Sprint planning', duration: 1 }] },
-      { name: 'Development', tasks: [{ name: 'Backend API', duration: 10 }, { name: 'Frontend UI', duration: 10, after: ['Sprint planning'] }, { name: 'Integration', duration: 4, after: ['Backend API', 'Frontend UI'] }] },
-      { name: 'Testing', tasks: [{ name: 'QA testing', duration: 5 }, { name: 'Bug fixing', duration: 4 }, { name: 'User acceptance testing', duration: 3 }] },
-      { name: 'Release', tasks: [{ name: 'Deployment', duration: 1 }, { name: 'Release', duration: 0 }] },
-    ],
-  },
-  {
-    id: 'marketing', name: 'Marketing Campaign', icon: 'Megaphone', description: 'Research, create, launch, and measure a campaign.',
-    phases: [
-      { name: 'Strategy', tasks: [{ name: 'Market research', duration: 5 }, { name: 'Define audience and goals', duration: 2 }, { name: 'Budget approval', duration: 0 }] },
-      { name: 'Creative', tasks: [{ name: 'Copywriting', duration: 5 }, { name: 'Design assets', duration: 6, after: ['Budget approval'] }, { name: 'Creative review', duration: 2, after: ['Copywriting', 'Design assets'] }] },
-      { name: 'Execution', tasks: [{ name: 'Set up channels', duration: 3 }, { name: 'Campaign launch', duration: 0 }, { name: 'Run ads and social', duration: 15 }] },
-      { name: 'Analysis', tasks: [{ name: 'Track metrics', duration: 10, after: ['Campaign launch'] }, { name: 'Final report', duration: 3, after: ['Run ads and social', 'Track metrics'] }] },
-    ],
-  },
-  {
-    id: 'product-launch', name: 'Product Launch', icon: 'Rocket', description: 'Take a product from beta to a public launch.',
-    phases: [
-      { name: 'Preparation', tasks: [{ name: 'Positioning and messaging', duration: 4 }, { name: 'Pricing strategy', duration: 3 }, { name: 'Beta program', duration: 10 }] },
-      { name: 'Assets', tasks: [{ name: 'Landing page', duration: 6, after: ['Pricing strategy'] }, { name: 'Demo video', duration: 5, after: ['Beta program'] }, { name: 'Press kit', duration: 3, after: ['Beta program'] }] },
-      { name: 'Launch', tasks: [{ name: 'Press outreach', duration: 5, after: ['Press kit'] }, { name: 'Launch day', duration: 0, after: ['Landing page', 'Demo video', 'Press outreach'] }, { name: 'Post-launch follow-up', duration: 5 }] },
-    ],
-  },
-  {
-    id: 'event', name: 'Event Planning', icon: 'CalendarDays', description: 'Organize a conference, meetup, or celebration.',
-    phases: [
-      { name: 'Planning', tasks: [{ name: 'Define event goals', duration: 2 }, { name: 'Set budget', duration: 2 }, { name: 'Book venue', duration: 5 }] },
-      { name: 'Logistics', tasks: [{ name: 'Hire vendors', duration: 7 }, { name: 'Catering', duration: 5, after: ['Book venue'] }, { name: 'Speakers and agenda', duration: 8, after: ['Book venue'] }] },
-      { name: 'Promotion', tasks: [{ name: 'Invitations and registration', duration: 10, after: ['Speakers and agenda'] }, { name: 'Event day', duration: 0, after: ['Hire vendors', 'Catering', 'Invitations and registration'] }, { name: 'Post-event survey', duration: 3 }] },
-    ],
-  },
-  {
-    id: 'website', name: 'Website Redesign', icon: 'MonitorSmartphone', description: 'Discover, design, build, and launch a new site.',
-    phases: [
-      { name: 'Discovery', tasks: [{ name: 'Stakeholder interviews', duration: 3 }, { name: 'Content audit', duration: 4 }, { name: 'Sitemap and wireframes', duration: 5 }] },
-      { name: 'Design', tasks: [{ name: 'Visual design', duration: 8 }, { name: 'Design review', duration: 2 }] },
-      { name: 'Build', tasks: [{ name: 'Front-end development', duration: 12 }, { name: 'Content migration', duration: 8, after: ['Design review'] }, { name: 'QA and accessibility', duration: 5, after: ['Front-end development', 'Content migration'] }] },
-      { name: 'Launch', tasks: [{ name: 'Go live', duration: 0 }, { name: 'Post-launch fixes', duration: 5 }] },
-    ],
-  },
-  {
-    id: 'construction', name: 'Construction Project', icon: 'HardHat', description: 'From permits and foundations to final handover.',
-    phases: [
-      { name: 'Pre-construction', tasks: [{ name: 'Site survey', duration: 5 }, { name: 'Permits and approvals', duration: 15 }, { name: 'Contractor bidding', duration: 10, after: ['Site survey'] }] },
-      { name: 'Construction', tasks: [{ name: 'Foundation', duration: 15, after: ['Permits and approvals', 'Contractor bidding'] }, { name: 'Framing', duration: 20 }, { name: 'Roofing', duration: 10 }, { name: 'Plumbing and electrical', duration: 15, after: ['Framing'] }, { name: 'Interior finishing', duration: 20, after: ['Roofing', 'Plumbing and electrical'] }] },
-      { name: 'Closeout', tasks: [{ name: 'Final inspection', duration: 3 }, { name: 'Handover', duration: 0 }] },
-    ],
-  },
-  {
-    id: 'research', name: 'Research Project', icon: 'FlaskConical', description: 'A thesis or study, from proposal to submission.',
-    phases: [
-      { name: 'Proposal', tasks: [{ name: 'Literature review', duration: 10 }, { name: 'Research proposal', duration: 5 }, { name: 'Ethics approval', duration: 0 }] },
-      { name: 'Research', tasks: [{ name: 'Data collection', duration: 20 }, { name: 'Data analysis', duration: 10 }] },
-      { name: 'Writing', tasks: [{ name: 'First draft', duration: 15 }, { name: 'Peer review', duration: 5 }, { name: 'Revisions', duration: 5 }, { name: 'Submission', duration: 0 }] },
-    ],
-  },
-  {
-    id: 'blank', name: 'Blank Chart', icon: 'Plus', description: 'Start from a single task and build it yourself.',
-    phases: [{ name: 'Phase 1', tasks: [{ name: 'First task', duration: 5 }] }],
-  },
-];
+import { GANTT_TEMPLATES, type GanttTemplate } from './ganttTemplates';
+export { GANTT_TEMPLATES, type GanttTemplate };
 
 export type PromptAnswers = {
   name: string;

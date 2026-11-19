@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { ArrowLeft, ArrowRight, Check, Info, RefreshCw, Sparkles, TriangleAlert, Calendar } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Info, RefreshCw, Sparkles, TriangleAlert, Calendar, Search } from 'lucide-react';
 import {
   countDays, defaultAssignments, formatDay, GANTT_TEMPLATES, parseDay, templateLength, templateWorkTasks, todayDay, type PromptAnswers,
 } from '@/lib/gantt/ganttEngine';
+import type { GanttTemplate } from '@/lib/gantt/ganttTemplates';
 
 type Step = 'name' | 'template' | 'start' | 'deadline' | 'team' | 'assign' | 'weekends' | 'review';
 
@@ -43,6 +44,8 @@ export function GanttWizard({ onComplete, onCancel }: { onComplete: (answers: Pr
   const [answers, setAnswers] = useState<PromptAnswers>({ name: '', templateId: '', startDate: formatDay(todayDay()), deadline: null, team: [], skipWeekends: true, assignments: {} });
   const [teamText, setTeamText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<GanttTemplate['category'] | 'All'>('All');
   const top = useRef<HTMLDivElement>(null);
   const current = useRef<HTMLDivElement>(null);
 
@@ -51,6 +54,43 @@ export function GanttWizard({ onComplete, onCancel }: { onComplete: (answers: Pr
   const template = GANTT_TEMPLATES.find((candidate) => candidate.id === answers.templateId);
   const typedTeam = parseTeam(teamText);
   const workTasks = useMemo(() => templateWorkTasks(answers.templateId), [answers.templateId]);
+
+  // Filter templates by search and category
+  const filteredTemplates = useMemo(() => {
+    let filtered = GANTT_TEMPLATES;
+    
+    // Always show Blank Chart
+    const blankChart = filtered.find(t => t.id === 'blank');
+    let otherTemplates = filtered.filter(t => t.id !== 'blank');
+    
+    // Apply category filter
+    if (categoryFilter !== 'All') {
+      otherTemplates = otherTemplates.filter(t => t.category === categoryFilter);
+    }
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      otherTemplates = otherTemplates.filter(t => 
+        t.name.toLowerCase().includes(query) || 
+        t.description.toLowerCase().includes(query)
+      );
+    }
+    
+    return blankChart ? [blankChart, ...otherTemplates] : otherTemplates;
+  }, [searchQuery, categoryFilter]);
+
+  // Group templates by category for display
+  const templatesByCategory = useMemo(() => {
+    const groups = new Map<GanttTemplate['category'], GanttTemplate[]>();
+    filteredTemplates.forEach(t => {
+      if (t.id === 'blank') return; // Handle separately
+      const category = t.category;
+      if (!groups.has(category)) groups.set(category, []);
+      groups.get(category)!.push(t);
+    });
+    return groups;
+  }, [filteredTemplates]);
 
   useEffect(() => { current.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, [step]);
 
@@ -146,22 +186,69 @@ export function GanttWizard({ onComplete, onCancel }: { onComplete: (answers: Pr
             )}
 
             {step === 'template' && (
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                {GANTT_TEMPLATES.map((candidate) => {
-                  const Icon = iconFor(candidate.icon);
-                  const active = candidate.id === answers.templateId;
-                  const taskCount = candidate.phases.reduce((total, phase) => total + phase.tasks.length, 0);
-                  return (
-                    <button key={candidate.id} type="button" onClick={() => pickTemplate(candidate.id)} className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-colors ${active ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted'}`}>
-                      <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground"><Icon size={16} /></span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-foreground">{candidate.name}</span>
-                        <span className="block text-xs text-muted-foreground">{candidate.description}</span>
-                        <span className="mt-1 block text-[11px] text-muted-foreground">{candidate.phases.map((phase) => phase.name).join(' → ')} · {taskCount} tasks</span>
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="space-y-4">
+                {/* Search and Filter Controls */}
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="relative flex-1">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder="Search templates..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1">
+                    {(['All', 'Tech', 'Business', 'Events', 'Education', 'General'] as const).map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setCategoryFilter(cat)}
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                          categoryFilter === cat
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Blank Chart - Always Visible */}
+                {filteredTemplates.find(t => t.id === 'blank') && (
+                  <div className="mb-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quick Start</p>
+                    <TemplateCard
+                      template={filteredTemplates.find(t => t.id === 'blank')!}
+                      active={answers.templateId === 'blank'}
+                      onSelect={pickTemplate}
+                    />
+                  </div>
+                )}
+
+                {/* Templates by Category */}
+                {Array.from(templatesByCategory.entries()).map(([category, templates]) => (
+                  <div key={category}>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{category}</p>
+                    <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                      {templates.map((candidate) => (
+                        <TemplateCard
+                          key={candidate.id}
+                          template={candidate}
+                          active={candidate.id === answers.templateId}
+                          onSelect={pickTemplate}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {filteredTemplates.length === 1 && filteredTemplates[0].id === 'blank' && searchQuery && (
+                  <p className="text-center text-sm text-muted-foreground py-4">No templates match your search.</p>
+                )}
               </div>
             )}
 
@@ -278,6 +365,39 @@ export function GanttWizard({ onComplete, onCancel }: { onComplete: (answers: Pr
         </div>
       </div>
     </div>
+  );
+}
+
+function TemplateCard({ template, active, onSelect }: { template: GanttTemplate; active: boolean; onSelect: (id: string) => void }) {
+  const Icon = iconFor(template.icon);
+  const taskCount = template.phases.reduce((total, phase) => total + phase.tasks.length, 0);
+  
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(template.id)}
+      className={`flex items-start gap-3 rounded-xl border p-3 text-left transition-colors ${
+        active ? 'border-primary bg-primary/10 ring-2 ring-primary/20' : 'border-border hover:bg-muted hover:border-muted-foreground/20'
+      }`}
+    >
+      <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+        active ? 'bg-primary/20 text-primary' : 'bg-muted text-foreground'
+      }`}>
+        <Icon size={18} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-foreground">{template.name}</span>
+        <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{template.description}</span>
+        <span className="mt-1.5 block text-[11px] text-muted-foreground">
+          {taskCount} {taskCount === 1 ? 'task' : 'tasks'} · {template.phases.length} {template.phases.length === 1 ? 'phase' : 'phases'}
+        </span>
+      </span>
+      {active && (
+        <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <Check size={12} />
+        </span>
+      )}
+    </button>
   );
 }
 

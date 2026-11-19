@@ -32,6 +32,7 @@ function Header() {
           <Link href="#features" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Features</Link>
           <Link href="#roles" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Roles</Link>
           <Link href="#pricing" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Pricing</Link>
+          <Link href="/gantt-chart" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Gantt Chart</Link>
         </nav>
 
         <div className="flex items-center gap-3">

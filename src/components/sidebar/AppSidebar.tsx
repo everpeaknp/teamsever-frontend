@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   BriefcaseBusiness,
   MoreHorizontal,
+  GanttChart,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -1050,6 +1051,17 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                     >
                       <FolderOpen className="w-3.5 h-3.5" />
                       Files
+                    </Link>
+                    <Link
+                      href={`/workspace/${workspaceId}/gantt`}
+                      aria-current={matchesSidebarRoute(pathname || '', `/workspace/${workspaceId}/gantt`) ? 'page' : undefined}
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors',
+                        getQuickLinkClassName(`/workspace/${workspaceId}/gantt`)
+                      )}
+                    >
+                      <GanttChart className="w-3.5 h-3.5" />
+                      Gantt Chart
                     </Link>
                     {canAccessAttendance && (
                       <Link
