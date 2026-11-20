@@ -113,13 +113,13 @@ export function MobileShiftSyncPrompt() {
           </div>
           <DialogTitle>Mobile shift found</DialogTitle>
           <DialogDescription>
-            You are clocked in from the TeamsEver mobile app on this network. Would you like to share desktop presence for this shift?
+            You are clocked in from the Tasko mobile app on this network. Would you like to share desktop presence for this shift?
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex gap-3 rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">
           <ShieldCheck aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-          <p>When synced, TeamsEver reports foreground app names and Active/AFK state from this trusted desktop. It does not record keystrokes, text, mouse details, window titles, URLs, or screenshots.</p>
+          <p>When synced, Tasko reports foreground app names and Active/AFK state from this trusted desktop. It does not record keystrokes, text, mouse details, window titles, URLs, or screenshots.</p>
         </div>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 

@@ -11,6 +11,20 @@ import { api } from "@/lib/axios";
 import { Loader2, Globe, MessageSquare, Palette, Monitor } from "lucide-react";
 import { accentColors, AccentColor } from "@/store/useThemeStore";
 
+function withTaskoBranding(value: {
+  whatsappContactNumber: string;
+  systemName: string;
+  accentColor: string;
+  themeMode: string;
+  logoUrl: string;
+}) {
+  return {
+    ...value,
+    systemName: /teamsever/i.test(value.systemName) ? "Tasko" : value.systemName || "Tasko",
+    logoUrl: /teamsever/i.test(value.logoUrl) ? "/tasko_logo.png" : value.logoUrl || "/tasko_logo.png",
+  };
+}
+
 export default function SystemSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,7 +45,7 @@ export default function SystemSettings() {
       setLoading(true);
       const response = await api.get("/super-admin/settings");
       if (response.data.success) {
-        setSettings(response.data.data);
+        setSettings(withTaskoBranding(response.data.data));
       }
     } catch (error) {
       toast.error("Failed to load system settings");
@@ -43,15 +57,17 @@ export default function SystemSettings() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const response = await api.put("/super-admin/settings", settings);
+      const brandedSettings = withTaskoBranding(settings);
+      const response = await api.put("/super-admin/settings", brandedSettings);
       if (response.data.success) {
+        setSettings(brandedSettings);
         toast.success("System settings updated successfully");
         // Trigger a global event so other components can update
         window.dispatchEvent(new CustomEvent('whatsapp-number-updated', { 
           detail: { whatsappContactNumber: settings.whatsappContactNumber } 
         }));
-        window.dispatchEvent(new CustomEvent('system-settings-updated', { 
-          detail: settings 
+        window.dispatchEvent(new CustomEvent('system-settings-updated', {
+          detail: brandedSettings
         }));
       }
     } catch (error) {
@@ -93,7 +109,7 @@ export default function SystemSettings() {
                 id="systemName"
                 value={settings.systemName}
                 onChange={(e) => setSettings({ ...settings, systemName: e.target.value })}
-                placeholder="e.g. Teamsever"
+                placeholder="e.g. Tasko"
               />
             </div>
             <div className="space-y-2">

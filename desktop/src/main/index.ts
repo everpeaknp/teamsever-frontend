@@ -47,7 +47,7 @@ async function writeStartupPreference(enabled: boolean): Promise<void> {
 function showPresenceNotice(body: string): void {
   if (!Notification.isSupported()) return;
   try {
-    new Notification({ title: 'TeamsEver attendance', body, silent: true }).show();
+    new Notification({ title: 'Tasko attendance', body, silent: true }).show();
   } catch (error) {
     console.warn('[Desktop notification] Could not show attendance notice:', error);
   }
@@ -343,7 +343,7 @@ function createWindow(): BrowserWindow {
     minWidth: 960,
     minHeight: 640,
     show: false,
-    title: 'TeamsEver Desktop',
+    title: 'Tasko Desktop',
     webPreferences: {
       preload: path.join(currentDirectory, '../preload/index.cjs'),
       contextIsolation: true,
@@ -373,8 +373,8 @@ function createWindow(): BrowserWindow {
     const result = await dialog.showMessageBox({
       type: 'question',
       title: 'Allow attendance location?',
-      message: 'TeamsEver needs your location for attendance verification when your workspace requires it.',
-      detail: 'Location is used only to verify an attendance clock action. You can deny access and continue using other parts of TeamsEver.',
+      message: 'Tasko needs your location for attendance verification when your workspace requires it.',
+      detail: 'Location is used only to verify an attendance clock action. You can deny access and continue using other parts of Tasko.',
       buttons: ['Allow', 'Don’t allow'],
       defaultId: 0,
       cancelId: 1,

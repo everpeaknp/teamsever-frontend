@@ -85,11 +85,11 @@ export default function SuperAdminLoginPage() {
       >
         {/* Compact Admin Header */}
         <div className="text-center mb-8">
-          <Image 
-            src="/teamsever_logo.png" 
-            alt="Teamsever Super Admin" 
-            width={48} 
-            height={48} 
+          <Image
+            src="/tasko_logo.png"
+            alt="Tasko Super Admin"
+            width={48}
+            height={48}
             className="mb-4 shadow-lg shadow-indigo-200/50 dark:shadow-none transition-transform group-hover:scale-105 rounded-2xl" 
           />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-tight">Super Admin Portal</h1>

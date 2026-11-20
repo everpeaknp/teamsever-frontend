@@ -75,8 +75,8 @@ export function Header() {
           </Button>
           
           <Link href="/dashboard" className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
-            <Image src="/teamsever_logo.png" alt="TeamsEver Logo" width={22} height={22} className="rounded-md" />
-            <h1 className="text-base sm:text-xl font-semibold text-slate-900 dark:text-white">TeamsEver</h1>
+            <Image src="/tasko_logo.png" alt="Tasko Logo" width={22} height={22} className="rounded-md" />
+            <h1 className="text-base sm:text-xl font-semibold text-slate-900 dark:text-white">Tasko</h1>
           </Link>
         </div>
 

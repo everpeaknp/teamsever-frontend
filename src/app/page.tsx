@@ -2,412 +2,113 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  ArrowRight,
-  Check,
-  FolderKanban,
-  ListChecks,
-  ShieldCheck,
-  BarChart3,
-  MessageSquare,
-  TrendingUp,
-} from 'lucide-react';
-import { HomePricingSection } from '@/components/pricing/HomePricingSection';
 
-const C = 'mx-auto w-full max-w-[1100px] px-5 sm:px-8';
+const C = 'mx-auto w-full max-w-6xl px-6 sm:px-8';
+const benefits = [
+  ['Make ownership clear', 'Assign work with owners, due dates, priorities, and status so the next action is always visible.'],
+  ['Connect attendance and leave', 'Bring clock in and out, schedules, leave, remote work, and site visits into the same workspace.'],
+  ['Give every role the right access', 'Use workspace roles and permissions to protect sensitive work while keeping collaboration simple.'],
+  ['Keep conversations with the work', 'Use direct messages, group chat, announcements, files, and documents without losing context.'],
+  ['See what needs attention', 'Use progress views and reports to find blockers, follow through, and make better team decisions.'],
+];
+const faqs = [
+  ['Who is Tasko for?', 'Tasko is built for workspace owners, managers, HR teams, and the people doing the work every day.'],
+  ['What can we manage in a workspace?', 'You can manage tasks, projects, lists, roles, attendance, leave, announcements, chat, files, documents, and reporting in one workspace.'],
+  ['Can HR and operations use the same workspace?', 'Yes. Attendance, leave, employee and access workflows can sit alongside day to day work, with permissions for sensitive areas.'],
+  ['Can managers control what their teams see?', 'Workspace roles and permissions help owners and managers give people the access they need for their responsibilities.'],
+  ['Does Tasko support remote and field work?', 'Tasko includes attendance workflows for remote work, site visits, location rules, and clock in and out.'],
+  ['How do we get started?', 'Create a workspace, invite your team, and start by adding the work and people workflows you already use.'],
+];
 
-// ─── Header ────────────────────────────────────────────────────────────────────
-function Header() {
-  return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-neutral-100">
-      <div className={`${C} flex h-16 items-center justify-between`}>
-        <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/teamsever_logo.png" alt="TeamsEver" width={32} height={32} priority className="h-8 w-auto" />
-          <span className="text-xl font-bold tracking-tight text-neutral-900">TeamsEver</span>
-        </Link>
-
-        <nav className="hidden items-center gap-7 md:flex">
-          <Link href="#features" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Features</Link>
-          <Link href="#roles" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Roles</Link>
-          <Link href="#pricing" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Pricing</Link>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="hidden sm:block text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
-            Sign in
-          </Link>
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-          >
-            Get started <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-// ─── Hero ───────────────────────────────────────────────────────────────────────
-function Hero() {
-  return (
-    <section className="pt-20 pb-16 sm:pt-28 sm:pb-20">
-      <div className={C}>
-
-
-        {/* Headline */}
-        <h1 className="max-w-3xl text-[40px] sm:text-[52px] lg:text-[64px] font-semibold leading-[1.05] tracking-[-0.02em] text-neutral-900">
-          Your team,<br />
-          <span className="text-neutral-400">finally organized.</span>
-        </h1>
-
-        <p className="mt-6 max-w-xl text-lg leading-[1.75] text-neutral-500">
-          Teamsever gives teams one place to manage workspaces, assign tasks,
-          control permissions, and see what's actually getting done.
-        </p>
-
-        <div className="mt-9 flex flex-wrap items-center gap-4">
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#2563EB] px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-          >
-            Start for free <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link href="#features" className="text-sm font-medium text-neutral-500 hover:text-neutral-800 transition-colors">
-            See how it works →
-          </Link>
-        </div>
-
-        {/* Social proof line */}
-        <p className="mt-10 text-sm text-neutral-400">
-          Trusted by high-performance teams worldwide.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-// ─── Dashboard Preview ──────────────────────────────────────────────────────────
-function DashboardPreview() {
-  return (
-    <section className="pb-20">
-      <div className={C}>
-        <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-[0_2px_24px_rgba(0,0,0,0.06)]">
-          {/* Window chrome */}
-          <div className="flex items-center gap-1.5 border-b border-neutral-100 bg-neutral-50 px-4 py-3">
-            <span className="h-2.5 w-2.5 rounded-full bg-neutral-200" />
-            <span className="h-2.5 w-2.5 rounded-full bg-neutral-200" />
-            <span className="h-2.5 w-2.5 rounded-full bg-neutral-200" />
-            <span className="ml-3 text-xs text-neutral-400">teamsever.everacy.com/workspace</span>
-          </div>
-
-          {/* Dashboard body */}
-          <div className="p-5 sm:p-6">
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
-              {[
-                { label: 'Active tasks', value: '24', pct: '68%', color: 'bg-[#2563EB]' },
-                { label: 'In review', value: '8', pct: '42%', color: 'bg-neutral-400' },
-                { label: 'Completed', value: '51', pct: '86%', color: 'bg-emerald-500' },
-              ].map((s) => (
-                <div key={s.label} className="rounded-xl border border-neutral-100 p-3.5">
-                  <p className="text-[11px] font-medium uppercase tracking-widest text-neutral-400">{s.label}</p>
-                  <p className="mt-1.5 text-2xl font-semibold text-neutral-900">{s.value}</p>
-                  <div className="mt-3 h-1.5 w-full rounded-full bg-neutral-100">
-                    <div className={`h-1.5 rounded-full ${s.color}`} style={{ width: s.pct }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Task list */}
-            <div className="rounded-xl border border-neutral-100 overflow-hidden">
-              <div className="flex items-center justify-between bg-neutral-50 px-4 py-3 border-b border-neutral-100">
-                <p className="text-xs font-semibold text-neutral-700">Execution board</p>
-                <span className="text-xs text-neutral-400">This week</span>
-              </div>
-              {[
-                { title: 'Landing page release', owner: 'Maya', due: 'Jun 03', tag: 'High', tagColor: 'text-red-600 bg-red-50' },
-                { title: 'Permissions QA pass', owner: 'Ankit', due: 'Jun 01', tag: 'Medium', tagColor: 'text-amber-600 bg-amber-50' },
-                { title: 'Client approval cycle', owner: 'Sara', due: 'Jun 02', tag: 'Low', tagColor: 'text-emerald-600 bg-emerald-50' },
-              ].map((t, i, arr) => (
-                <div key={t.title} className={`flex items-center justify-between px-4 py-3.5 ${i < arr.length - 1 ? 'border-b border-neutral-100' : ''}`}>
-                  <div>
-                    <p className="text-sm font-medium text-neutral-800">{t.title}</p>
-                    <p className="text-xs text-neutral-400 mt-0.5">Owner: {t.owner} · Due: {t.due}</p>
-                  </div>
-                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${t.tagColor}`}>{t.tag}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Features ──────────────────────────────────────────────────────────────────
-function Features() {
-  const features = [
-    {
-      icon: FolderKanban,
-      title: 'Workspace organization',
-      desc: 'Structure work by team, client, or department. Everyone knows where things live.',
-    },
-    {
-      icon: ListChecks,
-      title: 'Task ownership',
-      desc: "Every task has an owner, a due date, and a priority. No more guessing who's doing what.",
-    },
-    {
-      icon: ShieldCheck,
-      title: 'Role-based access',
-      desc: 'Define who can view, manage, review, or comment. Permissions that actually work.',
-    },
-    {
-      icon: MessageSquare,
-      title: 'Contextual updates',
-      desc: 'Discussions stay tied to the work they belong to, not buried in chat.',
-    },
-    {
-      icon: BarChart3,
-      title: 'Progress visibility',
-      desc: "See what is moving, what's blocked, and what's done — all in one view.",
-    },
-    {
-      icon: TrendingUp,
-      title: 'Team analytics',
-      desc: 'Understand delivery trends and performance without building a report from scratch.',
-    },
-  ];
-
-  return (
-    <section id="features" className="py-20 border-t border-neutral-100">
-      <div className={C}>
-        <div className="mb-12">
-          <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
-            Everything your team needs,<br className="hidden sm:block" /> nothing they don't.
-          </h2>
-          <p className="mt-4 text-neutral-500 text-base leading-relaxed max-w-xl">
-            Built for real teams doing real work. Practical tools without the bloat.
-          </p>
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-neutral-100 border border-neutral-100 rounded-2xl overflow-hidden">
-          {features.map((f) => (
-            <div key={f.title} className="bg-white p-6 hover:bg-neutral-50 transition-colors">
-              <div className="mb-4 inline-flex rounded-lg border border-neutral-200 p-2 text-neutral-500">
-                <f.icon className="h-4 w-4" />
-              </div>
-              <h3 className="text-[15px] font-semibold text-neutral-900">{f.title}</h3>
-              <p className="mt-2 text-sm leading-[1.7] text-neutral-500">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Permissions Table ──────────────────────────────────────────────────────────
-function PermissionsSection() {
-  const rows: [string, readonly (0 | 1)[]][] = [
-    ['Invite members',  [1, 1, 0, 0, 0]],
-    ['Assign tasks',    [1, 1, 1, 1, 0]],
-    ['Review work',     [1, 1, 1, 0, 1]],
-    ['Comment',         [1, 1, 1, 1, 1]],
-    ['View reports',    [1, 1, 1, 0, 1]],
-    ['Manage billing',  [1, 0, 0, 0, 0]],
-  ];
-  const cols = ['Admin', 'Manager', 'QA', 'Member', 'Client'];
-
-  return (
-    <section id="roles" className="py-20 border-t border-neutral-100">
-      <div className={`${C} grid gap-14 lg:grid-cols-2 items-start`}>
-        <div>
-          <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900">
-            Access control that doesn't get in the way.
-          </h2>
-          <p className="mt-4 text-base leading-relaxed text-neutral-500">
-            Set up roles for every responsibility level. People see only what they need, and can do only what they should.
-          </p>
-          <ul className="mt-7 space-y-3">
-            {[
-              'Protect sensitive workspace actions',
-              'Reduce mistakes with clear role boundaries',
-              'Scale operations with consistent permissions',
-            ].map((b) => (
-              <li key={b} className="flex items-start gap-2.5 text-sm text-neutral-600">
-                <Check className="h-4 w-4 text-[#2563EB] mt-0.5 shrink-0" />
-                {b}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div
-          className="overflow-x-auto overscroll-x-contain rounded-2xl border border-neutral-200 bg-white"
-          role="region"
-          aria-label="Role permissions comparison"
-          tabIndex={0}
-        >
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-neutral-100 bg-neutral-50">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-neutral-500">Permission</th>
-                {cols.map((c) => (
-                  <th key={c} className="px-3 py-3 text-center text-xs font-semibold text-neutral-500">{c}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(([label, values], i) => (
-                <tr key={label} className={`border-b border-neutral-100 ${i === rows.length - 1 ? 'border-b-0' : ''}`}>
-                  <td className="px-4 py-3.5 text-neutral-700 font-medium text-xs">{label}</td>
-                  {values.map((v, idx) => (
-                    <td key={idx} className="px-3 py-3.5 text-center">
-                      {v ? (
-                        <Check className="mx-auto h-3.5 w-3.5 text-[#2563EB]" />
-                      ) : (
-                        <span className="text-neutral-200">—</span>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── How It Works ───────────────────────────────────────────────────────────────
-function HowItWorks() {
-  const steps = [
-    { n: '01', title: 'Create a workspace', desc: 'Set up a clear structure for your team, client, or project.' },
-    { n: '02', title: 'Invite your team', desc: 'Bring people in and assign them roles in minutes.' },
-    { n: '03', title: 'Assign the work', desc: 'Create tasks with owners, dates, and priorities.' },
-    { n: '04', title: 'Track progress', desc: "See what's moving, what's blocked, and ship faster." },
-  ];
-
-  return (
-    <section className="py-20 border-t border-neutral-100">
-      <div className={C}>
-        <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-neutral-900 mb-12">
-          Up and running in under five minutes.
-        </h2>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((s) => (
-            <div key={s.n} className="group">
-              <p className="text-3xl font-semibold text-neutral-100 group-hover:text-neutral-200 transition-colors tabular-nums">{s.n}</p>
-              <h3 className="mt-3 text-[15px] font-semibold text-neutral-900">{s.title}</h3>
-              <p className="mt-1.5 text-sm leading-[1.7] text-neutral-500">{s.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── CTA ────────────────────────────────────────────────────────────────────────
-function CTA() {
-  return (
-    <section className="py-20 border-t border-neutral-100">
-      <div className={C}>
-        <div className="rounded-2xl border border-[#1e3a8a] bg-[#0f1c3f] px-8 py-14 sm:px-14 text-center">
-          <h2 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
-            Bring your team together.
-          </h2>
-          <p className="mt-4 max-w-lg mx-auto text-base leading-relaxed text-blue-100">
-            Create your first workspace, invite your team, and start managing work with clarity today.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-medium text-[#2563EB] hover:bg-blue-50 transition-colors"
-            >
-              Start for free <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link href="#" className="text-sm font-medium text-blue-100 hover:text-white transition-colors">
-              Contact us →
-            </Link>
-          </div>
-
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ─── Footer ─────────────────────────────────────────────────────────────────────
-function Footer() {
-  const cols = [
-    { title: 'Product', links: ['Features', 'Roles', 'Workflow', 'Pricing'] },
-    { title: 'Company', links: ['About', 'Contact', 'Careers'] },
-    { title: 'Resources', links: ['Documentation', 'Help center', 'Guides'] },
-  ];
-
-  return (
-    <footer className="border-t border-neutral-100 bg-white py-14">
-      <div className={`${C} grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]`}>
-        <div>
-          <div className="flex items-center gap-2.5">
-            <Image src="/teamsever_logo.png" alt="Teamsever" width={32} height={32} className="h-8 w-auto" />
-            <span className="text-xl font-bold tracking-tight text-neutral-900">TeamsEver</span>
-          </div>
-          <p className="mt-4 max-w-xs text-sm leading-[1.7] text-neutral-400">
-            Workspaces, tasks, roles, and progress — all in one place.
-          </p>
-        </div>
-        {cols.map((col) => (
-          <div key={col.title}>
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-neutral-900 mb-4">{col.title}</h3>
-            <ul className="space-y-2.5">
-              {col.links.map((l) => (
-                <li key={l}>
-                  <Link href="#" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">{l}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-      <div className={`${C} mt-10 border-t border-neutral-100 pt-6 flex items-center justify-between`}>
-        <p className="text-xs text-neutral-400">© 2026 Teamsever. All rights reserved.</p>
-        <p className="text-xs text-neutral-400">A flagship product of Everacy Tech.</p>
-      </div>
-    </footer>
-  );
-}
-
-// ─── Page ───────────────────────────────────────────────────────────────────────
-export default function Home() {
-  const router = useRouter();
-
+function Reveal({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-    if (token) router.push('/dashboard');
-  }, [router]);
-
-  return (
-    <div className="min-h-screen bg-white text-neutral-900 antialiased">
-      <Header />
-      <main>
-        <Hero />
-        <DashboardPreview />
-        <Features />
-        <PermissionsSection />
-        <HowItWorks />
-        <HomePricingSection />
-        <CTA />
-      </main>
-      <Footer />
-    </div>
-  );
+    const node = ref.current;
+    if (!node) return;
+    if (!('IntersectionObserver' in window)) { node.classList.add('is-visible'); return; }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        node.classList.add('is-visible');
+        observer.disconnect();
+      }
+    }, { threshold: 0.12 });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return <div ref={ref} className={`landing-reveal ${className}`}>{children}</div>;
 }
+
+function Header() {
+  return <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur"><div className={`${C} flex min-h-16 items-center justify-between gap-6`}><Link href="/" className="flex shrink-0 items-center gap-3" aria-label="Tasko home"><Image src="/tasko_logo.png" alt="Tasko" width={36} height={36} priority className="h-9 w-9" /><span className="title-1 text-slate-950">Tasko</span></Link><nav aria-label="Primary navigation" className="hidden items-center gap-8 md:flex"><Link href="#capabilities" className="body-5 text-slate-600 transition-colors hover:text-slate-950">Capabilities</Link><Link href="#roles" className="body-5 text-slate-600 transition-colors hover:text-slate-950">For teams</Link><Link href="/pricing" className="body-5 text-slate-600 transition-colors hover:text-slate-950">Pricing</Link></nav><div className="flex items-center gap-4"><Link href="/login" className="hidden body-5 text-slate-600 transition-colors hover:text-slate-950 sm:inline-flex">Sign in</Link><Link href="/register" className="button-sm inline-flex items-center rounded-lg bg-blue-600 px-3 py-2 text-white transition-transform duration-300 hover:bg-blue-700 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Create a workspace</Link></div></div></header>;
+}
+
+function Hero() {
+  return <section data-testid="hero-command-center" className="relative overflow-hidden border-b border-slate-200 bg-[#f7f9fc] py-16 text-slate-950 sm:py-24 lg:py-28"><div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_78%_25%,rgba(37,99,235,0.08),transparent_34%),radial-gradient(circle_at_12%_90%,rgba(15,23,42,0.04),transparent_28%)]" aria-hidden="true" /><div className={`${C} relative grid items-center gap-14 lg:grid-cols-[0.92fr_1.08fr]`}><div className="relative z-10"><p className="caption-3 mb-6 uppercase tracking-[0.16em] text-blue-700">The operating workspace for modern teams</p><h1 className="heading-1 max-w-2xl text-wrap-balance text-slate-950">The workspace where work, people, and progress meet.</h1><p className="body-2 mt-6 max-w-xl text-wrap-pretty text-slate-600">Tasko gives owners, managers, and HR teams one calm command center for daily work, attendance, communication, and the decisions that keep a team moving.</p><div className="mt-8 flex flex-wrap items-center gap-4"><Link href="/register" className="button-md inline-flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-white shadow-sm transition-transform duration-300 hover:bg-blue-800 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2">Create your workspace <span aria-hidden="true">→</span></Link><Link href="/login" className="button-md text-slate-700 transition-colors hover:text-blue-700">Sign in <span aria-hidden="true">→</span></Link></div><p className="caption-2 mt-6 text-slate-500">Tasks, people operations, and team context in one place.</p></div><div className="relative mx-auto w-full max-w-2xl lg:mx-0"><div className="absolute -inset-5 rounded-[2rem] bg-blue-100/60" aria-hidden="true" /><div className="relative rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_24px_70px_rgba(15,23,42,0.14)]"><div className="mb-4 flex items-center justify-between"><div className="flex items-center gap-3"><Image src="/tasko_logo.png" alt="" width={28} height={28} className="h-7 w-7" /><div><p className="title-3 text-slate-950">Everacy workspace</p><p className="caption-2 text-slate-500">Today at a glance</p></div></div><span className="caption-4 rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">On track</span></div><div className="grid gap-3 sm:grid-cols-[1.35fr_0.65fr]"><div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className="flex items-center justify-between"><p className="title-3 text-slate-950">Assigned work</p><span className="caption-2 text-slate-500">This week</span></div><div className="mt-4 space-y-3"><div className="rounded-lg border border-slate-200 bg-white p-3"><div className="flex items-center justify-between gap-3"><span className="body-5 text-slate-800">Verify password visibility</span><span className="caption-4 rounded-full bg-blue-50 px-2 py-1 text-blue-700">In progress</span></div><div className="mt-2 h-1.5 rounded-full bg-slate-200"><div className="h-1.5 w-3/5 rounded-full bg-blue-600" /></div></div><div className="rounded-lg border border-slate-200 bg-white p-3"><div className="flex items-center justify-between gap-3"><span className="body-5 text-slate-800">Homepage dynamic states</span><span className="caption-4 rounded-full bg-amber-50 px-2 py-1 text-amber-700">Review</span></div><p className="caption-2 mt-2 text-slate-500">Due tomorrow · Web team</p></div></div></div><div className="space-y-3"><div data-testid="hero-status-card" className="rounded-xl border border-slate-200 bg-slate-950 p-4 text-white"><p className="caption-3 text-blue-300">Team pulse</p><p className="heading-5 mt-2">82%</p><p className="caption-2 mt-1 text-slate-400">work on track</p><div className="mt-4 h-1.5 rounded-full bg-slate-700"><div className="h-1.5 w-4/5 rounded-full bg-blue-500" /></div></div><div className="rounded-xl border border-slate-200 bg-white p-4"><p className="caption-3 text-slate-500">People operations</p><p className="title-2 mt-2 text-slate-950">Attendance connected</p><p className="caption-2 mt-1 text-emerald-700">Ready for today</p></div></div></div><div className="mt-3 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3"><span className="caption-2 text-slate-600">Keep context close across the workspace</span><span className="caption-3 text-blue-700">Tasko</span></div></div></div></div></section>;
+}
+
+function ProductTour() {
+  const [activeView, setActiveView] = useState<'dashboard' | 'people' | 'inbox'>('dashboard');
+  const [completed, setCompleted] = useState<string[]>([]);
+  const tasks = ['Verify password visibility', 'Homepage dynamic states', 'Review team announcement'];
+  const toggleTask = (task: string) => setCompleted((current) => current.includes(task) ? current.filter((item) => item !== task) : [...current, task]);
+  const views = {
+    dashboard: { label: 'Dashboard', title: 'Your work today', subtitle: 'A focused view of what needs attention next.' },
+    people: { label: 'People', title: 'Team availability', subtitle: 'Attendance and people context beside the work.' },
+    inbox: { label: 'Inbox', title: 'Updates that need a response', subtitle: 'Announcements and conversations stay attached to the workspace.' },
+  } as const;
+  const view = views[activeView];
+
+  return <Reveal><section className="border-b border-slate-200 bg-white py-20 sm:py-24"><div className={C}><div className="max-w-2xl"><p className="caption-3 uppercase tracking-[0.18em] text-blue-700">Try the workspace rhythm</p><h2 className="heading-3 mt-4 text-wrap-balance text-slate-950">See how one workspace changes the way the day moves.</h2><p className="body-3 mt-6 max-w-xl text-wrap-pretty text-slate-600">This is the part that is hard to explain with screenshots. Click through the views, then mark a task done.</p></div><div className="mt-10 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-[0_20px_60px_rgba(15,23,42,0.08)]"><div className="flex min-h-[520px] flex-col md:flex-row"><aside className="border-b border-slate-200 bg-slate-950 p-4 text-white md:w-52 md:border-b-0 md:border-r"><div className="flex items-center gap-2 border-b border-white/10 px-2 pb-5"><Image src="/tasko_logo.png" alt="" width={24} height={24} className="h-6 w-6" /><span className="body-5">Tasko</span></div><nav className="mt-5 space-y-1" aria-label="Workspace preview navigation">{(Object.keys(views) as Array<keyof typeof views>).map((key) => <button key={key} type="button" onClick={() => setActiveView(key)} className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left transition-colors ${activeView === key ? 'bg-white text-slate-950' : 'text-slate-300 hover:bg-white/10 hover:text-white'}`}><span className="body-6">{views[key].label}</span><span className="caption-3 opacity-60">{key === 'dashboard' ? '3' : key === 'people' ? '2' : '5'}</span></button>)}</nav><div className="mt-auto hidden border-t border-white/10 pt-5 md:block"><p className="caption-3 text-slate-400">Everacy workspace</p><p className="caption-2 mt-1 text-slate-300">R.a.mon · Member</p></div></aside><div className="min-w-0 flex-1 bg-white"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sm:px-7"><div><p className="title-3 text-slate-950">{view.title}</p><p className="caption-2 mt-1 text-slate-500">{view.subtitle}</p></div><div className="hidden items-center gap-2 sm:flex"><span className="caption-2 rounded-md border border-slate-200 px-2.5 py-1.5 text-slate-500">Search</span><span className="caption-2 rounded-md bg-blue-50 px-2.5 py-1.5 text-blue-700">Today</span></div></div>{activeView === 'dashboard' && <div className="grid gap-4 p-5 sm:grid-cols-[1.15fr_0.85fr] sm:p-7"><div className="rounded-xl border border-slate-200"><div className="flex items-center justify-between border-b border-slate-200 px-4 py-3"><span className="body-5 text-slate-900">Assigned to you</span><span className="caption-2 text-slate-500">{completed.length}/{tasks.length} done</span></div><div className="space-y-2 p-3">{tasks.map((task) => <button key={task} type="button" onClick={() => toggleTask(task)} className="flex w-full items-center gap-3 rounded-lg border border-slate-100 px-3 py-3 text-left transition-colors hover:border-blue-200 hover:bg-blue-50/50"><span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${completed.includes(task) ? 'border-blue-700 bg-blue-700 text-white' : 'border-slate-300 text-transparent'}`}>✓</span><span className={`body-6 ${completed.includes(task) ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{task}</span></button>)}</div></div><div className="space-y-4"><div className="rounded-xl bg-blue-700 p-5 text-white"><p className="caption-3 text-blue-100">Weekly progress</p><p className="heading-5 mt-3">{Math.round((completed.length / tasks.length) * 100)}%</p><div className="mt-4 h-1.5 rounded-full bg-blue-900/60"><div className="h-1.5 rounded-full bg-white transition-all" style={{ width: `${Math.max(8, (completed.length / tasks.length) * 100)}%` }} /></div></div><div className="rounded-xl border border-slate-200 bg-slate-50 p-5"><p className="caption-3 text-slate-500">Next up</p><p className="title-2 mt-2 text-slate-950">Team check-in</p><p className="caption-2 mt-1 text-slate-500">Today · 2:00 PM</p></div></div></div>}{activeView === 'people' && <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-7"><div className="rounded-xl border border-slate-200 p-5"><p className="caption-3 text-blue-700">Team availability</p><p className="heading-5 mt-3 text-slate-950">24 of 26</p><p className="body-6 mt-1 text-slate-500">people available today</p><div className="mt-5 space-y-3">{['R.a.mon · Clocked in', 'Ankita · Working remotely', 'Niraj · On leave'].map((person) => <div key={person} className="flex items-center gap-3 border-t border-slate-100 pt-3"><span className="h-2 w-2 rounded-full bg-emerald-500" /><span className="body-6 text-slate-700">{person}</span></div>)}</div></div><div className="rounded-xl bg-slate-950 p-5 text-white"><p className="caption-3 text-blue-300">Requests</p><p className="heading-5 mt-3">2 pending</p><p className="body-6 mt-1 text-slate-400">Leave and remote approvals</p><button type="button" onClick={() => setActiveView('inbox')} className="button-sm mt-8 text-blue-300 hover:text-white">Open inbox →</button></div></div>}{activeView === 'inbox' && <div className="space-y-3 p-5 sm:p-7">{[['Workspace announcement', 'Policy update · 12 minutes ago'], ['General group chat', 'Mandeep shared an image · 1 hour ago'], ['Leave request', 'Ankita requested Nov 12–13 · 2 hours ago']].map(([title, meta], index) => <button key={title} type="button" className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-200 p-4 text-left transition-colors hover:border-blue-200 hover:bg-blue-50/40"><span><span className="body-5 block text-slate-900">{title}</span><span className="caption-2 mt-1 block text-slate-500">{meta}</span></span><span className={`h-2.5 w-2.5 shrink-0 rounded-full ${index === 0 ? 'bg-blue-700' : 'bg-slate-300'}`} /></button>)}</div>}</div></div></div></div></section></Reveal>;
+}
+
+function ProblemSolution() {
+  return <Reveal><section className="border-b border-slate-200 bg-slate-50 py-20 sm:py-24"><div className={`${C} grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start`}><div><p className="caption-3 uppercase tracking-[0.18em] text-blue-700">A clearer operating rhythm</p><h2 className="heading-3 mt-4 text-wrap-balance text-slate-950">Stop switching between the work and the people doing it.</h2></div><div className="space-y-5 body-3 text-wrap-pretty text-slate-600"><p>When tasks live in one tool, attendance in another, and team updates in a chat thread, important context gets lost.</p><p>Tasko brings those daily workflows into one workspace, so an owner can see the work, a manager can support the team, and HR can keep people operations accountable.</p></div></div></section></Reveal>;
+}
+
+function Capabilities() {
+  return <Reveal><section id="capabilities" className="border-b border-slate-200 bg-white py-20 sm:py-24"><div className={C}><div className="max-w-2xl"><p className="caption-3 uppercase tracking-[0.18em] text-blue-700">Built for the whole team</p><h2 className="heading-3 mt-4 text-wrap-balance text-slate-950">The everyday systems your team already needs.</h2></div><div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{benefits.map(([title, description]) => <article key={title} className="rounded-2xl border border-slate-200 bg-slate-50 p-6 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-safe:hover:-translate-y-1"><div className="mb-5 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700" aria-hidden="true">✓</div><h3 className="title-2 text-slate-950">{title}</h3><p className="body-6 mt-3 text-wrap-pretty text-slate-600">{description}</p></article>)}</div></div></section></Reveal>;
+}
+
+function OperatingRhythm() {
+  const loops: Array<[string, string, string, string[]]> = [
+    ['01', 'Plan the work', 'Turn priorities into tasks, projects, lists, owners, due dates, and clear next actions.', ['Tasks', 'Projects', 'Lists']],
+    ['02', 'Coordinate the people', 'Keep attendance, leave, remote work, site visits, and team availability connected to the day.', ['Attendance', 'Leave', 'Schedules']],
+    ['03', 'Keep context close', 'Share announcements, chat, files, and documents alongside the work they belong to.', ['Chat', 'Files', 'Documents']],
+    ['04', 'Follow through', 'Use activity, reports, and progress views to spot what needs attention and close the loop.', ['Reports', 'Activity', 'Quality']],
+  ];
+  return <Reveal><section className="border-b border-slate-200 bg-[#f7f9fc] py-20 sm:py-24"><div className={C}><div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-end"><div><p className="caption-3 uppercase tracking-[0.18em] text-blue-700">A workspace that follows the day</p><h2 className="heading-3 mt-4 max-w-xl text-wrap-balance text-slate-950">From the first priority to the final follow-up.</h2></div><p className="body-3 max-w-xl text-wrap-pretty text-slate-600">Tasko gives each part of the operating day a place, then connects the pieces so teams don’t have to reconstruct the story from scattered tools.</p></div><div className="mt-12 grid gap-4 sm:grid-cols-2">{loops.map(([number, title, description, modules]) => <article key={number} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_12px_35px_rgba(15,23,42,0.05)]"><div className="flex items-center justify-between"><span className="heading-5 text-blue-700">{number}</span><span className="caption-3 rounded-full bg-slate-100 px-2.5 py-1 text-slate-500">Connected</span></div><h3 className="title-2 mt-6 text-slate-950">{title}</h3><p className="body-6 mt-3 min-h-[60px] text-wrap-pretty text-slate-600">{description}</p><div className="mt-5 flex flex-wrap gap-2">{modules.map((module) => <span key={module} className="caption-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1 text-slate-600">{module}</span>)}</div></article>)}</div></div></section></Reveal>;
+}
+
+function OperatingPrinciples() {
+  return <Reveal><section className="border-b border-slate-200 bg-white py-20 sm:py-24"><div className={`${C} grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-start`}><div><p className="caption-3 uppercase tracking-[0.18em] text-blue-700">The system behind the work</p><h2 className="heading-3 mt-4 max-w-xl text-wrap-balance text-slate-950">Clarity for the team. Control for the people responsible for it.</h2><p className="body-3 mt-6 max-w-lg text-wrap-pretty text-slate-600">The same workspace can feel simple for a team member and dependable for an owner because access, records, and activity stay connected underneath.</p></div><div className="grid gap-4 sm:grid-cols-2"><article className="rounded-2xl border border-slate-200 bg-slate-50 p-6"><div className="mb-5 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 font-semibold text-blue-700">01</div><h3 className="title-2 text-slate-950">Permission-aware by design</h3><p className="body-6 mt-3 text-wrap-pretty text-slate-600">Owners, managers, HR, and team members see the workflows that match their responsibilities.</p></article><article className="rounded-2xl border border-slate-200 bg-slate-50 p-6"><div className="mb-5 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 font-semibold text-blue-700">02</div><h3 className="title-2 text-slate-950">A record of what changed</h3><p className="body-6 mt-3 text-wrap-pretty text-slate-600">Activity, updates, and decisions stay visible so follow-up doesn’t depend on memory.</p></article><article className="rounded-2xl border border-slate-200 bg-slate-50 p-6"><div className="mb-5 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 font-semibold text-blue-700">03</div><h3 className="title-2 text-slate-950">Ready for distributed work</h3><p className="body-6 mt-3 text-wrap-pretty text-slate-600">Remote, field, and in-office work can use the same workspace rules and context.</p></article><article className="rounded-2xl border border-slate-200 bg-slate-50 p-6"><div className="mb-5 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 font-semibold text-blue-700">04</div><h3 className="title-2 text-slate-950">Built to grow with the team</h3><p className="body-6 mt-3 text-wrap-pretty text-slate-600">Start with daily work, then add HR, quality, analytics, and operations as the organization matures.</p></article></div></div></section></Reveal>;
+}
+
+function TaglineReveal() {
+  const words = 'Make the work visible. Keep the team moving.'.split(' ');
+  const [active, setActive] = useState(false);
+  useEffect(() => { if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setActive(true); return; } const node = document.querySelector('[data-tagline]'); if (!node) return; if (!('IntersectionObserver' in window)) { setActive(true); return; } const observer = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) { setActive(true); observer.disconnect(); } }, { threshold: 0.45 }); observer.observe(node); return () => observer.disconnect(); }, []);
+  return <section data-tagline className="border-b border-slate-200 bg-slate-950 py-24 sm:py-32"><div className={`${C} max-w-5xl`}><p className="caption-3 uppercase tracking-[0.18em] text-blue-300">The Tasko way</p><p className="heading-2 mt-6 max-w-4xl text-wrap-balance text-white" aria-label="Make the work visible. Keep the team moving.">{words.map((word, index) => <span key={`${word}-${index}`} className={`mr-3 inline-block transition-opacity duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${active ? 'opacity-100' : 'opacity-30'}`} style={{ transitionDelay: active ? `${index * 70}ms` : '0ms' }}>{word}</span>)}</p></div></section>;
+}
+
+function HowItWorks() {
+  const steps = [['01', 'Create a workspace', 'Set up a home for your team, client, department, or operation.'], ['02', 'Bring in the team', 'Invite people and give each role the access it needs.'], ['03', 'Run the day from one place', 'Assign work, coordinate attendance, share updates, and follow progress.']];
+  return <Reveal><section id="how-it-works" className="border-b border-slate-200 bg-slate-50 py-20 sm:py-24"><div className={C}><h2 className="heading-3 max-w-2xl text-wrap-balance text-slate-950">Start with the work your team is already doing.</h2><div className="mt-12 grid gap-8 md:grid-cols-3">{steps.map(([number, title, description]) => <article key={number} className="border-t-2 border-blue-600 pt-5"><p className="heading-5 text-blue-700">{number}</p><h3 className="title-2 mt-5 text-slate-950">{title}</h3><p className="body-6 mt-3 text-wrap-pretty text-slate-600">{description}</p></article>)}</div></div></section></Reveal>;
+}
+
+function Roles() {
+  const roles = [['Owners', 'Keep the workspace structured, secure, and moving in the right direction.'], ['Managers', 'Turn priorities into clear work and support the people responsible for delivery.'], ['HR teams', 'Connect employee workflows, attendance, leave, and records with the wider operation.'], ['Team members', 'Know what is expected, share updates, and keep work moving without guesswork.']];
+  return <Reveal><section id="roles" className="border-b border-slate-200 py-20 sm:py-24"><div className={C}><div className="max-w-2xl"><p className="caption-3 uppercase tracking-[0.18em] text-blue-700">One workspace, different responsibilities</p><h2 className="heading-3 mt-4 text-wrap-balance text-slate-950">Everyone sees the part of the operation they own.</h2></div><div className="mt-12 grid gap-4 sm:grid-cols-2">{roles.map(([title, description]) => <article key={title} className="rounded-2xl bg-slate-50 p-6"><h3 className="title-2 text-slate-950">{title}</h3><p className="body-6 mt-3 text-wrap-pretty text-slate-600">{description}</p></article>)}</div></div></section></Reveal>;
+}
+
+function FAQ() {
+  const [open, setOpen] = useState<number | null>(null);
+  return <Reveal><section className="border-b border-slate-200 bg-slate-50 py-20 sm:py-24"><div className={`${C} grid gap-12 lg:grid-cols-[0.75fr_1.25fr]`}><div><p className="caption-3 uppercase tracking-[0.18em] text-blue-700">Questions, answered</p><h2 className="heading-3 mt-4 text-wrap-balance text-slate-950">A practical place to start.</h2></div><div className="divide-y divide-slate-200 border-y border-slate-200">{faqs.map(([question, answer], index) => <div key={question}><button type="button" aria-expanded={open === index} onClick={() => setOpen(open === index ? null : index)} className="flex w-full items-center justify-between gap-6 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-inset"><span className="title-3 text-slate-950">{question}</span><span className="title-1 shrink-0 text-blue-700" aria-hidden="true">{open === index ? '−' : '+'}</span></button>{open === index && <p className="body-6 pb-5 pr-10 text-wrap-pretty text-slate-600">{answer}</p>}</div>)}</div></div></section></Reveal>;
+}
+
+function CTA() { return <Reveal><section className="py-20 sm:py-24"><div className={`${C} rounded-2xl bg-blue-700 px-6 py-14 text-center sm:px-12`}><h2 className="heading-3 text-wrap-balance text-white">Give the team one clear place to work.</h2><p className="body-2 mx-auto mt-5 max-w-2xl text-wrap-pretty text-blue-100">Create a workspace and start connecting the work, the people, and the day to day decisions.</p><p className="caption-2 mx-auto mt-5 max-w-xl text-wrap-pretty text-blue-100">Review the plans before you start. See pricing, then create a workspace when you are ready.</p><div className="mt-8 flex flex-wrap items-center justify-center gap-4"><Link href="/register" className="button-md inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-blue-700 transition-transform duration-300 hover:bg-blue-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-blue-700">Create your workspace <span aria-hidden="true">→</span></Link><Link href="/pricing" className="button-md text-white underline decoration-blue-200 underline-offset-4 transition-colors hover:text-blue-100">Review pricing</Link></div></div></section></Reveal>; }
+
+function Footer() { return <footer className="border-t border-slate-200 bg-white py-12"><div className={`${C} flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between`}><div><Link href="/" className="flex items-center gap-3"><Image src="/tasko_logo.png" alt="Tasko" width={32} height={32} className="h-8 w-8" /><span className="title-1 text-slate-950">Tasko</span></Link><p className="body-6 mt-4 max-w-sm text-wrap-pretty text-slate-500">Workspaces, tasks, people operations, and team visibility in one place.</p></div><div className="flex flex-wrap gap-x-6 gap-y-3"><Link href="/pricing" className="body-6 text-slate-600 hover:text-slate-950">Pricing</Link><Link href="/privacy-policy" className="body-6 text-slate-600 hover:text-slate-950">Privacy</Link><Link href="/terms-and-conditions" className="body-6 text-slate-600 hover:text-slate-950">Terms</Link><Link href="/support" className="body-6 text-slate-600 hover:text-slate-950">Support</Link></div></div><div className={`${C} mt-8 border-t border-slate-200 pt-6`}><p className="caption-2 text-slate-500">© 2026 Tasko. All rights reserved.</p></div></footer>; }
+
+export default function Home() { const router = useRouter(); useEffect(() => { if (localStorage.getItem('authToken')) router.push('/dashboard'); }, [router]); return <div className="landing-manrope min-h-screen overflow-x-hidden bg-white text-slate-950"><a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-slate-950 focus:px-4 focus:py-3 focus:text-white">Skip to content</a><Header /><main id="main-content"><Hero /><ProductTour /><ProblemSolution /><Capabilities /><OperatingRhythm /><TaglineReveal /><HowItWorks /><OperatingPrinciples /><Roles /><FAQ /><CTA /></main><Footer /></div>; }

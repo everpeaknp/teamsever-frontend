@@ -9,6 +9,26 @@ interface SystemSettings {
   logoUrl: string;
 }
 
+const defaultSystemSettings: SystemSettings = {
+  whatsappContactNumber: '+1234567890',
+  systemName: 'Tasko',
+  accentColor: 'mint',
+  themeMode: 'light',
+  logoUrl: '/tasko_logo.png',
+};
+
+function normalizeSystemBranding(value: Partial<SystemSettings> | null | undefined): SystemSettings {
+  const systemName = value?.systemName?.trim();
+  const logoUrl = value?.logoUrl?.trim();
+  return {
+    whatsappContactNumber: value?.whatsappContactNumber || defaultSystemSettings.whatsappContactNumber,
+    systemName: !systemName || /teamsever/i.test(systemName) ? 'Tasko' : systemName,
+    accentColor: value?.accentColor || defaultSystemSettings.accentColor,
+    themeMode: value?.themeMode || defaultSystemSettings.themeMode,
+    logoUrl: !logoUrl || /teamsever/i.test(logoUrl) ? '/tasko_logo.png' : logoUrl,
+  };
+}
+
 export function useSystemSettings() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -21,20 +41,14 @@ export function useSystemSettings() {
       // Try to fetch from super admin endpoint (which uses public access for basic settings)
       const response = await api.get('/super-admin/settings');
       if (response.data?.success) {
-        setSettings(response.data.data);
+        setSettings(normalizeSystemBranding(response.data.data));
       }
       setError(null);
     } catch (err: any) {
       // Silently use default if can't fetch
       if (err.response?.status !== 403 && err.response?.status !== 401 && err.response?.status !== 500) {
       }
-      setSettings({ 
-        whatsappContactNumber: '+1234567890',
-        systemName: 'Teamsever',
-        accentColor: 'mint',
-        themeMode: 'light',
-        logoUrl: '/teamsever_logo.png'
-      });
+      setSettings(defaultSystemSettings);
       setError(null);
     } finally {
       setLoading(false);
@@ -54,7 +68,7 @@ export function useSystemSettings() {
     // Listen for systemic settings updates
     const handleSystemUpdate = (event: CustomEvent) => {
       if (event.detail) {
-        setSettings(event.detail);
+        setSettings(normalizeSystemBranding(event.detail));
       }
     };
     
@@ -72,10 +86,10 @@ export function useSystemSettings() {
     loading,
     error,
     whatsappNumber: settings?.whatsappContactNumber || '+1234567890',
-    systemName: settings?.systemName || 'Teamsever',
+    systemName: settings?.systemName || 'Tasko',
     accentColor: settings?.accentColor || 'mint',
     themeMode: settings?.themeMode || 'light',
-    logoUrl: settings?.logoUrl || '/teamsever_logo.png',
+    logoUrl: settings?.logoUrl || '/tasko_logo.png',
     refetch: fetchSettings
   };
 }

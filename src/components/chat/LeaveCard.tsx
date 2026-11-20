@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Calendar, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Loader2, Maximize2, MapPin, Home } from 'lucide-react';
+import { Calendar, CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Loader2, Maximize2, MapPin, Home, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -33,6 +34,9 @@ interface LeaveCardProps {
         latitude?: number;
         longitude?: number;
         address?: string;
+        assignmentMode?: string;
+        routeStops?: Array<{ name: string; address?: string; sequence?: number }>;
+        territoryName?: string;
       };
       proposedRemoteArea?: { name?: string; latitude?: number; longitude?: number };
       remoteLocation?: { name?: string; latitude?: number; longitude?: number };
@@ -76,12 +80,28 @@ export function LeaveCard({
   const isRemoteRequest = meta.requestType === 'remote';
   const isSiteVisit = meta.requestType === 'site_visit';
   const siteVisit = meta.siteVisitDetails;
+  const isRoaming = isSiteVisit && (siteVisit?.assignmentMode === 'roaming_field' || siteVisit?.assignmentMode === 'roaming');
+  const hasValidSiteCoordinates = Boolean(
+    siteVisit &&
+    typeof siteVisit.latitude === 'number' &&
+    typeof siteVisit.longitude === 'number' &&
+    !(siteVisit.latitude === 0 && siteVisit.longitude === 0) &&
+    !isNaN(siteVisit.latitude) &&
+    !isNaN(siteVisit.longitude)
+  );
   const remoteLocation = meta.remoteLocation || meta.proposedRemoteArea;
-  const effectiveLocation = isSiteVisit && siteVisit?.latitude != null && siteVisit.longitude != null
-    ? { name: siteVisit.siteName || 'Site location', latitude: siteVisit.latitude, longitude: siteVisit.longitude }
-    : remoteLocation;
-  const hasRemoteCoordinates = remoteLocation?.latitude != null && remoteLocation.longitude != null;
-  const hasCoordinates = (isSiteVisit && siteVisit?.latitude != null && siteVisit.longitude != null) || hasRemoteCoordinates;
+  const hasValidRemoteCoordinates = Boolean(
+    remoteLocation &&
+    typeof remoteLocation.latitude === 'number' &&
+    typeof remoteLocation.longitude === 'number' &&
+    !(remoteLocation.latitude === 0 && remoteLocation.longitude === 0) &&
+    !isNaN(remoteLocation.latitude) &&
+    !isNaN(remoteLocation.longitude)
+  );
+  const effectiveLocation = isSiteVisit
+    ? (hasValidSiteCoordinates && siteVisit && !isRoaming ? { name: siteVisit.siteName || 'Site location', latitude: siteVisit.latitude!, longitude: siteVisit.longitude! } : null)
+    : (hasValidRemoteCoordinates ? remoteLocation : null);
+  const hasCoordinates = Boolean(!isRoaming && effectiveLocation);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showDenyPopover, setShowDenyPopover] = useState(false);
@@ -129,7 +149,7 @@ export function LeaveCard({
       await api.patch(`/workspaces/${workspaceId}/leaves/${leaveRequestId}/deny`, {
         denialReason: denialReason.trim() || undefined,
       });
-      toast.success('Leave request denied');
+      toast.success(`${isSiteVisit ? 'Site visit' : isRemoteRequest ? 'Remote work' : 'Leave'} request denied`);
       setShowDenyPopover(false);
       setDenialReason('');
       if (onStatusUpdated) onStatusUpdated();
@@ -220,11 +240,40 @@ export function LeaveCard({
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Site / Destination</span>
               <p className="mt-0.5 text-sm font-semibold text-foreground">{siteVisit.siteName || 'Site Location'}</p>
-              {siteVisit.clientName && <p className="text-xs text-muted-foreground">Client: {siteVisit.clientName}</p>}
+              {siteVisit.assignmentMode && siteVisit.assignmentMode !== 'point_visit' && (
+                <Badge variant="outline" className="mt-1 text-[10px] uppercase font-semibold text-indigo-600 border-indigo-200">
+                  {siteVisit.assignmentMode.replace('_', ' ')}
+                </Badge>
+              )}
+              {siteVisit.clientName && <p className="text-xs text-muted-foreground mt-1">Client: {siteVisit.clientName}</p>}
               {siteVisit.purpose && <p className="text-xs text-muted-foreground">Purpose: {siteVisit.purpose}</p>}
               {siteVisit.address && <p className="text-xs text-muted-foreground">Address: {siteVisit.address}</p>}
+              {Array.isArray(siteVisit.routeStops) && siteVisit.routeStops.length > 0 && (
+                <div className="mt-2 space-y-1 rounded-md bg-muted/40 p-2">
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground">Planned Route Stops ({siteVisit.routeStops.length})</p>
+                  {siteVisit.routeStops.map((stop: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-1.5 text-xs text-foreground">
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-bold text-primary">
+                        {idx + 1}
+                      </span>
+                      <span className="truncate">{stop.name}</span>
+                      {stop.address && <span className="text-[11px] text-muted-foreground truncate">({stop.address})</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            {hasCoordinates && effectiveLocation ? (
+            {isRoaming ? (
+              <div className="flex items-center gap-2.5 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-foreground">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <Navigation className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground">Roaming Field Assignment</p>
+                  <p className="text-[11px] text-muted-foreground">Continuous live GPS breadcrumbs will be recorded during active duty. No stationary destination pin required.</p>
+                </div>
+              </div>
+            ) : hasCoordinates && effectiveLocation ? (
               <>
                 <div className="relative isolate z-0 min-w-0 overflow-hidden rounded-lg">
                   {!isMapExpanded && <RemoteLocationMap latitude={effectiveLocation.latitude!} longitude={effectiveLocation.longitude!} className="h-28 sm:h-36" />}
@@ -263,7 +312,7 @@ export function LeaveCard({
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Remote work location</span>
             <p className="mt-0.5 text-sm font-medium text-foreground">{remoteLocation?.name || meta.remoteAreaName || 'Approved private place'}</p>
           </div>
-          {hasRemoteCoordinates && remoteLocation ? <>
+          {hasValidRemoteCoordinates && remoteLocation ? <>
             <div className="relative isolate z-0 min-w-0 overflow-hidden rounded-lg">
               {!isMapExpanded && <RemoteLocationMap latitude={remoteLocation.latitude!} longitude={remoteLocation.longitude!} className="h-28 sm:h-36" />}
               <div className="flex min-w-0 items-center justify-between gap-2 pt-2">

@@ -1,25 +1,31 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Manrope } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import { ClientLayout } from '@/components/layout/ClientLayout'
 import { CurrencyProvider } from '@/contexts/CurrencyContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-const inter = Inter({
+const manrope = Manrope({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-manrope',
   display: 'swap',
   preload: true,
 })
 
 export const metadata: Metadata = {
-  title: 'Teamsever',
-  description: 'Manage tasks with unrivaled precision.',
+  metadataBase: new URL('https://teamsever.everacy.com'),
+  title: 'Tasko | Work and people operations in one workspace',
+  description: 'Tasko gives owners, managers, and HR teams one workspace for tasks, attendance, leave, communication, and team visibility.',
+  openGraph: {
+    title: 'Tasko | Work and people operations in one workspace',
+    description: 'One workspace for tasks, attendance, leave, communication, and team visibility.',
+    images: ['/product-showcase.png'],
+  },
   icons: {
-    icon: '/teamsever_logo.png',
-    shortcut: '/teamsever_logo.png',
-    apple: '/teamsever_logo.png',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/tasko_logo.png',
   },
 }
 
@@ -39,7 +45,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={`${inter.className} ${inter.variable} bg-background text-foreground font-display`}>
+      <body className={`${manrope.className} ${manrope.variable} bg-background text-foreground font-display`}>
         <Providers>
           <ErrorBoundary>
             <CurrencyProvider>

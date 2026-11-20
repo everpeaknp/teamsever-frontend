@@ -31,7 +31,7 @@ export function AppUpdateNotifier({
         if (typeof data.version !== 'string' || !data.version || data.version === currentBuildId || updateNotified) return;
 
         updateNotified = true;
-        toast('TeamsEver has been updated', {
+        toast('Tasko has been updated', {
           id: 'teamsever-app-update',
           description: 'Refresh to load the latest version.',
           duration: Infinity,

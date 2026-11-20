@@ -173,7 +173,7 @@ export default function NotificationsPage() {
                   Enable Desktop Notifications
                 </h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                   Get notified even when Teamsever is in the background
+                   Get notified even when Tasko is in the background
                 </p>
                 <button
                   onClick={handleEnableNotifications}

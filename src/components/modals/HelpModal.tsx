@@ -35,7 +35,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Help & Keyboard Shortcuts</DialogTitle>
           <DialogDescription>
-            Learn how to use Teamsever efficiently with these tips and shortcuts
+            Learn how to use Tasko efficiently with these tips and shortcuts
           </DialogDescription>
         </DialogHeader>
 

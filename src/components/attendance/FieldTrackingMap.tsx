@@ -32,6 +32,14 @@ export interface FieldSiteVisitMapItem {
   latitude: number;
   longitude: number;
   status: string;
+  assignmentMode?: string;
+  routeStops?: Array<{
+    name: string;
+    latitude?: number;
+    longitude?: number;
+    sequence?: number;
+    status?: string;
+  }>;
   user?: {
     _id?: string;
     name?: string;
@@ -45,6 +53,7 @@ interface FieldTrackingMapProps {
   selectedWorkerId?: string | null;
   onSelectWorker?: (userId: string) => void;
   className?: string;
+  showCompletedVisits?: boolean;
 }
 
 const DEFAULT_CENTER: [number, number] = [27.7172, 85.324]; // Kathmandu default
@@ -56,6 +65,7 @@ export function FieldTrackingMap({
   selectedWorkerId,
   onSelectWorker,
   className = 'h-96',
+  showCompletedVisits = false,
 }: FieldTrackingMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -98,32 +108,118 @@ export function FieldTrackingMap({
     group.clearLayers();
     const boundsPoints: Array<[number, number]> = [];
 
-    // 1. Render active site visit destination pins
+    // 1. Render active & scheduled site visit destination pins
     for (const visit of siteVisits) {
-      if (!Number.isFinite(visit.latitude) || !Number.isFinite(visit.longitude)) continue;
-      const coords: [number, number] = [visit.latitude, visit.longitude];
-      if (visit.status === 'active') {
-        boundsPoints.push(coords);
+      if (Number.isFinite(visit.latitude) && Number.isFinite(visit.longitude)) {
+        const isCompleted = visit.status === 'completed';
+        const isCancelled = visit.status === 'cancelled';
+        if (!showCompletedVisits && (isCompleted || isCancelled)) {
+          continue;
+        }
+
+        const coords: [number, number] = [visit.latitude, visit.longitude];
+        if (visit.status === 'active' || visit.status === 'en_route') {
+          boundsPoints.push(coords);
+        }
+
+        const isActive = visit.status === 'active';
+        const isScheduled = visit.status === 'scheduled';
+        const isEnRoute = visit.status === 'en_route';
+        const isPaused = visit.status === 'paused';
+
+        let badgeBg = '#64748b';
+        let badgeIcon = '';
+        let statusBadge = '<span style="background:#f1f5f9;color:#475569;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">PAST VISIT</span>';
+
+        if (isActive) {
+          badgeBg = '#e11d48';
+          badgeIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 0 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>';
+          statusBadge = '<span style="background:#ffe4e6;color:#e11d48;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">● ACTIVE VISIT</span>';
+        } else if (isEnRoute) {
+          badgeBg = '#f97316';
+          badgeIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+          statusBadge = '<span style="background:#ffedd5;color:#ea580c;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">EN ROUTE</span>';
+        } else if (isScheduled) {
+          badgeBg = '#3b82f6';
+          badgeIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+          statusBadge = '<span style="background:#dbeafe;color:#2563eb;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">SCHEDULED</span>';
+        } else if (isPaused) {
+          badgeBg = '#eab308';
+          badgeIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+          statusBadge = '<span style="background:#fef9c3;color:#ca8a04;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">PAUSED</span>';
+        } else if (isCompleted) {
+          badgeBg = '#059669';
+          badgeIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+          statusBadge = '<span style="background:#d1fae5;color:#059669;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">✓ COMPLETED</span>';
+        }
+
+        const marker = L.marker(coords, {
+          icon: L.divIcon({
+            className: 'field-visit-pin',
+            html: `<div style="background:${badgeBg};color:white;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35);border:2.5px solid white;">${badgeIcon}</div>`,
+            iconSize: [26, 26],
+            iconAnchor: [13, 13],
+          }),
+        });
+
+        marker.bindPopup(
+          `<div style="font-family:inherit;min-width:180px;padding:4px 2px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              ${statusBadge}
+              ${visit.assignmentMode ? `<span style="font-size:9.5px;color:#64748b;text-transform:uppercase;font-weight:600;">${visit.assignmentMode.replace('_', ' ')}</span>` : ''}
+            </div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;line-height:1.3;margin-bottom:4px;">${visit.siteName}</div>
+            ${visit.clientName ? `<div style="font-size:11px;color:#475569;margin-bottom:2px;"><strong>Client:</strong> ${visit.clientName}</div>` : ''}
+            ${visit.user?.name ? `<div style="font-size:11px;color:#475569;margin-bottom:2px;"><strong>Member:</strong> ${visit.user.name}</div>` : ''}
+            ${visit.purpose ? `<div style="font-size:10.5px;color:#64748b;margin-top:4px;">Purpose: ${visit.purpose}</div>` : ''}
+          </div>`
+        );
+        marker.addTo(group);
       }
 
-      const isActive = visit.status === 'active';
-      const marker = L.marker(coords, {
-        icon: L.divIcon({
-          className: 'field-visit-pin',
-          html: `<span class="${isActive ? 'field-visit-pin-active' : 'field-visit-pin-completed'}" title="${visit.siteName}"></span>`,
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
-        }),
-      });
-      marker.bindPopup(
-        `<div style="font-size:12px;line-height:1.4">
-          <strong>${visit.siteName}</strong>
-          ${visit.clientName ? `<br/>Client: ${visit.clientName}` : ''}
-          ${visit.user?.name ? `<br/>Member: ${visit.user.name}` : ''}
-          <br/>Status: ${isActive ? 'On Site Now' : 'Completed'}
-        </div>`
-      );
-      marker.addTo(group);
+      // If visit has route stops, render stop pins and dashed connecting polyline
+      if (Array.isArray(visit.routeStops) && visit.routeStops.length > 0) {
+        const validStops = visit.routeStops.filter(
+          (s) => Number.isFinite(s.latitude) && Number.isFinite(s.longitude)
+        );
+        if (validStops.length > 0) {
+          const stopCoords: Array<[number, number]> = [];
+          validStops.forEach((stop, idx) => {
+            const sCoords: [number, number] = [stop.latitude!, stop.longitude!];
+            stopCoords.push(sCoords);
+            if (visit.status === 'active' || visit.status === 'en_route') {
+              boundsPoints.push(sCoords);
+            }
+
+            const isDone = stop.status === 'completed';
+            const isArrived = stop.status === 'arrived';
+            const badgeBg = isDone ? '#10b981' : isArrived ? '#f59e0b' : '#3b82f6';
+
+            const stopMarker = L.marker(sCoords, {
+              icon: L.divIcon({
+                className: 'route-stop-pin',
+                html: `<div style="background:${badgeBg};color:white;font-size:10px;font-weight:700;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.3);border:2px solid white;">${stop.sequence || idx + 1}</div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10],
+              }),
+            });
+            stopMarker.bindTooltip(`Stop ${stop.sequence || idx + 1}: ${stop.name} (${(stop.status || 'pending').toUpperCase()})`, {
+              direction: 'top',
+              offset: [0, -10],
+            });
+            stopMarker.addTo(group);
+          });
+
+          if (stopCoords.length > 1) {
+            L.polyline(stopCoords, {
+              color: '#6366f1',
+              weight: 3,
+              dashArray: '6, 6',
+              opacity: 0.75,
+            }).addTo(group);
+          }
+        }
+      }
     }
 
     // 2. Render active field workers
@@ -210,7 +306,7 @@ export function FieldTrackingMap({
       >
         © OpenStreetMap contributors
       </a>
-      <style jsx global>{`
+      <style>{`
         .field-visit-pin,
         .field-worker-pin {
           background: transparent;

@@ -6,7 +6,7 @@ export default function PrivacyPolicyPage() {
       <h1>Privacy Policy</h1>
       <p><strong>Last updated:</strong> June 12, 2026</p>
       <p>
-        This Privacy Policy explains how Teamsever collects, uses, stores, and shares information when you use our website,
+        This Privacy Policy explains how Tasko collects, uses, stores, and shares information when you use our website,
         mobile app, and related services.
       </p>
 
@@ -53,7 +53,7 @@ export default function PrivacyPolicyPage() {
 
       <h2>Children’s Privacy</h2>
       <p>
-        Teamsever is not intended for children under 13, and we do not knowingly collect personal information from children
+        Tasko is not intended for children under 13, and we do not knowingly collect personal information from children
         under 13.
       </p>
 
@@ -69,7 +69,7 @@ export default function PrivacyPolicyPage() {
       </p>
 
       <h2>Contact Us</h2>
-      <p>If you have questions about this Privacy Policy, contact us through the support channels provided by Teamsever.</p>
+      <p>If you have questions about this Privacy Policy, contact us through the support channels provided by Tasko.</p>
     </main>
   );
 }

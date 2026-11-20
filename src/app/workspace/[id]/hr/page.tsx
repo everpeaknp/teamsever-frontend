@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlanFeatureGate } from '@/components/subscription/PlanFeatureGate';
 import { toast } from 'sonner';
+import { HrSetupReadinessCard } from '@/components/hr/HrSetupReadinessCard';
 
 type HrCapabilities = Record<string, boolean>;
 type DashboardData = Record<string, any>;
@@ -102,6 +103,8 @@ export default function HrDashboardPage() {
           <div className="flex items-center gap-3"><span className="rounded-xl bg-primary/10 p-3 text-primary"><BriefcaseBusiness className="h-6 w-6" /></span><div><h1 className="text-3xl font-bold tracking-tight">Human Resources</h1><p className="mt-1 text-sm text-muted-foreground">Workforce overview and people operations</p></div></div>
           <Button asChild variant="outline"><Link href={`/workspace/${workspaceId}/attendance`}>Attendance & leave <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
         </header>
+
+        <HrSetupReadinessCard workspaceId={workspaceId} canManageRecords={capabilities.MANAGE_HR_RECORDS === true} />
 
         {loading ? <div className="flex items-center justify-center py-16 text-muted-foreground"><Loader2 className="mr-2 h-5 w-5 animate-spin" />Loading HR dashboard</div> : error ? <Card><CardContent className="flex flex-col items-center gap-3 py-12 text-center"><p className="text-sm text-destructive">{error}</p><Button variant="outline" onClick={() => window.location.reload()}>Retry</Button></CardContent></Card> : <>
           {!canSeeOverview ? <Card><CardContent className="py-6"><h2 className="font-semibold">Your HR workspace</h2><p className="mt-1 text-sm text-muted-foreground">Use the links below to open the HR areas available to your role.</p>{data?.headcount && <p className="mt-4 text-2xl font-bold">{number(headcount.total)} <span className="text-sm font-normal text-muted-foreground">employee records in your access scope</span></p>}</CardContent></Card> : <>

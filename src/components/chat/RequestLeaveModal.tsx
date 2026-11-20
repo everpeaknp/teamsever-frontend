@@ -43,6 +43,10 @@ export function RequestLeaveModal({
   const [sitePurpose, setSitePurpose] = useState('meeting');
   const [siteAddress, setSiteAddress] = useState('');
   const [sitePoint, setSitePoint] = useState<{ latitude: number; longitude: number }>({ latitude: 27.7172, longitude: 85.324 });
+  const [assignmentMode, setAssignmentMode] = useState<'point_visit' | 'route' | 'territory' | 'roaming_field'>('point_visit');
+  const [routeStops, setRouteStops] = useState<Array<{ name: string; address?: string }>>([{ name: '', address: '' }]);
+  const [territoryName, setTerritoryName] = useState('');
+  const [allowUnplannedStops, setAllowUnplannedStops] = useState(false);
   const [remoteAreas, setRemoteAreas] = useState<any[]>([]);
   const [remoteAreaId, setRemoteAreaId] = useState('propose');
   const [remotePoint, setRemotePoint] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -146,9 +150,22 @@ export function RequestLeaveModal({
       toast.error(policyError || 'Select a leave type once the policies finish loading');
       return;
     }
-    if (requestType === 'site_visit' && !siteName.trim()) {
-      toast.error('Site or destination name is compulsory');
-      return;
+    if (requestType === 'site_visit') {
+      if (assignmentMode === 'point_visit' && !siteName.trim()) {
+        toast.error('Site or destination name is compulsory');
+        return;
+      }
+      if (assignmentMode === 'route') {
+        const validStops = routeStops.filter((s) => s.name.trim().length > 0);
+        if (validStops.length === 0) {
+          toast.error('At least one route stop with a name is required');
+          return;
+        }
+      }
+      if (assignmentMode === 'territory' && !territoryName.trim()) {
+        toast.error('Territory or campaign name is compulsory');
+        return;
+      }
     }
 
     const submitRequest = async (replaceRequestIds: string[] = []) => api.post(`/workspaces/${workspaceId}/leaves`, {
@@ -163,12 +180,18 @@ export function RequestLeaveModal({
         ...(requestType === 'remote' ? remoteAreaId !== 'propose' ? { remoteAreaId } : { proposedRemoteArea: remotePoint ? { name: remoteAreaName.trim() || 'Requested remote place', latitude: remotePoint.latitude, longitude: remotePoint.longitude, radiusMeters: 60 } : undefined } : {}),
         ...(requestType === 'site_visit' ? {
           siteVisitDetails: {
-            siteName: siteName.trim(),
+            siteName: siteName.trim() || (assignmentMode === 'territory' ? territoryName.trim() : assignmentMode === 'route' ? (routeStops[0]?.name.trim() || 'Multi-stop Route') : 'Roaming field work'),
             clientName: clientName.trim() || undefined,
             purpose: sitePurpose,
-            latitude: sitePoint.latitude,
-            longitude: sitePoint.longitude,
+            latitude: assignmentMode === 'point_visit' ? sitePoint.latitude : undefined,
+            longitude: assignmentMode === 'point_visit' ? sitePoint.longitude : undefined,
             address: siteAddress.trim() || undefined,
+            assignmentMode,
+            routeStops: assignmentMode === 'route'
+              ? routeStops.filter((s) => s.name.trim().length > 0).map((s, idx) => ({ name: s.name.trim(), address: s.address?.trim() || undefined, sequence: idx + 1 }))
+              : undefined,
+            territoryName: assignmentMode === 'territory' ? territoryName.trim() : undefined,
+            allowUnplannedStops: Boolean(allowUnplannedStops),
           }
         } : {}),
       });
@@ -240,9 +263,105 @@ export function RequestLeaveModal({
           {requestType === 'site_visit' && (
             <div className="space-y-3 rounded-lg border p-3 bg-muted/20">
               <div className="space-y-1.5">
-                <Label htmlFor="site-name" className="text-xs font-semibold">Site / Destination Name <span className="text-destructive font-bold">*</span></Label>
-                <Input id="site-name" placeholder="e.g. Acme Corp HQ, Apex Construction Site" value={siteName} onChange={(e) => setSiteName(e.target.value)} required />
+                <Label className="text-xs font-semibold">Assignment Mode</Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: 'point_visit', label: 'Point Visit' },
+                    { id: 'route', label: 'Multi-Stop Route' },
+                    { id: 'territory', label: 'Territory' },
+                    { id: 'roaming_field', label: 'Roaming' },
+                  ].map((mode) => (
+                    <Button
+                      key={mode.id}
+                      type="button"
+                      size="sm"
+                      variant={assignmentMode === mode.id ? 'default' : 'outline'}
+                      onClick={() => setAssignmentMode(mode.id as any)}
+                      className="h-8 text-xs"
+                    >
+                      {mode.label}
+                    </Button>
+                  ))}
+                </div>
               </div>
+
+              {assignmentMode === 'point_visit' && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="site-name" className="text-xs font-semibold">Site / Destination Name <span className="text-destructive font-bold">*</span></Label>
+                  <Input id="site-name" placeholder="e.g. Acme Corp HQ, Apex Construction Site" value={siteName} onChange={(e) => setSiteName(e.target.value)} required />
+                </div>
+              )}
+
+              {assignmentMode === 'territory' && (
+                <div className="space-y-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="territory-name" className="text-xs font-semibold">Territory / Campaign Name <span className="text-destructive font-bold">*</span></Label>
+                    <Input id="territory-name" placeholder="e.g. Lalitpur Sector 4, Pokhara Retail Coverage" value={territoryName} onChange={(e) => setTerritoryName(e.target.value)} required />
+                  </div>
+                  <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer pt-1">
+                    <input type="checkbox" checked={allowUnplannedStops} onChange={(e) => setAllowUnplannedStops(e.target.checked)} className="rounded border-border text-primary" />
+                    Allow adding unplanned stops during the campaign
+                  </label>
+                </div>
+              )}
+
+              {assignmentMode === 'route' && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">Planned Stops ({routeStops.length})</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs text-primary font-semibold"
+                      onClick={() => setRouteStops([...routeStops, { name: '', address: '' }])}
+                    >
+                      + Add Stop
+                    </Button>
+                  </div>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {routeStops.map((stop, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">
+                          {idx + 1}
+                        </span>
+                        <Input
+                          placeholder="Stop Name / Client"
+                          value={stop.name}
+                          onChange={(e) => {
+                            const updated = [...routeStops];
+                            updated[idx] = { ...updated[idx], name: e.target.value };
+                            setRouteStops(updated);
+                          }}
+                          className="h-8 text-xs"
+                        />
+                        <Input
+                          placeholder="Address"
+                          value={stop.address || ''}
+                          onChange={(e) => {
+                            const updated = [...routeStops];
+                            updated[idx] = { ...updated[idx], address: e.target.value };
+                            setRouteStops(updated);
+                          }}
+                          className="h-8 text-xs"
+                        />
+                        {routeStops.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-destructive"
+                            onClick={() => setRouteStops(routeStops.filter((_, i) => i !== idx))}
+                          >
+                            ✕
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="site-client" className="text-xs font-semibold">Client Name</Label>
@@ -261,10 +380,13 @@ export function RequestLeaveModal({
                   </select>
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="site-address" className="text-xs font-semibold">Address / Landmark</Label>
-                <Input id="site-address" placeholder="e.g. 450 Financial District" value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} />
-              </div>
+
+              {assignmentMode === 'point_visit' && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="site-address" className="text-xs font-semibold">Address / Landmark</Label>
+                  <Input id="site-address" placeholder="e.g. 450 Financial District" value={siteAddress} onChange={(e) => setSiteAddress(e.target.value)} />
+                </div>
+              )}
             </div>
           )}
 
@@ -344,7 +466,7 @@ export function RequestLeaveModal({
             </>}
           </div>}
 
-          {requestType === 'site_visit' && (
+          {requestType === 'site_visit' && assignmentMode === 'point_visit' && (
             <div className="min-w-0 space-y-2 overflow-hidden rounded-lg border p-3">
               <Label className="text-xs font-semibold">Pinned Destination Location</Label>
               <p className="text-xs text-muted-foreground">Click or drag the marker to pin the client or inspection site on the map.</p>
@@ -374,7 +496,7 @@ export function RequestLeaveModal({
             <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={loading || !reason.trim() || (requestType === 'leave' && (policiesLoading || !!policyError || (leavePolicies.length > 0 && !leavePolicyId))) || (requestType === 'remote' && remoteAreaId === 'propose' && !remotePoint) || (requestType === 'site_visit' && !siteName.trim())} className="gap-1.5">
+            <Button type="submit" size="sm" disabled={loading || !reason.trim() || (requestType === 'leave' && (policiesLoading || !!policyError || (leavePolicies.length > 0 && !leavePolicyId))) || (requestType === 'remote' && remoteAreaId === 'propose' && !remotePoint) || (requestType === 'site_visit' && assignmentMode === 'point_visit' && !siteName.trim()) || (requestType === 'site_visit' && assignmentMode === 'territory' && !territoryName.trim()) || (requestType === 'site_visit' && assignmentMode === 'route' && routeStops.filter((s) => s.name.trim().length > 0).length === 0)} className="gap-1.5">
               {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Send {requestType === 'site_visit' ? 'Site Visit' : requestType === 'leave' ? 'Leave' : 'Remote'} Request
             </Button>

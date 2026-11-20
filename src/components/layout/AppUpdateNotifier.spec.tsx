@@ -20,7 +20,7 @@ describe('AppUpdateNotifier', () => {
     render(<AppUpdateNotifier currentBuildId="old-build" pollIntervalMs={60_000} />);
 
     await waitFor(() => expect(toast).toHaveBeenCalledWith(
-      'TeamsEver has been updated',
+      'Tasko has been updated',
       expect.objectContaining({
         description: 'Refresh to load the latest version.',
         duration: Infinity,

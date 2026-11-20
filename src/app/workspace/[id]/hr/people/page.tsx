@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BriefcaseBusiness, Loader2, Plus, Search, Users } from 'lucide-react';
 import { api } from '@/lib/axios';
@@ -20,6 +20,8 @@ const localDateValue = (date = new Date()) => `${date.getFullYear()}-${String(da
 export default function HrDirectoryPage() {
   const workspaceId = useParams().id as string;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedEmployeeId = searchParams.get('employeeId');
   const loadGeneration = useRef(0);
   const currentWorkspace = useRef(workspaceId);
   currentWorkspace.current = workspaceId;
@@ -37,6 +39,7 @@ export default function HrDirectoryPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deepLinkError, setDeepLinkError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [canManageRecords, setCanManageRecords] = useState(false);
@@ -93,6 +96,15 @@ export default function HrDirectoryPage() {
       .then((res) => setDepartmentsList(res.data.data || []))
       .catch(() => {});
   }, [workspaceId]);
+  useEffect(() => {
+    if (!requestedEmployeeId) return;
+    let active = true;
+    setDeepLinkError(null);
+    api.get(`/workspaces/${workspaceId}/hr/employees/${requestedEmployeeId}`)
+      .then(() => { if (active) router.replace(`/workspace/${workspaceId}/hr/${requestedEmployeeId}`); })
+      .catch((requestError: any) => { if (active) setDeepLinkError(requestError?.response?.data?.message || 'That employee record is unavailable or outside your access scope.'); });
+    return () => { active = false; };
+  }, [workspaceId, requestedEmployeeId, router]);
 
   useEffect(() => {
     if (!canManageRecords) return;
@@ -159,6 +171,8 @@ export default function HrDirectoryPage() {
       <div><div className="flex items-center gap-3"><span className="rounded-xl bg-primary/10 p-3 text-primary"><BriefcaseBusiness className="h-6 w-6" /></span><div><h1 className="text-3xl font-bold tracking-tight">Human Resources</h1><p className="mt-1 text-sm text-muted-foreground">Employee directory and organization records</p></div></div></div>
       <div className="flex flex-wrap gap-2">{featureLinks.map((item) => <Link key={item.href} href={item.href} className="inline-flex h-10 items-center rounded-md border px-4 text-sm font-medium hover:bg-muted">{item.label}</Link>)}{canManageRecords && <Button onClick={() => setShowCreate(!showCreate)} disabled={!employeeOptionsLoaded || !availableMembers.length}><Plus className="mr-2 h-4 w-4" />Add employee record</Button>}</div>
     </header>
+
+    {deepLinkError && <Card><CardContent className="flex flex-wrap items-center justify-between gap-3 py-4"><p role="alert" className="text-sm text-destructive">{deepLinkError}</p><Button variant="outline" onClick={() => router.replace(`/workspace/${workspaceId}/hr/people`)}>Return to directory</Button></CardContent></Card>}
 
     {showCreate && <Card><CardContent className="p-5"><form onSubmit={create} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <label className="space-y-1 text-sm font-medium">Workspace member<select required value={form.userId} onChange={(event) => setForm({ ...form, userId: event.target.value })} className="h-10 w-full rounded-md border bg-background px-3"><option value="">Select member</option>{availableMembers.map((member) => <option key={member._id} value={member._id}>{member.name} · {member.email}</option>)}</select></label>

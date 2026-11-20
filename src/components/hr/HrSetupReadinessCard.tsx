@@ -1,0 +1,8 @@
+'use client';
+import Link from 'next/link';
+import { useEffect,useState } from 'react';
+import { ArrowRight,CheckCircle2,CircleAlert,Loader2 } from 'lucide-react';
+import { Card,CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { getHrSetupReadiness,type HrSetupReadiness } from '@/lib/hrSetup';
+export function HrSetupReadinessCard({workspaceId,canManageRecords}:{workspaceId:string;canManageRecords:boolean}){const[data,setData]=useState<HrSetupReadiness|null>(null);const[failed,setFailed]=useState(false);useEffect(()=>{if(!canManageRecords)return;let active=true;getHrSetupReadiness(workspaceId).then(v=>{if(active)setData(v)}).catch(()=>{if(active)setFailed(true)});return()=>{active=false};},[workspaceId,canManageRecords]);if(!canManageRecords)return null;return <Card className="border-primary/20 bg-primary/5"><CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-3"><span className="rounded-xl bg-primary/10 p-2 text-primary">{data?.readiness.core==='ready'?<CheckCircle2 className="h-5 w-5"/>:failed?<CircleAlert className="h-5 w-5"/>:<Loader2 className="h-5 w-5 animate-spin"/>}</span><div><h2 className="font-semibold">HR setup</h2><p className="mt-1 text-sm text-muted-foreground">{failed?'Readiness could not be loaded. Open setup to retry.':data?data.readiness.core==='ready'?'Core employee records are ready.':`${data.members.unenrolled} unenrolled · ${data.members.unreviewed} awaiting HR review`:'Checking readiness…'}</p></div></div><Button asChild><Link href={`/workspace/${workspaceId}/hr/setup`}>Continue setup <ArrowRight className="ml-2 h-4 w-4"/></Link></Button></CardContent></Card>}

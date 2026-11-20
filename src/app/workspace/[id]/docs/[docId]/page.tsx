@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { api } from '@/lib/axios';
 import { Editor } from '@/components/docs/Editor';
@@ -13,6 +13,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
+import debounce from 'lodash.debounce';
+import { DocumentPatch, DocumentSaveQueue } from '@/lib/documentSaveQueue';
 
 interface Document {
   _id: string;
@@ -28,6 +30,11 @@ interface Document {
   workspace?: string;
   createdAt: string;
   updatedAt: string;
+  revision: number;
+  capabilities: {
+    canEdit: boolean;
+    canArchive: boolean;
+  };
 }
 
 export default function DocumentPage() {
@@ -40,8 +47,48 @@ export default function DocumentPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [icon, setIcon] = useState('📄');
+  const saveQueue = useRef<DocumentSaveQueue | null>(null);
+
+  const writeDocument = useCallback(async (patch: DocumentPatch, expectedRevision: number) => {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const response = await api.patch(`/docs/${docId}`, { ...patch, expectedRevision });
+      const updated = response.data.data as Document;
+      setDocument((current) => current ? { ...current, ...updated } : updated);
+      return updated.revision;
+    } catch (requestError: any) {
+      const isConflict = requestError.response?.status === 409;
+      setSaveError(isConflict
+        ? 'This document changed elsewhere. Reload before saving again.'
+        : requestError.response?.data?.message || 'Changes could not be saved.');
+      throw requestError;
+    } finally {
+      setSaving(false);
+    }
+  }, [docId]);
+
+  const flushPending = useCallback(async () => {
+    saveDebounced.flush();
+    await saveQueue.current?.flush();
+  // saveDebounced is stable for the lifetime of writeDocument.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [writeDocument]);
+
+  const saveDebounced = useMemo(() => debounce(() => {
+    void saveQueue.current?.flush().catch(() => undefined);
+  }, 700), [writeDocument]);
+
+  const enqueuePatch = useCallback((patch: DocumentPatch) => {
+    if (!document?.capabilities.canEdit) return;
+    saveQueue.current?.enqueue(patch);
+    setSaving(true);
+    setSaveError(null);
+    saveDebounced();
+  }, [document?.capabilities.canEdit, saveDebounced]);
 
   useEffect(() => {
     fetchDocument();
@@ -54,6 +101,7 @@ export default function DocumentPage() {
       const response = await api.get(`/docs/${docId}`);
       const doc = response.data.data;
       setDocument(doc);
+      saveQueue.current = new DocumentSaveQueue(doc.revision || 1, writeDocument);
       setTitle(doc.title);
       setIcon(doc.icon);
     } catch (error: any) {
@@ -63,19 +111,27 @@ export default function DocumentPage() {
     }
   };
 
-  const handleTitleChange = async (newTitle: string) => {
+  const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
-    try {
-      await api.patch(`/docs/${docId}`, { title: newTitle });
-    } catch (error) {
-    }
+    enqueuePatch({ title: newTitle });
   };
 
   const handleIconChange = () => {
     const newIcon = window.prompt('Enter an emoji:', icon);
     if (newIcon) {
       setIcon(newIcon);
-      api.patch(`/docs/${docId}`, { icon: newIcon }).catch(() => undefined);
+      enqueuePatch({ icon: newIcon });
+    }
+  };
+
+  const handleArchive = async () => {
+    if (!confirm('Archive this document?')) return;
+    try {
+      await flushPending();
+      await api.delete(`/docs/${docId}`);
+      router.push(`/workspace/${workspaceId}/docs`);
+    } catch (requestError: any) {
+      setSaveError(requestError.response?.data?.message || 'Failed to archive document');
     }
   };
 
@@ -90,9 +146,28 @@ export default function DocumentPage() {
     }
   };
 
-  const handleSave = () => {
-    setSaving(true);
-    setTimeout(() => setSaving(false), 1000);
+  useEffect(() => {
+    const warnAboutPendingChanges = (event: BeforeUnloadEvent) => {
+      if (!saveQueue.current?.hasPendingChanges) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnAboutPendingChanges);
+    return () => {
+      window.removeEventListener('beforeunload', warnAboutPendingChanges);
+      saveDebounced.flush();
+      void saveQueue.current?.flush().catch(() => undefined);
+      saveDebounced.cancel();
+    };
+  }, [saveDebounced]);
+
+  const handleBack = async () => {
+    try {
+      await flushPending();
+      router.back();
+    } catch {
+      // Keep the editor open so the user can retry instead of losing changes.
+    }
   };
 
   if (loading) {
@@ -126,13 +201,17 @@ export default function DocumentPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
-                onClick={() => router.back()}
+                onClick={handleBack}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                {saving ? (
+                {saveError ? (
+                  <button className="text-red-600" onClick={() => flushPending().catch(() => undefined)}>
+                    Save failed · Retry
+                  </button>
+                ) : saving ? (
                   <>
                     <Save className="w-4 h-4 animate-pulse" />
                     <span>Saving...</span>
@@ -150,7 +229,7 @@ export default function DocumentPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleArchive} disabled={!document.capabilities.canArchive}>
                   <Archive className="w-4 h-4 mr-2" />
                   Archive
                 </DropdownMenuItem>
@@ -194,6 +273,7 @@ export default function DocumentPage() {
             type="text"
             value={title}
             onChange={(e) => handleTitleChange(e.target.value)}
+            disabled={!document.capabilities.canEdit}
             className="min-w-0 w-full border-none bg-transparent text-3xl font-bold outline-none placeholder-gray-300 sm:text-5xl"
             placeholder="Untitled"
           />
@@ -209,7 +289,8 @@ export default function DocumentPage() {
         <Editor
           documentId={docId}
           initialContent={document.content}
-          onSave={handleSave}
+          onChange={(content) => enqueuePatch({ content })}
+          editable={document.capabilities.canEdit}
         />
       </main>
     </div>

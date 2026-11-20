@@ -6,13 +6,13 @@ export default function TermsAndConditionsPage() {
       <h1>Terms and Conditions</h1>
       <p><strong>Last updated:</strong> June 12, 2026</p>
       <p>
-        These Terms and Conditions govern your access to and use of Teamsever. By using the service, you agree to these
+        These Terms and Conditions govern your access to and use of Tasko. By using the service, you agree to these
         terms.
       </p>
 
       <h2>Use of the Service</h2>
       <p>
-        Teamsever provides task management, workspace collaboration, messaging, file sharing, and related productivity
+        Tasko provides task management, workspace collaboration, messaging, file sharing, and related productivity
         features. You agree to use the service only for lawful purposes and in compliance with these terms.
       </p>
 
@@ -50,7 +50,7 @@ export default function TermsAndConditionsPage() {
 
       <h2>Intellectual Property</h2>
       <p>
-        Teamsever and its content, branding, and software are owned by us or our licensors and are protected by applicable
+        Tasko and its content, branding, and software are owned by us or our licensors and are protected by applicable
         intellectual property laws.
       </p>
 
@@ -68,7 +68,7 @@ export default function TermsAndConditionsPage() {
 
       <h2>Limitation of Liability</h2>
       <p>
-        To the maximum extent permitted by law, Teamsever will not be liable for indirect, incidental, special, or
+        To the maximum extent permitted by law, Tasko will not be liable for indirect, incidental, special, or
         consequential damages arising from your use of the service.
       </p>
 
@@ -79,7 +79,7 @@ export default function TermsAndConditionsPage() {
       </p>
 
       <h2>Contact</h2>
-      <p>If you have questions about these Terms and Conditions, contact us through the support channels provided by Teamsever.</p>
+      <p>If you have questions about these Terms and Conditions, contact us through the support channels provided by Tasko.</p>
     </main>
   );
 }

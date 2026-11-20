@@ -43,11 +43,11 @@ export default function GlobalTimer() {
     if (isTimerRunning && taskTitle) {
       document.title = `⏱️ ${displayTime} - ${taskTitle}`;
     } else {
-      document.title = 'Teamsever';
+      document.title = 'Tasko';
     }
 
     return () => {
-      document.title = 'Teamsever';
+      document.title = 'Tasko';
     };
   }, [isTimerRunning, displayTime, taskTitle]);
 

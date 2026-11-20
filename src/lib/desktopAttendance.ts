@@ -23,12 +23,12 @@ async function provision() {
   const bridge = window.teamseverDesktop;
   if (!bridge) return null;
   const capabilities = await bridge.getCapabilities();
-  if (!['win32', 'linux'].includes(capabilities.platform)) throw new Error('TeamsEver desktop attendance currently supports Windows and Linux only.');
+  if (!['win32', 'linux'].includes(capabilities.platform)) throw new Error('Tasko desktop attendance currently supports Windows and Linux only.');
   let deviceId = localStorage.getItem(DEVICE_ID_KEY);
   if (!capabilities.credentialInstalled || !deviceId) {
     if (deviceId) await api.delete(`/attendance/desktop-devices/${deviceId}`).catch(() => undefined);
     const platform = capabilities.platform === 'win32' ? 'windows' : 'linux';
-    const response = await api.post('/attendance/desktop-devices', { name: `TeamsEver Desktop (${platform})`, platform });
+    const response = await api.post('/attendance/desktop-devices', { name: `Tasko Desktop (${platform})`, platform });
     deviceId = String(response.data.data.device.id);
     try {
       await bridge.storeCredential(response.data.data.credential);

@@ -43,7 +43,7 @@ describe('DesktopUpdateNotifier', () => {
     const { bridge } = createBridge({ type: 'downloading', percent: 43 });
     window.teamseverDesktop = bridge as any;
     render(<DesktopUpdateNotifier />);
-    await waitFor(() => expect(mockToast.loading).toHaveBeenCalledWith('Downloading TeamsEver update', expect.objectContaining({ description: '43%' })));
+    await waitFor(() => expect(mockToast.loading).toHaveBeenCalledWith('Downloading Tasko update', expect.objectContaining({ description: '43%' })));
   });
 
   it('offers a restart action when an update has finished downloading', async () => {
@@ -51,7 +51,7 @@ describe('DesktopUpdateNotifier', () => {
     window.teamseverDesktop = bridge as any;
     render(<DesktopUpdateNotifier />);
     act(() => emit({ type: 'downloaded', version: '0.1.5' }));
-    expect(mockToast).toHaveBeenCalledWith('TeamsEver update is ready', expect.objectContaining({
+    expect(mockToast).toHaveBeenCalledWith('Tasko update is ready', expect.objectContaining({
       action: expect.objectContaining({ label: 'Restart to update' }),
       cancel: expect.objectContaining({ label: 'Later' }),
     }));

@@ -148,7 +148,7 @@ export function GitHubWebhookModal() {
                     <FormLabel>GitHub Repository Name</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="e.g. everpeaknp/teamsever-backend"
+                        placeholder="e.g. your-org/backend-repository"
                         autoFocus
                         autoComplete="off"
                         {...field}

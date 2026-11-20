@@ -377,7 +377,7 @@ export default function AccountSettingsPage() {
       toast.success(`Successfully linked GitHub account: @${githubUsername}`);
     } catch (error: any) {
       if (error.code === 'auth/credential-already-in-use') {
-        toast.error('This GitHub account is already linked to another Teamsever user.');
+        toast.error('This GitHub account is already linked to another Tasko user.');
       } else {
         toast.error(error.message || 'Failed to link GitHub account');
       }

@@ -13,8 +13,8 @@ function Header({ isLoggedIn }: { isLoggedIn: boolean }) {
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-neutral-100">
       <div className={`${C} flex h-16 items-center justify-between`}>
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/teamsever_logo.png" alt="TeamsEver" width={32} height={32} priority className="h-8 w-auto" />
-          <span className="text-xl font-bold tracking-tight text-neutral-900">TeamsEver</span>
+          <Image src="/tasko_logo.png" alt="Tasko" width={32} height={32} priority className="h-8 w-auto" />
+          <span className="text-xl font-bold tracking-tight text-neutral-900">Tasko</span>
         </Link>
 
         <nav className="hidden items-center gap-7 md:flex">
@@ -62,8 +62,8 @@ function Footer() {
       <div className={`${C} grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]`}>
         <div>
           <div className="flex items-center gap-2.5">
-            <Image src="/teamsever_logo.png" alt="Teamsever" width={32} height={32} className="h-8 w-auto" />
-            <span className="text-xl font-bold tracking-tight text-neutral-900">TeamsEver</span>
+            <Image src="/tasko_logo.png" alt="Tasko" width={32} height={32} className="h-8 w-auto" />
+            <span className="text-xl font-bold tracking-tight text-neutral-900">Tasko</span>
           </div>
           <p className="mt-4 max-w-xs text-sm leading-[1.7] text-neutral-400">
             Workspaces, tasks, roles, and progress — all in one place.
@@ -83,7 +83,7 @@ function Footer() {
         ))}
       </div>
       <div className={`${C} mt-10 border-t border-neutral-100 pt-6 flex items-center justify-between`}>
-        <p className="text-xs text-neutral-400">© 2026 Teamsever. All rights reserved.</p>
+        <p className="text-xs text-neutral-400">© 2026 Tasko. All rights reserved.</p>
         <p className="text-xs text-neutral-400">A flagship product of Everacy Tech.</p>
       </div>
     </footer>
@@ -118,7 +118,7 @@ export default function DeleteAccountPage() {
                 <Trash2 className="w-5 h-5 text-[#2563EB]" /> How "Soft Delete" Works
               </h2>
               <p className="text-neutral-600 leading-relaxed mb-4">
-                When you choose to delete your account, TeamsEver employs a <strong>Soft Delete</strong> mechanism. 
+                When you choose to delete your account, Tasko employs a <strong>Soft Delete</strong> mechanism.
                 This means your account is immediately deactivated and hidden from all workspaces, directories, 
                 and active systems. To your team and other users, it will appear as though your account has been completely removed.
               </p>

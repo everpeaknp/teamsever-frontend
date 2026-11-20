@@ -35,7 +35,7 @@ export function DesktopDownloadButton() {
     <div className="relative">
       <button
         type="button"
-        aria-label="Download TeamsEver desktop app"
+        aria-label="Download Tasko desktop app"
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         aria-controls={menuId}

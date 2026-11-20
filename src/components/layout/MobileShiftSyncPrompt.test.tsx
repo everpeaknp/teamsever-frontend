@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MobileShiftSyncPrompt } from './MobileShiftSyncPrompt';
 import { ensureTrustedDesktopDevice, getDesktopPresencePreference } from '@/lib/desktopAttendance';
 
@@ -77,12 +77,21 @@ describe('MobileShiftSyncPrompt', () => {
     vi.mocked(ensureTrustedDesktopDevice)
       .mockRejectedValueOnce(new Error('temporary provisioning failure'))
       .mockResolvedValue({ deviceId: 'device-1', capabilities: {} as any });
-    render(<MobileShiftSyncPrompt />);
+    const view = render(<MobileShiftSyncPrompt />);
 
-    await vi.waitFor(() => expect(ensureTrustedDesktopDevice).toHaveBeenCalledTimes(1));
-    await vi.advanceTimersByTimeAsync(15_000);
-    await vi.waitFor(() => expect(ensureTrustedDesktopDevice).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(ensureTrustedDesktopDevice).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+    expect(ensureTrustedDesktopDevice).toHaveBeenCalledTimes(2);
     expect(window.teamseverDesktop!.getStatus).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      view.unmount();
+      await vi.runOnlyPendingTimersAsync();
+    });
   });
 
   it('does not show a shift dismissed by the in-app prompt again after reload', async () => {

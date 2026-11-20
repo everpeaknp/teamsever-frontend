@@ -350,8 +350,8 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
       try {
         const options = {
           body,
-          icon: '/teamsever_logo.png', // Corrected path to logo
-          badge: '/teamsever_logo.png',
+          icon: '/tasko_logo.png', // Corrected path to logo
+          badge: '/tasko_logo.png',
           tag: data?.notificationId || data?._id || data?.resourceId || data?.conversationId || 'default',
           renotify: false,
           vibrate: [200, 100, 200],

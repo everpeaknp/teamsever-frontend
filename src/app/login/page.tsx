@@ -147,15 +147,15 @@ export default function LoginPage() {
         {/* Compact Brand Header */}
         <div className="text-left mb-7">
           <Link href="/" className="inline-flex items-center gap-2 mb-6 group decoration-transparent">
-            <Image 
-              src="/teamsever_logo.png" 
-              alt="Teamsever Logo" 
-              width={36} 
-              height={36} 
-              className="rounded-[10px] shadow-lg shadow-indigo-200/50 dark:shadow-none transition-transform group-hover:scale-105" 
+            <Image
+              src="/tasko_logo.png"
+              alt="Tasko Logo"
+              width={36}
+              height={36}
+              className="rounded-[10px] shadow-lg shadow-indigo-200/50 dark:shadow-none transition-transform group-hover:scale-105"
             />
             <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Teamsever
+              Tasko
             </span>
           </Link>
           <h1 className="text-[28px] leading-tight font-bold text-slate-900 dark:text-white tracking-tight">Welcome back</h1>
@@ -313,7 +313,7 @@ export default function LoginPage() {
         {/* Compact Footer */}
         <div className="mt-7 text-center space-y-4">
           <p className="text-[13px] text-slate-500 dark:text-slate-400 font-medium tracking-tight">
-            New to Teamsever?{' '}
+            New to Tasko?{' '}
             <Link href="/register" className="text-[#2563EB] dark:text-[#60A5FA] font-bold hover:opacity-80 transition-opacity decoration-transparent">
               Create account
             </Link>

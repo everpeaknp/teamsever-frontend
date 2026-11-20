@@ -5,9 +5,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import { useEffect, useCallback } from 'react';
-import { api } from '@/lib/axios';
-import debounce from 'lodash.debounce';
+import { useEffect } from 'react';
 import {
   Bold,
   Italic,
@@ -29,10 +27,11 @@ interface EditorProps {
   documentId: string;
   initialContent: any;
   onSave?: () => void;
+  onChange?: (content: any) => void;
   editable?: boolean;
 }
 
-export function Editor({ documentId, initialContent, onSave, editable = true }: EditorProps) {
+export function Editor({ initialContent, onChange, editable = true }: EditorProps) {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -65,35 +64,24 @@ export function Editor({ documentId, initialContent, onSave, editable = true }: 
     },
   });
 
-  // Auto-save with debounce
-  const saveContent = useCallback(
-    debounce(async (content: any) => {
-      try {
-        await api.patch(`/docs/${documentId}`, {
-          content,
-        });
-        if (onSave) onSave();
-      } catch (error) {
-      }
-    }, 1000),
-    [documentId, onSave]
-  );
-
   useEffect(() => {
     if (!editor) return;
 
     const handleUpdate = () => {
       const json = editor.getJSON();
-      saveContent(json);
+      onChange?.(json);
     };
 
     editor.on('update', handleUpdate);
 
     return () => {
       editor.off('update', handleUpdate);
-      saveContent.cancel();
     };
-  }, [editor, saveContent]);
+  }, [editor, onChange]);
+
+  useEffect(() => {
+    editor?.setEditable(editable);
+  }, [editor, editable]);
 
   if (!editor) {
     return null;

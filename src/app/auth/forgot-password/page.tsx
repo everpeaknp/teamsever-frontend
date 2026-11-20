@@ -49,13 +49,13 @@ export default function ForgotPasswordPage() {
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-4 group decoration-transparent">
             <Image
-              src="/teamsever_logo.png"
-              alt="Teamsever Logo"
+              src="/tasko_logo.png"
+              alt="Tasko Logo"
               width={36}
               height={36}
               className="rounded-[10px] shadow-lg shadow-indigo-200/50 dark:shadow-none transition-transform group-hover:scale-105"
             />
-            <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Teamsever</span>
+            <span className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">Tasko</span>
           </Link>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
             {!success ? 'Forgot password?' : 'Check your email'}

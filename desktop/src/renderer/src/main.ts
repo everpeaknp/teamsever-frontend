@@ -1,1 +1,1 @@
-document.title = 'TeamsEver Desktop';
+document.title = 'Tasko Desktop';

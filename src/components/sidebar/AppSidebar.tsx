@@ -692,8 +692,8 @@ export function AppSidebar({ isMobile = false }: AppSidebarProps) {
                 border: themeMode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.05)',
               }}
             >
-              <img 
-                src={logoUrl || "/teamsever_logo.png"} 
+              <img
+                src={logoUrl || "/tasko_logo.png"}
                 alt="System Logo" 
                 className="w-8 h-8 object-contain"
               />

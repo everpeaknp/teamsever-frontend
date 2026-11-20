@@ -378,7 +378,7 @@ export default function FilesPage() {
       const objectUrl = URL.createObjectURL(await response.blob());
       const link = document.createElement('a');
       link.href = objectUrl;
-      link.download = file.fileName || 'teamsever-file';
+      link.download = file.fileName || 'tasko-file';
       document.body.appendChild(link);
       link.click();
       link.remove();

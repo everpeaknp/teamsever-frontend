@@ -678,7 +678,7 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = objectUrl;
-      link.download = url.split('/').pop()?.split('?')[0] || 'teamsever-image';
+      link.download = url.split('/').pop()?.split('?')[0] || 'tasko-image';
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1255,8 +1255,21 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
               <p className="text-sm">No messages yet. Start the conversation!</p>
             </div>
           </div>
-        ) : (
-          localMessages.map((message, index) => {
+        ) : (() => {
+          let latestMyMessageId: string | null = null;
+          if (type === 'direct') {
+            for (let i = localMessages.length - 1; i >= 0; i--) {
+              const msg = localMessages[i];
+              const sId = getSenderId(msg.sender);
+              const isOwn = Boolean(currentUserId && sId && sId === currentUserId);
+              if (isOwn && !msg.isDeleted) {
+                latestMyMessageId = msg._id;
+                break;
+              }
+            }
+          }
+
+          return localMessages.map((message, index) => {
             const showAvatar = shouldShowAvatar(message, index);
             const groupedWithPrevious = isSameMessageGroup(message, localMessages[index - 1]);
             const groupedWithNext = isSameMessageGroup(message, localMessages[index + 1]);
@@ -1506,9 +1519,11 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
                           </div>
                         )}
                         {!message.sending && !message.failed && !message.tempId && (
-                          type === 'direct' && readers.length > 0
-                            ? <span className="text-[10px]">Seen</span>
-                            : <CheckCheck className="h-3 w-3" />
+                          type === 'direct'
+                            ? (message._id === latestMyMessageId
+                                ? <span className="text-[10px] text-muted-foreground">{readers.length > 0 ? 'Seen' : 'Sent'}</span>
+                                : null)
+                            : (readers.length > 0 ? <CheckCheck className="h-3 w-3 text-primary" /> : <CheckCheck className="h-3 w-3" />)
                         )}
                       </div>
                     </div>
@@ -1612,8 +1627,8 @@ export const ChatWindow = ({ workspaceId, channelId, conversationId, userId, typ
 
               </div>
             );
-          })
-        )}
+          });
+        })()}
 
         <div ref={messagesEndRef} />
       </div>

@@ -52,8 +52,8 @@ messaging.onBackgroundMessage((payload) => {
 
   const notificationOptions = {
     body: notificationBody,
-    icon: '/teamsever_logo.png',
-    badge: '/teamsever_logo.png',
+    icon: '/tasko_logo.png',
+    badge: '/tasko_logo.png',
     tag: data?.notificationId || data?.messageId || data?.resourceId || data?.conversationId || 'teamsever-notification',
     renotify: false,
     data,

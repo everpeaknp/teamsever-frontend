@@ -19,14 +19,14 @@ export function DesktopUpdateNotifier() {
         case 'checking':
           return;
         case 'available':
-          toast.info('TeamsEver update found', {
+          toast.info('Tasko update found', {
             id: UPDATE_TOAST_ID,
             description: `Version ${state.version} is downloading in the background.`,
             duration: 5_000,
           });
           return;
         case 'downloading':
-          toast.loading('Downloading TeamsEver update', {
+          toast.loading('Downloading Tasko update', {
             id: UPDATE_TOAST_ID,
             description: `${state.percent}%`,
             duration: Infinity,
@@ -34,7 +34,7 @@ export function DesktopUpdateNotifier() {
           return;
         case 'downloaded':
           toast.dismiss(UPDATE_TOAST_ID);
-          toast('TeamsEver update is ready', {
+          toast('Tasko update is ready', {
             id: UPDATE_TOAST_ID,
             description: `Version ${state.version} will install when you restart or close the app.`,
             duration: Infinity,
@@ -48,7 +48,7 @@ export function DesktopUpdateNotifier() {
         case 'deferred':
           toast.dismiss(UPDATE_TOAST_ID);
           toast.warning(
-            state.reason === 'clocked-in' ? 'Update will install after you clock out' : 'TeamsEver could not verify your clock status',
+            state.reason === 'clocked-in' ? 'Update will install after you clock out' : 'Tasko could not verify your clock status',
             { description: state.reason === 'clocked-in' ? 'Your shift stays active. Restart after clocking out to install the update.' : 'The update was not installed. Try again when your connection is available.', duration: 10_000 },
           );
           return;

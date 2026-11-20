@@ -7,12 +7,12 @@ describe('DesktopDownloadButton', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   function openPlatformMenu() {
-    const trigger = screen.getByRole('button', { name: 'Download TeamsEver desktop app' });
+    const trigger = screen.getByRole('button', { name: 'Download Tasko desktop app' });
     fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: 'mouse' });
     fireEvent.click(trigger);
   }
 
-  it('uses the configured TeamsEver API for discovery and installer downloads', () => {
+  it('uses the configured Tasko API for discovery and installer downloads', () => {
     expect(getDesktopDownloadsApiUrl()).toMatch(/\/api\/desktop-downloads$/);
     expect(getDesktopDownloadUrl('windows')).toBe(`${getDesktopDownloadsApiUrl()}/windows`);
     expect(getDesktopDownloadUrl('linux')).toBe(`${getDesktopDownloadsApiUrl()}/linux`);

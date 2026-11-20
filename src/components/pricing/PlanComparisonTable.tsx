@@ -213,20 +213,20 @@ export function PlanComparisonTable({ plans, className = "" }: PlanComparisonTab
   ];
 
   return (
-    <div className={`w-full overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-card shadow-sm ${className}`}>
-      <div className="overflow-x-auto">
+    <div className={`w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.06)] ${className}`}>
+      <div className="pricing-table-scroll overflow-x-auto overscroll-x-contain">
         <table className="w-full border-collapse text-left text-sm">
           {/* Header */}
           <thead>
-            <tr className="border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/90 dark:bg-neutral-900/80">
-              <th className="py-5 px-6 font-semibold text-neutral-900 dark:text-neutral-100 min-w-[280px] sticky left-0 bg-neutral-50 dark:bg-neutral-900 z-20 border-r border-neutral-200 dark:border-neutral-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                <span className="text-xs uppercase tracking-wider text-muted-foreground block mb-1">Comparison</span>
+            <tr className="border-b border-slate-200 bg-slate-50">
+              <th className="sticky left-0 z-20 min-w-[280px] border-r border-slate-200 bg-slate-50 px-6 py-5 font-semibold text-slate-950 shadow-[2px_0_5px_-2px_rgba(15,23,42,0.08)]">
+                <span className="caption-3 mb-1 block uppercase tracking-wider text-blue-700">Comparison</span>
                 Features & Capabilities
               </th>
               {plans.map((plan) => (
-                <th key={plan._id} className="py-5 px-6 text-center font-bold text-neutral-900 dark:text-neutral-100 min-w-[180px]">
-                  <div className="text-base">{plan.name}</div>
-                  <div className="text-xs font-normal text-muted-foreground mt-0.5">
+                <th key={plan._id} className="min-w-[180px] px-6 py-5 text-center font-bold text-slate-950">
+                  <div className="title-3">{plan.name}</div>
+                  <div className="caption-2 mt-0.5 text-slate-500">
                     {plan.price === 0 || plan.pricePerMemberMonthly === 0
                       ? "Free"
                       : `${plan.baseCurrency || 'Rs.'} ${plan.pricePerMemberMonthly || plan.price}/member`}
@@ -237,14 +237,14 @@ export function PlanComparisonTable({ plans, className = "" }: PlanComparisonTab
           </thead>
 
           {/* Body */}
-          <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+          <tbody className="divide-y divide-slate-100">
             {categories.map((category) => (
               <React.Fragment key={category.name}>
                 {/* Category Header Row */}
-                <tr className="bg-neutral-50/50 dark:bg-neutral-900/30">
+                <tr className="bg-blue-50/60">
                   <td
                     colSpan={plans.length + 1}
-                    className="py-3 px-6 text-xs font-bold uppercase tracking-wider text-[#2563EB] dark:text-blue-400 sticky left-0 z-10"
+                    className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-blue-700"
                   >
                     <div className="flex items-center gap-2">
                       <category.icon className="h-4 w-4" />
@@ -255,25 +255,25 @@ export function PlanComparisonTable({ plans, className = "" }: PlanComparisonTab
 
                 {/* Feature Rows */}
                 {category.rows.map((row) => (
-                  <tr key={row.label} className="hover:bg-neutral-50/40 dark:hover:bg-neutral-800/30 transition-colors">
-                    <td className="py-3.5 px-6 text-sm text-neutral-700 dark:text-neutral-300 font-medium sticky left-0 bg-white dark:bg-card z-10 border-r border-neutral-100 dark:border-neutral-800/80 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
+                  <tr key={row.label} className="transition-colors hover:bg-slate-50">
+                    <td className="sticky left-0 z-10 border-r border-slate-100 bg-white px-6 py-3.5 text-sm font-medium text-slate-700 shadow-[2px_0_5px_-2px_rgba(15,23,42,0.08)]">
                       {row.label}
                     </td>
                     {plans.map((plan) => {
                       const val = row.getValue(plan);
 
                       return (
-                        <td key={plan._id} className="py-3.5 px-6 text-center text-sm">
+                        <td key={plan._id} className="px-6 py-3.5 text-center text-sm">
                           {typeof val === "boolean" ? (
                             val ? (
-                              <div className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-blue-50 dark:bg-blue-950/60 text-[#2563EB] dark:text-blue-400 mx-auto">
+                                <div className="mx-auto inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-50 text-blue-700">
                                 <Check className="h-4 w-4 stroke-[2.5]" />
                               </div>
                             ) : (
-                              <Minus className="h-4 w-4 text-neutral-300 dark:text-neutral-600 mx-auto" />
+                              <Minus className="mx-auto h-4 w-4 text-slate-300" />
                             )
                           ) : (
-                            <span className="font-semibold text-neutral-800 dark:text-neutral-200">
+                            <span className="font-semibold text-slate-800">
                               {val}
                             </span>
                           )}

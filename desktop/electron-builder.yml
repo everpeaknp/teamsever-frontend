@@ -1,5 +1,5 @@
 appId: com.everpeaknp.teamsever
-productName: TeamsEver
+productName: Tasko
 directories:
   output: release
   buildResources: build

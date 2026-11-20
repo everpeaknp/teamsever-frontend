@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import {
   BatteryCharging,
   Building2,
+  Calendar,
   CheckCircle2,
   Compass,
   Gauge,
@@ -52,12 +53,34 @@ interface FieldWorker extends FieldWorkerMapItem {
   attendanceMode?: string;
 }
 
+interface RouteStopDetail {
+  _id?: string;
+  stopId?: string;
+  name: string;
+  sequence: number;
+  status?: 'pending' | 'arrived' | 'completed' | 'skipped';
+  address?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
+  notes?: string;
+  photos?: string[];
+  signatureUrl?: string;
+  unplanned?: boolean;
+}
+
 interface SiteVisitItem extends FieldSiteVisitMapItem {
   address?: string;
   notes?: string;
-  checkInTime: string;
+  checkInTime?: string;
+  plannedStartDate?: string;
+  plannedEndDate?: string;
+  assignmentMode?: 'point_visit' | 'route' | 'territory' | 'roaming_field';
+  routeStops?: RouteStopDetail[];
+  territoryName?: string;
   checkOutTime?: string;
   durationMinutes?: number;
+  totalPausedMinutes?: number;
+  cancellationReason?: string;
   user?: {
     _id: string;
     name: string;
@@ -97,16 +120,20 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
   const [siteVisits, setSiteVisits] = useState<SiteVisitItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [routePoints, setRoutePoints] = useState<Array<{ latitude: number; longitude: number }>>([]);
   const [loadingRoute, setLoadingRoute] = useState(false);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [showPastVisitsOnMap, setShowPastVisitsOnMap] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'scheduled' | 'en_route' | 'active' | 'paused' | 'completed' | 'cancelled'>('all');
+  const [actingVisitId, setActingVisitId] = useState<string | null>(null);
 
   // Ping / Check-in state
   const [pinging, setPinging] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [submittingVisit, setSubmittingVisit] = useState(false);
   const [completingVisitId, setCompletingVisitId] = useState<string | null>(null);
+  const [startingVisitId, setStartingVisitId] = useState<string | null>(null);
   const [siteName, setSiteName] = useState('');
   const [clientName, setClientName] = useState('');
   const [purpose, setPurpose] = useState('site_visit');
@@ -163,13 +190,14 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
   }, [socket, workspaceId, loadData]);
 
   const handleSelectWorker = useCallback(
-    async (userId: string) => {
+    async (userId: string, dateOverride?: string) => {
       setSelectedWorkerId(userId);
       setLoadingRoute(true);
       setRoutePoints([]);
+      const targetDate = dateOverride || selectedDate;
       try {
         const res = await api.get(
-          `/attendance/workspace/${workspaceId}/field-tracking/routes/${userId}`
+          `/attendance/workspace/${workspaceId}/field-tracking/routes/${userId}?date=${targetDate}`
         );
         const route = res.data?.data?.route;
         if (Array.isArray(route)) {
@@ -296,6 +324,131 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
     }
   };
 
+  const handleStartScheduledVisit = async (visit: SiteVisitItem) => {
+    setStartingVisitId(visit._id);
+    try {
+      const pos = await readCurrentPosition();
+      await api.post(
+        `/attendance/workspace/${workspaceId}/field-tracking/site-visits/${visit._id}/start`,
+        {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy || 10,
+        }
+      );
+      toast.success(`Started ${visit.siteName}`);
+      await loadData(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Could not start this field assignment');
+    } finally {
+      setStartingVisitId(null);
+    }
+  };
+
+  const handleSetEnRoute = async (visit: SiteVisitItem) => {
+    setActingVisitId(visit._id);
+    try {
+      let latitude: number | undefined;
+      let longitude: number | undefined;
+      let accuracy: number | undefined;
+      try {
+        const pos = await readCurrentPosition();
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+        accuracy = pos.coords.accuracy;
+      } catch {}
+
+      await api.post(
+        `/attendance/workspace/${workspaceId}/field-tracking/site-visits/${visit._id}/en-route`,
+        { latitude, longitude, accuracy }
+      );
+      toast.success(`En route to ${visit.siteName}`);
+      await loadData(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Could not update to en-route');
+    } finally {
+      setActingVisitId(null);
+    }
+  };
+
+  const handlePauseVisit = async (visitId: string) => {
+    setActingVisitId(visitId);
+    try {
+      await api.post(`/attendance/workspace/${workspaceId}/field-tracking/site-visits/${visitId}/pause`, {});
+      toast.success('Assignment paused (break)');
+      await loadData(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Could not pause assignment');
+    } finally {
+      setActingVisitId(null);
+    }
+  };
+
+  const handleResumeVisit = async (visitId: string) => {
+    setActingVisitId(visitId);
+    try {
+      await api.post(`/attendance/workspace/${workspaceId}/field-tracking/site-visits/${visitId}/resume`, {});
+      toast.success('Assignment resumed');
+      await loadData(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Could not resume assignment');
+    } finally {
+      setActingVisitId(null);
+    }
+  };
+
+  const handleCancelVisit = async (visitId: string) => {
+    setActingVisitId(visitId);
+    try {
+      await api.post(`/attendance/workspace/${workspaceId}/field-tracking/site-visits/${visitId}/cancel`, {
+        reason: 'Cancelled via dashboard',
+      });
+      toast.success('Assignment cancelled');
+      await loadData(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Could not cancel assignment');
+    } finally {
+      setActingVisitId(null);
+    }
+  };
+
+  const handleCheckInStop = async (visitId: string, stopId: string) => {
+    setActingVisitId(`${visitId}_${stopId}`);
+    try {
+      const pos = await readCurrentPosition();
+      await api.post(
+        `/attendance/workspace/${workspaceId}/field-tracking/site-visits/${visitId}/stops/${stopId}/check-in`,
+        {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy || 10,
+        }
+      );
+      toast.success('Checked in at stop');
+      await loadData(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || err?.message || 'Could not check in at stop');
+    } finally {
+      setActingVisitId(null);
+    }
+  };
+
+  const handleCompleteStop = async (visitId: string, stopId: string) => {
+    setActingVisitId(`${visitId}_${stopId}`);
+    try {
+      await api.post(
+        `/attendance/workspace/${workspaceId}/field-tracking/site-visits/${visitId}/stops/${stopId}/complete`,
+        { notes: 'Completed stop' }
+      );
+      toast.success('Stop marked completed');
+      await loadData(true);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Could not complete stop');
+    } finally {
+      setActingVisitId(null);
+    }
+  };
+
   const selectedWorker = workers.find((w) => w.userId === selectedWorkerId) || null;
   const activeVisitsCount = siteVisits.filter((v) => v.status === 'active').length;
   const liveWorkersCount = workers.filter((w) => w.isLive).length;
@@ -374,17 +527,29 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
                 Green/blue badges show clocked-in field members; red pins show active site visits.
               </p>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              aria-label="Expand field map"
-              onClick={() => setIsMapExpanded(true)}
-              className="gap-1.5 text-xs"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-              Expand Map
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={showPastVisitsOnMap ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setShowPastVisitsOnMap((prev) => !prev)}
+                className="gap-1.5 text-xs h-8"
+              >
+                <CheckCircle2 className={`h-3.5 w-3.5 ${showPastVisitsOnMap ? 'text-emerald-600' : 'text-muted-foreground'}`} />
+                {showPastVisitsOnMap ? 'Hide Past Visits' : 'Show Past Visits'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label="Expand field map"
+                onClick={() => setIsMapExpanded(true)}
+                className="gap-1.5 text-xs h-8"
+              >
+                <Maximize2 className="h-3.5 w-3.5" />
+                Expand Map
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             {!isMapExpanded && (
@@ -394,6 +559,7 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
                 routePoints={routePoints}
                 selectedWorkerId={selectedWorkerId}
                 onSelectWorker={handleSelectWorker}
+                showCompletedVisits={showPastVisitsOnMap}
                 className="h-80 sm:h-96"
               />
             )}
@@ -442,8 +608,23 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
                   </span>
                   <span className="inline-flex items-center gap-1 text-muted-foreground">
                     <Route className="h-3.5 w-3.5 text-primary" />
-                    {loadingRoute ? 'Loading trail…' : `${routePoints.length} GPS points today`}
+                    {loadingRoute ? 'Loading trail…' : `${routePoints.length} GPS points`}
                   </span>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Calendar className="h-3.5 w-3.5 text-primary" />
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setSelectedDate(next);
+                        if (selectedWorker.userId) {
+                          void handleSelectWorker(selectedWorker.userId, next);
+                        }
+                      }}
+                      className="h-7 rounded border border-border bg-background px-1.5 text-xs font-medium text-foreground"
+                    />
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"
@@ -546,17 +727,25 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
               Approved site visit requests and on-site field check-ins appear here automatically.
             </p>
           </div>
-          <div className="flex items-center gap-1.5">
-            {(['all', 'active', 'completed'] as const).map((status) => (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {([
+              { key: 'all', label: 'All' },
+              { key: 'scheduled', label: 'Scheduled' },
+              { key: 'en_route', label: 'En Route' },
+              { key: 'active', label: 'Active' },
+              { key: 'paused', label: 'Paused' },
+              { key: 'completed', label: 'Completed' },
+              { key: 'cancelled', label: 'Cancelled' },
+            ] as const).map((tab) => (
               <Button
-                key={status}
+                key={tab.key}
                 type="button"
                 size="sm"
-                variant={statusFilter === status ? 'default' : 'outline'}
-                onClick={() => setStatusFilter(status)}
+                variant={statusFilter === tab.key ? 'default' : 'outline'}
+                onClick={() => setStatusFilter(tab.key)}
                 className="h-8 text-xs capitalize"
               >
-                {status === 'all' ? 'All' : status === 'active' ? 'On Site Now' : 'Completed'}
+                {tab.label}
               </Button>
             ))}
           </div>
@@ -574,7 +763,13 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               {filteredVisits.map((visit) => {
+                const isScheduled = visit.status === 'scheduled';
+                const isEnRoute = visit.status === 'en_route';
                 const isActive = visit.status === 'active';
+                const isPaused = visit.status === 'paused';
+                const isCompleted = visit.status === 'completed';
+                const isCancelled = visit.status === 'cancelled';
+
                 return (
                   <article
                     key={visit._id}
@@ -605,15 +800,30 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
                         <Badge
                           variant="outline"
                           className={
-                            isActive
+                            isScheduled
+                              ? 'shrink-0 border-blue-500/30 bg-blue-500/10 text-blue-600'
+                              : isEnRoute
+                              ? 'shrink-0 border-indigo-500/30 bg-indigo-500/10 text-indigo-600'
+                              : isActive
                               ? 'shrink-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-600'
+                              : isPaused
+                              ? 'shrink-0 border-amber-500/30 bg-amber-500/10 text-amber-600'
+                              : isCancelled
+                              ? 'shrink-0 border-rose-500/30 bg-rose-500/10 text-rose-600'
                               : 'shrink-0'
                           }
                         >
-                          {isActive
+                          {isScheduled
+                            ? 'SCHEDULED'
+                            : isEnRoute
+                            ? 'EN ROUTE'
+                            : isActive
                             ? 'ON SITE NOW'
-                            : PURPOSE_LABELS[visit.purpose || ''] ||
-                              (visit.purpose || 'site_visit').replaceAll('_', ' ')}
+                            : isPaused
+                            ? 'PAUSED'
+                            : isCancelled
+                            ? 'CANCELLED'
+                            : 'COMPLETED'}
                         </Badge>
                       </div>
 
@@ -622,16 +832,21 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
                           Checked in:{' '}
                           {visit.checkInTime
                             ? new Date(visit.checkInTime).toLocaleString()
-                            : 'Today'}
+                            : visit.plannedStartDate
+                              ? `Planned: ${new Date(visit.plannedStartDate).toLocaleDateString()}`
+                              : 'Not started'}
                         </span>
                         <span>
                           Duration:{' '}
                           {visit.durationMinutes && visit.durationMinutes > 0
                             ? `${visit.durationMinutes} mins`
-                            : isActive
+                            : isActive || isPaused
                               ? 'In progress'
                               : '—'}
                         </span>
+                        {visit.assignmentMode && visit.assignmentMode !== 'point_visit' && (
+                          <span className="capitalize">Mode: {visit.assignmentMode.replaceAll('_', ' ')}</span>
+                        )}
                         {Number.isFinite(visit.latitude) && Number.isFinite(visit.longitude) && (
                           <span>
                             GPS: {Number(visit.latitude).toFixed(5)},{' '}
@@ -648,24 +863,180 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
                           {visit.notes}
                         </p>
                       )}
+
+                      {/* Route Stops display */}
+                      {Array.isArray(visit.routeStops) && visit.routeStops.length > 0 && (
+                        <div className="space-y-1.5 rounded-lg border border-border/60 bg-muted/20 p-2.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Route Stops ({visit.routeStops.filter(s => s.status === 'completed').length}/{visit.routeStops.length} Completed)
+                          </p>
+                          <div className="space-y-1">
+                            {visit.routeStops.map((stop, idx) => {
+                              const sId = stop._id || stop.stopId || String(idx);
+                              const isStopDone = stop.status === 'completed';
+                              const isStopArrived = stop.status === 'arrived';
+                              const isStopLoading = actingVisitId === `${visit._id}_${sId}`;
+
+                              return (
+                                <div
+                                  key={sId}
+                                  className="flex items-center justify-between gap-2 rounded border border-border/40 bg-card px-2.5 py-1.5 text-xs"
+                                >
+                                  <div className="flex items-center gap-2 truncate">
+                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold">
+                                      {stop.sequence || idx + 1}
+                                    </span>
+                                    <span className={`truncate ${isStopDone ? 'line-through text-muted-foreground' : 'font-medium text-foreground'}`}>
+                                      {stop.name}
+                                    </span>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-1.5">
+                                    <Badge
+                                      variant="outline"
+                                      className="text-[10px] capitalize py-0 px-1.5"
+                                    >
+                                      {stop.status || 'pending'}
+                                    </Badge>
+                                    {(isActive || isEnRoute) && !isStopDone && (
+                                      <>
+                                        {!isStopArrived ? (
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            disabled={isStopLoading}
+                                            onClick={() => void handleCheckInStop(visit._id, sId)}
+                                            className="h-6 px-2 text-[10px]"
+                                          >
+                                            {isStopLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Arrive'}
+                                          </Button>
+                                        ) : (
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="ghost"
+                                            disabled={isStopLoading}
+                                            onClick={() => void handleCompleteStop(visit._id, sId)}
+                                            className="h-6 px-2 text-[10px] text-emerald-600 hover:text-emerald-700"
+                                          >
+                                            {isStopLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Complete'}
+                                          </Button>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    {isActive && (
-                      <div className="mt-3 flex justify-end border-t border-border/60 pt-3">
+                    {/* Action Bar */}
+                    {!isCompleted && !isCancelled && (
+                      <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-border/60 pt-3">
+                        {isScheduled && (
+                          <>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={actingVisitId === visit._id}
+                              onClick={() => void handleSetEnRoute(visit)}
+                              className="text-xs"
+                            >
+                              En Route
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={startingVisitId === visit._id}
+                              onClick={() => void handleStartScheduledVisit(visit)}
+                              className="gap-1.5 text-xs"
+                            >
+                              {startingVisitId === visit._id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                              Start with GPS
+                            </Button>
+                          </>
+                        )}
+
+                        {isEnRoute && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={startingVisitId === visit._id}
+                            onClick={() => void handleStartScheduledVisit(visit)}
+                            className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                          >
+                            {startingVisitId === visit._id && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                            Arrive & Check In
+                          </Button>
+                        )}
+
+                        {isActive && (
+                          <>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={actingVisitId === visit._id}
+                              onClick={() => void handlePauseVisit(visit._id)}
+                              className="gap-1.5 text-xs"
+                            >
+                              Pause (Break)
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={completingVisitId === visit._id}
+                              onClick={() => void handleCompleteVisit(visit._id)}
+                              className="gap-1.5 text-xs text-emerald-600"
+                            >
+                              {completingVisitId === visit._id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                              )}
+                              Complete Visit
+                            </Button>
+                          </>
+                        )}
+
+                        {isPaused && (
+                          <>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={actingVisitId === visit._id}
+                              onClick={() => void handleResumeVisit(visit._id)}
+                              className="gap-1.5 text-xs bg-amber-600 hover:bg-amber-700 text-white"
+                            >
+                              Resume Work
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={completingVisitId === visit._id}
+                              onClick={() => void handleCompleteVisit(visit._id)}
+                              className="gap-1.5 text-xs"
+                            >
+                              Finish & Check-out
+                            </Button>
+                          </>
+                        )}
+
                         <Button
                           type="button"
                           size="sm"
-                          variant="outline"
-                          disabled={completingVisitId === visit._id}
-                          onClick={() => void handleCompleteVisit(visit._id)}
-                          className="gap-1.5 text-xs"
+                          variant="ghost"
+                          disabled={actingVisitId === visit._id}
+                          onClick={() => void handleCancelVisit(visit._id)}
+                          className="text-xs text-destructive hover:text-destructive"
                         >
-                          {completingVisitId === visit._id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                          )}
-                          Complete & Check-out
+                          Cancel
                         </Button>
                       </div>
                     )}
@@ -683,11 +1054,23 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
           aria-label="Fullscreen field GPS tracking map"
           className="z-[70] max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-6xl overflow-y-auto p-3 sm:p-5"
         >
-          <DialogHeader>
-            <DialogTitle>Live Field GPS Visits & Active Workers</DialogTitle>
-            <DialogDescription>
-              Real-time worker locations, approved/checked-in client site pins, and breadcrumb trails.
-            </DialogDescription>
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <DialogTitle>Live Field GPS Visits & Active Workers</DialogTitle>
+              <DialogDescription>
+                Real-time worker locations, approved/checked-in client site pins, and breadcrumb trails.
+              </DialogDescription>
+            </div>
+            <Button
+              type="button"
+              variant={showPastVisitsOnMap ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowPastVisitsOnMap((prev) => !prev)}
+              className="mr-6 gap-1.5 text-xs h-8"
+            >
+              <CheckCircle2 className={`h-3.5 w-3.5 ${showPastVisitsOnMap ? 'text-emerald-600' : 'text-muted-foreground'}`} />
+              {showPastVisitsOnMap ? 'Hide Past Visits' : 'Show Past Visits'}
+            </Button>
           </DialogHeader>
           <FieldTrackingMap
             workers={workers}
@@ -695,6 +1078,7 @@ export function FieldTrackingTab({ workspaceId }: { workspaceId: string }) {
             routePoints={routePoints}
             selectedWorkerId={selectedWorkerId}
             onSelectWorker={handleSelectWorker}
+            showCompletedVisits={showPastVisitsOnMap}
             className="h-[min(74dvh,48rem)]"
           />
         </DialogContent>

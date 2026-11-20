@@ -22,35 +22,35 @@ const C = 'mx-auto w-full max-w-[1100px] px-5 sm:px-8';
 // ─── Header ────────────────────────────────────────────────────────────────────
 function Header({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-neutral-100">
+    <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur">
       <div className={`${C} flex h-16 items-center justify-between`}>
         <Link href="/" className="flex items-center gap-2.5">
-          <Image src="/teamsever_logo.png" alt="TeamsEver" width={32} height={32} priority className="h-8 w-auto" />
-          <span className="text-xl font-bold tracking-tight text-neutral-900">TeamsEver</span>
+          <Image src="/tasko_logo.png" alt="Tasko" width={32} height={32} priority className="h-8 w-auto" />
+          <span className="title-1 text-slate-950">Tasko</span>
         </Link>
 
         <nav className="hidden items-center gap-7 md:flex">
-          <Link href="/#features" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Features</Link>
-          <Link href="/#roles" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">Roles</Link>
-          <Link href="/pricing" className="text-sm text-neutral-900 font-medium">Pricing</Link>
+          <Link href="/#capabilities" className="body-5 text-slate-600 transition-colors hover:text-slate-950">Capabilities</Link>
+          <Link href="/#roles" className="body-5 text-slate-600 transition-colors hover:text-slate-950">For teams</Link>
+          <Link href="/pricing" className="body-5 text-slate-950">Pricing</Link>
         </nav>
 
         <div className="flex items-center gap-3">
           {isLoggedIn ? (
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              className="button-sm inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-4 py-2 text-white transition-colors hover:bg-blue-800"
             >
               Dashboard <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           ) : (
             <>
-              <Link href="/login" className="hidden sm:block text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
+                <Link href="/login" className="body-5 hidden text-slate-600 transition-colors hover:text-slate-950 sm:block">
                 Sign in
               </Link>
               <Link
                 href="/register"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#2563EB] px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                className="button-sm inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-4 py-2 text-white transition-colors hover:bg-blue-800"
               >
                 Get started <ArrowRight className="h-3.5 w-3.5" />
               </Link>
@@ -71,33 +71,33 @@ function Footer() {
   ];
 
   return (
-    <footer className="border-t border-neutral-100 bg-white py-14">
+    <footer className="border-t border-slate-200 bg-white py-14">
       <div className={`${C} grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]`}>
         <div>
           <div className="flex items-center gap-2.5">
-            <Image src="/teamsever_logo.png" alt="Teamsever" width={32} height={32} className="h-8 w-auto" />
-            <span className="text-xl font-bold tracking-tight text-neutral-900">TeamsEver</span>
+            <Image src="/tasko_logo.png" alt="Tasko" width={32} height={32} className="h-8 w-auto" />
+            <span className="title-1 text-slate-950">Tasko</span>
           </div>
-          <p className="mt-4 max-w-xs text-sm leading-[1.7] text-neutral-400">
+          <p className="body-6 mt-4 max-w-xs text-wrap-pretty text-slate-500">
             Workspaces, tasks, roles, and progress — all in one place.
           </p>
         </div>
         {cols.map((col) => (
           <div key={col.title}>
-            <h3 className="text-xs font-semibold uppercase tracking-widest text-neutral-900 mb-4">{col.title}</h3>
+            <h3 className="caption-3 mb-4 uppercase tracking-widest text-slate-950">{col.title}</h3>
             <ul className="space-y-2.5">
               {col.links.map((l) => (
                 <li key={l}>
-                  <Link href="#" className="text-sm text-neutral-500 hover:text-neutral-900 transition-colors">{l}</Link>
+                  <Link href="#" className="body-6 text-slate-600 transition-colors hover:text-slate-950">{l}</Link>
                 </li>
               ))}
             </ul>
           </div>
         ))}
       </div>
-      <div className={`${C} mt-10 border-t border-neutral-100 pt-6 flex items-center justify-between`}>
-        <p className="text-xs text-neutral-400">© 2026 Teamsever. All rights reserved.</p>
-        <p className="text-xs text-neutral-400">A flagship product of Everacy Tech.</p>
+      <div className={`${C} mt-10 flex items-center justify-between border-t border-slate-200 pt-6`}>
+        <p className="caption-2 text-slate-500">© 2026 Tasko. All rights reserved.</p>
+        <p className="caption-2 text-slate-500">A flagship product of Everacy Tech.</p>
       </div>
     </footer>
   );
@@ -151,27 +151,28 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-neutral-900 antialiased flex flex-col">
+    <div className="landing-manrope flex min-h-screen flex-col bg-[#f7f9fc] text-slate-950 antialiased">
       <Header isLoggedIn={isLoggedIn} />
       
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="pt-20 pb-16 sm:pt-28 sm:pb-20">
+        <section className="border-b border-slate-200 bg-white py-16 sm:py-24">
           <div className={`${C} text-center`}>
-            <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-neutral-900">
-              Simple, transparent pricing
+            <p className="caption-3 uppercase tracking-[0.16em] text-blue-700">Plans that grow with the way you work</p>
+            <h1 className="heading-1 mx-auto mt-5 max-w-3xl text-wrap-balance text-slate-950">
+              Choose the right workspace for your team.
             </h1>
-            <p className="mt-5 max-w-2xl mx-auto text-lg text-neutral-500 leading-relaxed">
-              Choose the plan that fits your team's needs. No hidden fees, no surprises. 
-              Upgrade or downgrade at any time.
+            <p className="body-2 mx-auto mt-6 max-w-2xl text-wrap-pretty text-slate-600">
+              Start with the essentials, then add the people, operations, and controls your workspace needs as it grows.
             </p>
 
-            <div className="mt-10 flex justify-center">
-              <div className="relative inline-flex items-center rounded-full border border-neutral-200 bg-neutral-50 p-1">
+            <div className="mt-9 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <span className="caption-2 text-slate-500">Billing cadence</span>
+              <div className="relative inline-flex items-center rounded-lg border border-slate-200 bg-slate-100 p-1">
                 <button
                   onClick={() => setBillingCycle('monthly')}
                   className={`relative rounded-full px-5 py-2 text-sm font-medium transition-colors ${
-                    billingCycle === 'monthly' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'
+                    billingCycle === 'monthly' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-950'
                   }`}
                 >
                   Monthly
@@ -179,10 +180,10 @@ export default function PricingPage() {
                 <button
                   onClick={() => setBillingCycle('annual')}
                   className={`relative rounded-full px-5 py-2 text-sm font-medium transition-colors ${
-                    billingCycle === 'annual' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'
+                    billingCycle === 'annual' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-950'
                   }`}
                 >
-                  Annual <span className="ml-1 text-xs text-[#2563EB] font-bold">Save 20%</span>
+                  Annual <span className="ml-1 text-xs font-bold text-blue-700">Save 20%</span>
                 </button>
               </div>
             </div>
@@ -190,12 +191,12 @@ export default function PricingPage() {
         </section>
 
         {/* Pricing Cards */}
-        <section className="pb-24">
+        <section className="pb-24 pt-12 sm:pt-16">
           <div className={C}>
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-[#2563EB]" />
-                <p className="mt-4 text-sm text-neutral-500">Loading plans...</p>
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-700" />
+                <p className="body-6 mt-4 text-slate-500">Loading plans...</p>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
@@ -209,23 +210,23 @@ export default function PricingPage() {
                   return (
                     <div
                       key={plan._id}
-                      className={`relative flex h-full flex-col rounded-3xl bg-white p-8 transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${
+                      className={`relative flex h-full flex-col rounded-2xl bg-white p-7 transition-shadow hover:shadow-[0_18px_45px_rgba(15,23,42,0.09)] sm:p-8 ${
                         isPopular
-                          ? 'border-2 border-[#2563EB] shadow-[0_8px_30px_rgb(37,99,235,0.08)]'
-                          : 'border border-neutral-200'
+                          ? 'border-2 border-blue-700 shadow-[0_18px_45px_rgba(37,99,235,0.12)]'
+                          : 'border border-slate-200'
                       }`}
                     >
                       {isPopular && (
                         <div className="absolute -top-3.5 left-0 right-0 flex justify-center">
-                          <span className="rounded-full bg-[#2563EB] px-3 py-1 text-xs font-semibold text-white tracking-wide uppercase">
+                          <span className="rounded-full bg-blue-700 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
                             Most Popular
                           </span>
                         </div>
                       )}
 
                       <div className="mb-6">
-                        <h3 className="text-xl font-semibold text-neutral-900">{plan.name}</h3>
-                        <p className="mt-2 text-sm text-neutral-500 min-h-[40px]">{plan.description}</p>
+                        <h3 className="heading-5 text-slate-950">{plan.name}</h3>
+                        <p className="body-6 mt-2 min-h-[40px] text-wrap-pretty text-slate-500">{plan.description}</p>
                       </div>
 
                       <div className="mb-8 flex items-baseline gap-1">
@@ -234,20 +235,20 @@ export default function PricingPage() {
                           baseCurrency={plan.baseCurrency || 'NPR'}
                           className="text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900"
                         />
-                        <span className="text-sm font-medium text-neutral-500">/member/mo</span>
+                        <span className="body-6 text-slate-500">/member/mo</span>
                       </div>
 
-                      <div className="mb-8 space-y-3.5 flex-1">
+                      <div className="mb-8 flex-1 space-y-3.5">
                         {features.slice(0, 8).map((item, itemIndex) => {
                           const isDisabled = item.includes('Disabled');
                           return (
                             <div key={itemIndex} className="flex items-start gap-3">
                               {isDisabled ? (
-                                <X className="w-4 h-4 text-neutral-300 shrink-0 mt-0.5" />
+                                <X className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
                               ) : (
-                                <Check className="w-4 h-4 text-[#2563EB] shrink-0 mt-0.5" />
+                                <Check className="mt-0.5 h-4 w-4 shrink-0 text-blue-700" />
                               )}
-                              <span className={`text-sm leading-snug ${isDisabled ? 'text-neutral-400 line-through' : 'text-neutral-700'}`}>
+                              <span className={`body-6 leading-snug ${isDisabled ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
                                 {item}
                               </span>
                             </div>
@@ -259,7 +260,7 @@ export default function PricingPage() {
                             <button
                               type="button"
                               onClick={() => setDetailsPlan(plan)}
-                              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2563EB] hover:text-blue-700 hover:underline transition-colors cursor-pointer py-1"
+                              className="caption-3 inline-flex cursor-pointer items-center gap-1.5 py-1 text-blue-700 transition-colors hover:text-blue-800 hover:underline"
                             >
                               <span>+ View more ({features.length - 8} more features)</span>
                             </button>
@@ -267,21 +268,21 @@ export default function PricingPage() {
                         )}
                       </div>
 
-                      <div className="mt-auto pt-6 border-t border-neutral-100">
+                      <div className="mt-auto border-t border-slate-200 pt-6">
                         {isCurrent ? (
                           <button
                             disabled
-                            className="w-full rounded-xl bg-neutral-100 px-4 py-3 text-sm font-semibold text-neutral-400 cursor-not-allowed"
+                            className="button-md w-full cursor-not-allowed rounded-lg bg-slate-100 px-4 py-3 text-slate-400"
                           >
                             Current Plan
                           </button>
                         ) : (
                           <button
                             onClick={() => handleBuyPlan(plan)}
-                            className={`w-full rounded-xl px-4 py-3 text-sm font-semibold transition-colors ${
+                            className={`button-md w-full rounded-lg px-4 py-3 transition-colors ${
                               isPopular
-                                ? 'bg-[#2563EB] text-white hover:bg-blue-700'
-                                : 'bg-neutral-900 text-white hover:bg-neutral-800'
+                                ? 'bg-blue-700 text-white hover:bg-blue-800'
+                                : 'bg-slate-950 text-white hover:bg-slate-800'
                             }`}
                           >
                             {isFree ? 'Start for free' : 'Get started'}
@@ -296,12 +297,13 @@ export default function PricingPage() {
 
             {/* Everything You Get, Side by Side Table */}
             {!loading && plans.length > 0 && (
-              <div className="mt-20 pt-12 border-t border-neutral-100">
-                <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
-                  <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900">
-                    Everything You Get, Side by Side
+              <div className="mt-20 border-t border-slate-200 pt-12">
+                <div className="mx-auto mb-10 max-w-2xl space-y-2 text-center">
+                  <p className="caption-3 uppercase tracking-[0.16em] text-blue-700">Compare the details</p>
+                  <h3 className="heading-3 text-wrap-balance text-slate-950">
+                    See what changes as your workspace grows.
                   </h3>
-                  <p className="text-sm text-neutral-500">
+                  <p className="body-6 text-slate-500">
                     Compare features, storage limits, and module capabilities across every plan tier.
                   </p>
                 </div>
