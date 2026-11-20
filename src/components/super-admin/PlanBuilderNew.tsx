@@ -111,6 +111,26 @@ export default function PlanBuilderNew() {
     }
   };
 
+  const setPlanPublication = async (plan: Plan | any, publish: boolean) => {
+    const action = publish ? "publish" : "unpublish";
+    if (!confirm(`${publish ? "Publish" : "Unpublish"} the "${plan.name}" plan?${publish ? " It will become available to customers." : " It will be saved as a draft and removed from customer-facing plan lists."}`)) return;
+    try {
+      const token = localStorage.getItem("authToken");
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${API_URL}/api/plans/${plan._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ isActive: publish }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || `Failed to ${action} plan`);
+      toast.success(publish ? "Plan published" : "Plan saved as draft");
+      fetchAll();
+    } catch (error: any) {
+      toast.error(error.message || `Unable to ${action} plan`);
+    }
+  };
+
   const openDuplicateDialog = (planOrTemplate: any) => {
     setDuplicateTarget(planOrTemplate);
     setDuplicateName(`${planOrTemplate.name} (Copy)`);
@@ -242,7 +262,7 @@ export default function PlanBuilderNew() {
             className="gap-2 rounded-lg"
           >
             <Layers className="w-4 h-4" />
-            Active Plans ({plans.length})
+            Plans ({plans.length})
           </Button>
           <Button
             variant={activeView === 'templates' ? 'default' : 'ghost'}
@@ -432,7 +452,7 @@ export default function PlanBuilderNew() {
       {activeView === 'all' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold">Active Plans in System</h3>
+            <h3 className="text-lg font-bold">Plans in System</h3>
             <span className="text-xs text-muted-foreground">
               {plans.length} plan{plans.length === 1 ? '' : 's'} configured
             </span>
@@ -451,7 +471,7 @@ export default function PlanBuilderNew() {
                           <h3 className="font-bold text-lg">{plan.name}</h3>
                           {!plan.isActive && (
                             <Badge variant="secondary" className="text-xs">
-                              Inactive
+                              Draft
                             </Badge>
                           )}
                           {plan.isTemplate && (
@@ -494,6 +514,17 @@ export default function PlanBuilderNew() {
                         >
                           <Pencil1Icon className="w-3.5 h-3.5" />
                         </Button>
+                        {plan.name.toLowerCase() !== 'free' && plan.name.toLowerCase() !== 'free plan' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setPlanPublication(plan, !plan.isActive)}
+                            title={plan.isActive ? "Unpublish plan (save as draft)" : "Publish plan"}
+                            className="h-8 w-8"
+                          >
+                            {plan.isActive ? <ArchiveIcon className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
+                          </Button>
+                        )}
                         {plan.name.toLowerCase() !== 'free' && plan.name.toLowerCase() !== 'free plan' && (
                           <Button
                             variant="ghost"
